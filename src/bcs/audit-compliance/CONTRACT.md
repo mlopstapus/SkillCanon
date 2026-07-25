@@ -11,7 +11,7 @@ Owns the immutable `AuditEvent` log. Every mutating command in every other conte
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Redacts known-sensitive fields (`password_hash`, `key_hash`, raw tokens) from `before`/`after` before storage. First real caller: Identity & Access's `login`/`logout` (008-jwt-session-auth) | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements |
+| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Redacts known-sensitive fields (`password_hash`, `key_hash`, raw tokens) from `before`/`after` before storage. First real caller: Identity & Access's `login`/`logout` (008-jwt-session-auth) | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements, VCS Integration (011-vcs-integration) |
 | `list(orgId, filters, { requestingUserId })` | Paginated query, filtered by the entitlement-resolved retention window | Distribution (audit log UI) |
 | `export(orgId, format)` | Bulk export (Enterprise-gated via entitlement) | Distribution |
 

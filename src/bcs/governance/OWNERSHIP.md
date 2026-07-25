@@ -28,4 +28,5 @@ None.
 | Resource | Owned by BC |
 |---|---|
 | `getTeamChain(teamId)` | Identity & Access |
+| `getProject(orgId, projectId)` — used only by `resolveRequiredSkillPolicies` to find a project's owning team | Prompt Registry |
 | Team/project/user existence checks | Identity & Access, Prompt Registry |
