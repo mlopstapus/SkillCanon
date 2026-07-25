@@ -20,6 +20,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [X] [008 - `authDb` Consumer Handoff](008-authdb-consumer-handoff.md)
 - [ ] [009 - Auth & Onboarding UI](009-auth-and-onboarding-ui.md)
 - [ ] [010 - Account & Team Settings UI](010-account-and-team-settings-ui.md)
+- [ ] [011 - Logout UI Wiring](011-logout-ui-wiring.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -34,3 +35,5 @@ This is the first bounded-context port and the epic every other epic depends on 
 Feature 007 (tenant isolation tests) should land alongside 001–006, not after — it's what proves M1/M2/M3 actually hold for this BC's own tables, and it's where the reusable cross-tenant test helper other epics will import gets built.
 
 **Added 2026-07-23**: features 009/010 build this epic's real UI directly, same pattern as `003-audit-compliance/003-audit-log-ui.md` — a departure from this codebase's prior precedent of identity-access never building routes/pages (see CLAUDE.md's note on `007-user-accounts-registration`/`008-jwt-session-auth`, now `008-distribution` in the current numbering). Both are currently stubs pending a design mockup (see their own Open Questions).
+
+**Added 2026-07-25**: feature 011 files a gap discovered while writing `009-auth-and-onboarding-ui`'s spec (`specs/015-auth-onboarding-ui`) — no UI path to log out exists anywhere in the product yet, and 009's scope deliberately excludes it (page inventory is login/register/invite-accept/welcome only). Small, independently shippable once the app shell exists (it already does, per 010's dependency).

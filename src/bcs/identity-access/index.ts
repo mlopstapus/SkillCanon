@@ -30,9 +30,11 @@ export { inviteUser } from "./application/invite-user";
 export { acceptInvitation } from "./application/accept-invitation";
 export { revokeInvitation } from "./application/revoke-invitation";
 export { listInvitations } from "./application/list-invitations";
+export { previewInvitation } from "./application/preview-invitation";
 export type {
   Invitation,
   InvitationSummary,
+  InvitationPreview,
   InvitationRole,
   InvitationState,
 } from "./domain/invitation";
