@@ -12,9 +12,9 @@ As a result, this epic's original per-page features were distributed into the ep
 
 | Former feature here | New home |
 |---|---|
-| `001-design-tokens-and-theming.md` | `backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md` |
+| `001-design-tokens-and-theming.md` | already done, `backlog/004-app-shell-and-landing/archive/001-design-tokens-and-theming.md` |
 | `002-auth-and-onboarding-redesign.md` | `backlog/002-identity-access/009-auth-and-onboarding-ui.md` |
-| `003-workspace-redesign.md` (dashboard/teams/projects) | Dashboard/landing → `backlog/004-app-shell-and-landing/003-marketing-landing-page.md` and the shell's own composition (`002-app-shell-and-navigation.md`); teams → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; projects → `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
+| `003-workspace-redesign.md` (dashboard/teams/projects) | Dashboard/landing → already done, `backlog/004-app-shell-and-landing/archive/003-marketing-landing-page.md`, and the shell's own composition (already done, `backlog/004-app-shell-and-landing/archive/002-app-shell-and-navigation.md`); teams → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; projects → `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
 | `004-governance-views-redesign.md` | `backlog/005-governance/005-governance-views-ui.md` |
 | `005-prompt-registry-views-redesign.md` | `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
 | `006-workflow-views-redesign.md` | `backlog/007-workflow-orchestration/005-workflow-views-ui.md` |

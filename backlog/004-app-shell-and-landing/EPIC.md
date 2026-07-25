@@ -1,7 +1,7 @@
 # Epic 004: App Shell & Landing
 
 **Priority:** 4
-**Status:** in-progress (001 done; being picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
+**Status:** done (all three features complete; was picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
 **Goal:** Build and design, for real, the two structural surfaces every later epic's UI depends on — the authenticated app shell (nav/layout every bounded context composes its own pages into) and the public marketing landing page — early enough that every downstream epic, including `003-audit-compliance`'s own remaining UI work, composes its real, finished pages into an already-real shell instead of building a temporary one first.
 
 ## Overview
@@ -16,7 +16,7 @@
 
 - [x] [001 - Design Tokens & Theming](archive/001-design-tokens-and-theming.md)
 - [x] [002 - App Shell & Navigation](archive/002-app-shell-and-navigation.md)
-- [ ] [003 - Marketing Landing Page](003-marketing-landing-page.md)
+- [x] [003 - Marketing Landing Page](archive/003-marketing-landing-page.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
