@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it, vi } from "vitest";
 import type { AppSessionUser } from "@/bcs/identity-access";
-import { handleProtectedRequest } from "./proxy";
+import { config, handleProtectedRequest } from "./proxy";
 
 const user: AppSessionUser = {
   id: "user-123",
@@ -58,5 +58,16 @@ describe("handleProtectedRequest", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("x-middleware-next")).toBe("1");
     expect(await response.text()).toBe("");
+  });
+});
+
+describe("config.matcher", () => {
+  it("never gates the public root route", () => {
+    // The marketing landing page at "/" (014-marketing-landing-page) must never
+    // require auth. Guard against a future edit accidentally adding it here.
+    expect(config.matcher).not.toContain("/");
+    expect(
+      config.matcher.some((pattern) => pattern === "/:path*" || pattern === "/*"),
+    ).toBe(false);
   });
 });

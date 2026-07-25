@@ -1,61 +1,66 @@
-import { Badge, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/shared/ui";
+import type { Metadata } from "next";
+import { ComplianceCta } from "./_components/marketing/compliance-cta";
+import { Features } from "./_components/marketing/features";
+import { FinalCta } from "./_components/marketing/final-cta";
+import { Footer } from "./_components/marketing/footer";
+import { Governance } from "./_components/marketing/governance";
+import { Hero } from "./_components/marketing/hero";
+import { HowItWorks } from "./_components/marketing/how-it-works";
+import { Integrations } from "./_components/marketing/integrations";
+import { MarketingNav } from "./_components/marketing/marketing-nav";
+import { MarketingShell } from "./_components/marketing/marketing-shell";
+import { Reveal } from "./_components/marketing/reveal";
+import { TrustStrip } from "./_components/marketing/trust-strip";
+
+const TITLE = "SkillCanon — Govern every prompt your engineers ship";
+const DESCRIPTION =
+  "Define prompts once, publish them as native skills to every coding agent through one API, and enforce org-wide policy automatically. Self-hosted, SOC2-aligned, and SkillCanon never calls an LLM.";
+
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+};
 
 export default function Home() {
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-6 py-16">
-      <div>
-        <p className="mb-2 font-mono text-[12.5px] tracking-[0.1em] text-a uppercase">Scaffold</p>
-        <h1 className="font-display text-[36px] font-bold tracking-[-.03em]">
-          Skill<span className="text-a">Canon</span>
-        </h1>
-        <p className="mt-2 max-w-md text-[14px] leading-[1.6] text-dim">
-          Design tokens from docs/context/design-system.md are live: type families, dark-theme
-          surfaces, accent, and semantic status colors.
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Badge variant="accent">web</Badge>
-        <Badge variant="blue">api</Badge>
-        <Badge variant="violet">cli</Badge>
-        <Badge variant="neutral">system</Badge>
-        <Badge variant="green" dot>
-          created
-        </Badge>
-        <Badge variant="blue" dot>
-          updated
-        </Badge>
-        <Badge variant="red" dot>
-          deleted
-        </Badge>
-      </div>
-
-      <div className="overflow-hidden rounded-card border border-border bg-surface">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Time</TableHead>
-              <TableHead>Action</TableHead>
-              <TableHead>Source</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow>
-              <TableCell dense className="font-mono text-[12px] text-dim">
-                14:22:07
-              </TableCell>
-              <TableCell dense>
-                <Badge variant="blue" dot>
-                  policy.updated
-                </Badge>
-              </TableCell>
-              <TableCell dense>
-                <Badge variant="accent">web</Badge>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
-    </main>
+    <MarketingShell>
+      <MarketingNav />
+      <div id="top" />
+      <Reveal>
+        <Hero />
+      </Reveal>
+      <Reveal>
+        <TrustStrip />
+      </Reveal>
+      <Reveal>
+        <HowItWorks />
+      </Reveal>
+      <Reveal>
+        <Governance />
+      </Reveal>
+      <Reveal>
+        <Features />
+      </Reveal>
+      <Reveal>
+        <Integrations />
+      </Reveal>
+      <Reveal>
+        <ComplianceCta />
+      </Reveal>
+      <Reveal>
+        <FinalCta />
+      </Reveal>
+      <Footer />
+    </MarketingShell>
   );
 }
