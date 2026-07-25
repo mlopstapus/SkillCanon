@@ -18,7 +18,7 @@
 
 **Purpose**: Confirm the environment is ready; no new dependency is needed (research.md §1).
 
-- [ ] T001 Confirm baseline is green before starting: `pnpm typecheck && pnpm lint && pnpm vitest run src/bcs/identity-access`
+- [X] T001 Confirm baseline is green before starting: `pnpm typecheck && pnpm lint && pnpm vitest run src/bcs/identity-access`
 
 ---
 
@@ -32,15 +32,15 @@
 - [X] T003 Implement `previewInvitation(db, token)` in `src/bcs/identity-access/application/preview-invitation.ts`
 - [X] T004 Testcontainers test `src/bcs/identity-access/application/preview-invitation.test.ts` (6/6 passing)
 - [X] T005 Update `src/bcs/identity-access/CONTRACT.md` (Exposed APIs row + Connection Requirements entry) and `src/bcs/identity-access/index.ts` barrel export for `previewInvitation`/`InvitationPreview`
-- [ ] T006 [P] Create `src/app/(auth)/_components/field-icons.tsx` (`EmailIcon`, `PasswordIcon`, `OrgIcon`, `TeamIcon`, `PersonIcon`, ported from the mockup's inline SVGs per contracts/auth-onboarding-ui.md)
-- [ ] T007 [P] Create `src/app/(auth)/_components/text-field.tsx` (labeled icon-prefixed input, CSS `focus-within:` styling, no client JS)
-- [ ] T008 [P] Create `src/app/(auth)/_components/password-field.tsx` (client component: adds the mockup's show/hide toggle)
-- [ ] T009 [P] Create `src/app/(auth)/_components/auth-button.tsx` (primary teal/sheen and secondary outlined variants, `pending` state)
-- [ ] T010 [P] Create `src/app/(auth)/_components/terminal-state.tsx` (icon + heading + message + single button — reused by register-blocked and all four invite terminal views per data-model.md)
-- [ ] T011 [P] Create `src/app/(auth)/_components/brand-rail.tsx` (logo mark, "Prompt control plane" eyebrow, headline, three feature bullets, Apache-2.0/self-hosted/version footer — verbatim copy from `SkillCanon Auth.dc.html`)
-- [ ] T012 Create `src/app/(auth)/layout.tsx` (ambient background layers + two-column grid: `brand-rail` hidden below `lg`, content slot for `{children}` — depends on T011, research.md §8)
-- [ ] T013 [P] Write `src/app/(auth)/auth-redirect.test.ts` FIRST (dependency-injected tests for the access decision — mirror `(app)/app-shell-access.test.ts`'s shape; must fail before T014)
-- [ ] T014 Implement `src/app/(auth)/auth-redirect.ts` exporting `resolveAuthPageAccess(cookieHeader, dependencies?)` (contracts/auth-onboarding-ui.md's Routes table) — makes T013 pass
+- [X] T006 [P] Create `src/app/(auth)/_components/field-icons.tsx` (`EmailIcon`, `PasswordIcon`, `OrgIcon`, `TeamIcon`, `PersonIcon`, ported from the mockup's inline SVGs per contracts/auth-onboarding-ui.md)
+- [X] T007 [P] Create `src/app/(auth)/_components/text-field.tsx` (labeled icon-prefixed input, CSS `focus-within:` styling, no client JS)
+- [X] T008 [P] Create `src/app/(auth)/_components/password-field.tsx` (client component: adds the mockup's show/hide toggle)
+- [X] T009 [P] Create `src/app/(auth)/_components/auth-button.tsx` (primary teal/sheen and secondary outlined variants, `pending` state)
+- [X] T010 [P] Create `src/app/(auth)/_components/terminal-state.tsx` (icon + heading + message + single button — reused by register-blocked and all four invite terminal views per data-model.md)
+- [X] T011 [P] Create `src/app/(auth)/_components/brand-rail.tsx` (logo mark, "Prompt control plane" eyebrow, headline, three feature bullets, Apache-2.0/self-hosted/version footer — verbatim copy from `SkillCanon Auth.dc.html`)
+- [X] T012 Create `src/app/(auth)/layout.tsx` (ambient background layers + two-column grid: `brand-rail` hidden below `lg`, content slot for `{children}` — depends on T011, research.md §8)
+- [X] T013 [P] Write `src/app/(auth)/auth-redirect.test.ts` FIRST (dependency-injected tests for the access decision — mirror `(app)/app-shell-access.test.ts`'s shape; must fail before T014)
+- [X] T014 Implement `src/app/(auth)/auth-redirect.ts` exporting `resolveAuthPageAccess(cookieHeader, dependencies?)` (contracts/auth-onboarding-ui.md's Routes table) — makes T013 pass
 
 **Checkpoint**: Shared shell, field/button/terminal components, and the redirect helper all exist and are tested; no route page wired to them yet.
 
@@ -54,13 +54,13 @@
 
 ### Tests for User Story 1
 
-- [ ] T015 [P] [US1] Write `src/app/(auth)/login/login-form.test.tsx` FIRST — `renderToStaticMarkup` asserting the email/password fields, submit button, and register-link are present, error banner absent by default; must fail before T017
+- [X] T015 [P] [US1] Write `src/app/(auth)/login/login-form.test.tsx` FIRST — `renderToStaticMarkup` asserting the email/password fields, submit button, and register-link are present, error banner absent by default; must fail before T017
 
 ### Implementation for User Story 1
 
-- [ ] T016 [US1] Implement `src/app/(auth)/login/actions.ts`'s `loginAction` — calls `login(authDb, email, password)`; `null` → `{ error: "Incorrect email or password." }` (FR-003); success → set cookie from the returned `SessionCookieDescriptor`, `redirect("/dashboard")`
-- [ ] T017 [US1] Implement `src/app/(auth)/login/login-form.tsx` — Client Component, `useActionState(loginAction, ...)`, `PasswordField`/`TextField`/`AuthButton` composition, footer link to `/register` — makes T015 pass
-- [ ] T018 [US1] Implement `src/app/(auth)/login/page.tsx` — Server Component calling `resolveAuthPageAccess` (redirect to `/dashboard` if already authenticated, FR-004), renders `LoginForm`
+- [X] T016 [US1] Implement `src/app/(auth)/login/actions.ts`'s `loginAction` — calls `login(authDb, email, password)`; `null` → `{ error: "Incorrect email or password." }` (FR-003); success → set cookie from the returned `SessionCookieDescriptor`, `redirect("/dashboard")`
+- [X] T017 [US1] Implement `src/app/(auth)/login/login-form.tsx` — Client Component, `useActionState(loginAction, ...)`, `PasswordField`/`TextField`/`AuthButton` composition, footer link to `/register` — makes T015 pass
+- [X] T018 [US1] Implement `src/app/(auth)/login/page.tsx` — Server Component calling `resolveAuthPageAccess` (redirect to `/dashboard` if already authenticated, FR-004), renders `LoginForm`
 
 **Checkpoint**: `/login` is fully functional and independently testable (given a seeded user row).
 
@@ -74,15 +74,15 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Write `src/app/(auth)/register/slugify.test.ts` FIRST — pure-function cases (lowercasing, non-alphanumeric collapsing, leading/trailing trim); must fail before T021
-- [ ] T020 [P] [US2] Write `src/app/(auth)/register/register-form.test.tsx` FIRST — `renderToStaticMarkup` asserting both field groups (Organization; Admin account) and the password hint text are present; must fail before T023
+- [X] T019 [P] [US2] Write `src/app/(auth)/register/slugify.test.ts` FIRST — pure-function cases (lowercasing, non-alphanumeric collapsing, leading/trailing trim); must fail before T021
+- [X] T020 [P] [US2] Write `src/app/(auth)/register/register-form.test.tsx` FIRST — `renderToStaticMarkup` asserting both field groups (Organization; Admin account) and the password hint text are present; must fail before T023
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Implement `src/app/(auth)/register/slugify.ts` — makes T019 pass
-- [ ] T022 [US2] Implement `src/app/(auth)/register/actions.ts`'s `registerAction` — calls `registerFirstRunAdmin(authDb, { organization, team, admin })` with slugs from T021; `SecondOrganizationNotAllowedError` → `{ status: "blocked" }` (FR-006); `WeakPasswordError`/`DuplicateUserError` → inline field error; success → `login(authDb, admin.email, admin.password)` for the cookie (FR-016), `redirect("/welcome")`
-- [ ] T023 [US2] Implement `src/app/(auth)/register/register-form.tsx` — two-group form plus the `blocked` → `TerminalState` "already set up" view (T010) — makes T020 pass
-- [ ] T024 [US2] Implement `src/app/(auth)/register/page.tsx` — `resolveAuthPageAccess` redirect-if-authenticated, renders `RegisterForm`
+- [X] T021 [US2] Implement `src/app/(auth)/register/slugify.ts` — makes T019 pass
+- [X] T022 [US2] Implement `src/app/(auth)/register/actions.ts`'s `registerAction` — calls `registerFirstRunAdmin(authDb, { organization, team, admin })` with slugs from T021; `SecondOrganizationNotAllowedError` → `{ status: "blocked" }` (FR-006); `WeakPasswordError`/`DuplicateUserError` → inline field error; success → `login(authDb, admin.email, admin.password)` for the cookie (FR-016), `redirect("/welcome")`
+- [X] T023 [US2] Implement `src/app/(auth)/register/register-form.tsx` — two-group form plus the `blocked` → `TerminalState` "already set up" view (T010) — makes T020 pass
+- [X] T024 [US2] Implement `src/app/(auth)/register/page.tsx` — `resolveAuthPageAccess` redirect-if-authenticated, renders `RegisterForm`
 
 **Checkpoint**: `/register` is fully functional and independently testable; combined with Phase 3, `/login` now has a real account to authenticate against.
 
@@ -96,13 +96,13 @@
 
 ### Tests for User Story 3
 
-- [ ] T025 [P] [US3] Write `src/app/(auth)/invite/[token]/invite-form.test.tsx` FIRST — `renderToStaticMarkup` asserting the locked email, org/team/role copy, and username/password/display-name fields render given a sample `InvitationPreview`; must fail before T027
+- [X] T025 [P] [US3] Write `src/app/(auth)/invite/[token]/invite-form.test.tsx` FIRST — `renderToStaticMarkup` asserting the locked email, org/team/role copy, and username/password/display-name fields render given a sample `InvitationPreview`; must fail before T027
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Implement `src/app/(auth)/invite/[token]/actions.ts`'s `acceptInviteAction` — calls `acceptInvitation(authDb, token, { username, password, displayName })`; maps `InvalidInvitationTokenError`/`InvitationExpiredError`/`InvitationAlreadyAcceptedError`/`InvitationRevokedError` to the matching terminal view (race case, contracts/auth-onboarding-ui.md), `WeakPasswordError`/`DuplicateUserError` to inline field error; success → `login(authDb, result.user.email, password)` (FR-016, using the email from the result, never a form field), `redirect("/dashboard")`
-- [ ] T027 [US3] Implement `src/app/(auth)/invite/[token]/invite-form.tsx` — makes T025 pass
-- [ ] T028 [US3] Implement `src/app/(auth)/invite/[token]/page.tsx` — calls `previewInvitation(authDb, token)`, branches per data-model.md's mapping table to `InviteForm` or one of the four `TerminalState` (T010) views (FR-008)
+- [X] T026 [US3] Implement `src/app/(auth)/invite/[token]/actions.ts`'s `acceptInviteAction` — calls `acceptInvitation(authDb, token, { username, password, displayName })`; maps `InvalidInvitationTokenError`/`InvitationExpiredError`/`InvitationAlreadyAcceptedError`/`InvitationRevokedError` to the matching terminal view (race case, contracts/auth-onboarding-ui.md), `WeakPasswordError`/`DuplicateUserError` to inline field error; success → `login(authDb, result.user.email, password)` (FR-016, using the email from the result, never a form field), `redirect("/dashboard")`
+- [X] T027 [US3] Implement `src/app/(auth)/invite/[token]/invite-form.tsx` — makes T025 pass
+- [X] T028 [US3] Implement `src/app/(auth)/invite/[token]/page.tsx` — calls `previewInvitation(authDb, token)`, branches per data-model.md's mapping table to `InviteForm` or one of the four `TerminalState` (T010) views (FR-008)
 
 **Checkpoint**: `/invite/[token]` is fully functional and independently testable for all five states.
 
@@ -116,11 +116,11 @@
 
 ### Tests for User Story 4
 
-- [ ] T029 [P] [US4] Write `src/app/(auth)/welcome/page.test.tsx` FIRST — `renderToStaticMarkup` asserting the heading, three stat tiles, and CTA render given a sample `AppSessionUser`/org; must fail before T030
+- [X] T029 [P] [US4] Write `src/app/(auth)/welcome/page.test.tsx` FIRST — `renderToStaticMarkup` asserting the heading, three stat tiles, and CTA render given a sample `AppSessionUser`/org; must fail before T030
 
 ### Implementation for User Story 4
 
-- [ ] T030 [US4] Implement `src/app/(auth)/welcome/page.tsx` — requires a session (`authenticateSession(authDb, cookieHeader)`, else `redirect("/login")`), reads the org via `getOrganization(user.orgId)`, renders heading/stat-tiles/CTA (`redirect` target `/dashboard`) — makes T029 pass
+- [X] T030 [US4] Implement `src/app/(auth)/welcome/page.tsx` — requires a session (`authenticateSession(authDb, cookieHeader)`, else `redirect("/login")`), reads the org via `getOrganization(user.orgId)`, renders heading/stat-tiles/CTA (`redirect` target `/dashboard`) — makes T029 pass
 
 **Checkpoint**: All four routes/nine states are independently functional.
 
@@ -128,10 +128,10 @@
 
 ## Phase 7: Polish & Cross-Cutting Concerns
 
-- [ ] T031 [P] `pnpm typecheck && pnpm lint` clean across all new files
-- [ ] T032 [P] `pnpm vitest run "src/app/(auth)" src/bcs/identity-access/application/preview-invitation.test.ts` all green
-- [ ] T033 Manual verification per quickstart.md — all nine states, responsive check (~375px/~768px), design parity against `SkillCanon Auth.dc.html` in a real browser (dev server)
-- [ ] T034 Update `backlog/002-identity-access/009-auth-and-onboarding-ui.md`'s checkboxes against what's actually true and move to `archive/` once every Requirement/Acceptance Criteria is met (per this repo's archiving convention — don't force-complete anything not actually done)
+- [X] T031 [P] `pnpm typecheck && pnpm lint` clean across all new files
+- [X] T032 [P] `pnpm vitest run "src/app/(auth)" src/bcs/identity-access/application/preview-invitation.test.ts` all green
+- [X] T033 Manual verification per quickstart.md — all nine states, responsive check (~375px/~768px), design parity against `SkillCanon Auth.dc.html` in a real browser (dev server)
+- [X] T034 Update `backlog/002-identity-access/009-auth-and-onboarding-ui.md`'s checkboxes against what's actually true and move to `archive/` once every Requirement/Acceptance Criteria is met (per this repo's archiving convention — don't force-complete anything not actually done)
 
 ---
 
