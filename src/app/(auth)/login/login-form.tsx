@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState } from "react";
 import { EmailIcon } from "../_components/field-icons";
 import { AuthButton } from "../_components/auth-button";
+import { ErrorBanner } from "../_components/error-banner";
 import { PasswordField } from "../_components/password-field";
 import { TextField } from "../_components/text-field";
 import { loginAction, type LoginFormState } from "./actions";
@@ -23,11 +24,7 @@ export function LoginFormView({ state, action }: LoginFormViewProps) {
       </div>
 
       <form action={action} className="grid gap-5">
-        {state.error ? (
-          <p role="alert" className="rounded-control border border-red/35 bg-red-soft px-4 py-3 text-sm font-semibold text-red">
-            {state.error}
-          </p>
-        ) : null}
+        {state.error ? <ErrorBanner message={state.error} /> : null}
 
         <TextField
           label="Email"

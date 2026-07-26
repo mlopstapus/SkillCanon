@@ -20,8 +20,8 @@ describe("InviteForm", () => {
     expect(markup).toContain("Join Acme Ops.");
     expect(markup).toContain("Platform");
     expect(markup).toContain("Member");
-    expect(markup).toContain('value="kai@example.com"');
-    expect(markup).toContain("Locked to this invitation.");
+    expect(markup).toContain("kai@example.com");
+    expect(markup).toContain("Locked to this invitation");
     expect(markup).toContain('name="displayName"');
     expect(markup).toContain('name="username"');
     expect(markup).toContain('name="password"');

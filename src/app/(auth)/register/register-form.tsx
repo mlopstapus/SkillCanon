@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useActionState } from "react";
-import { EmailIcon, OrgIcon, PersonIcon, TeamIcon } from "../_components/field-icons";
+import { EmailIcon, OrgIcon, PersonIcon, ShieldCheckIcon, TeamIcon } from "../_components/field-icons";
 import { AuthButton } from "../_components/auth-button";
+import { ErrorBanner } from "../_components/error-banner";
 import { PasswordField } from "../_components/password-field";
 import { TerminalState } from "../_components/terminal-state";
 import { TextField } from "../_components/text-field";
@@ -22,7 +23,8 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
         message="First-run setup can only run once. Sign in with an existing admin account to continue."
         buttonLabel="Go to sign in"
         href="/login"
-        tone="warning"
+        tone="accent"
+        icon={<ShieldCheckIcon className="h-6 w-6" />}
       />
     );
   }
@@ -36,11 +38,7 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
       </div>
 
       <form action={action} className="grid gap-6">
-        {state.error ? (
-          <p role="alert" className="rounded-control border border-red/35 bg-red-soft px-4 py-3 text-sm font-semibold text-red">
-            {state.error}
-          </p>
-        ) : null}
+        {state.error ? <ErrorBanner message={state.error} /> : null}
 
         <fieldset className="grid gap-4">
           <legend className="mb-1 font-display text-lg font-semibold text-text">Organization</legend>

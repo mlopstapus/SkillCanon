@@ -1,3 +1,4 @@
+import { LogoMark, Wordmark } from "@/shared/ui";
 import { DOCS_URL, NAV_ANCHOR_LINKS, QUICKSTART_HREF, REPO_URL } from "./sections";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -6,12 +7,8 @@ export function MarketingNav() {
     <nav className="sticky top-0 z-50 border-b border-border bg-bg/72 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-3.5 px-6">
         <a href="#top" className="flex items-center gap-2.5">
-          <span className="grid size-7.5 place-items-center rounded-tile border border-border2 bg-surface-2 font-display text-[13px] font-bold text-a">
-            S
-          </span>
-          <span className="font-display text-[18px] font-bold tracking-[-.02em]">
-            Skill<span className="text-a">Canon</span>
-          </span>
+          <LogoMark size={30} />
+          <Wordmark className="text-[18px]" />
         </a>
 
         <div className="hidden items-center gap-1 lg:flex">

@@ -15,23 +15,23 @@ export function PasswordField({ label = "Password", hint, error, ...inputProps }
   const [visible, setVisible] = useState(false);
 
   return (
-    <div className="grid gap-2">
-      <TextField
-        {...inputProps}
-        label={label}
-        type={visible ? "text" : "password"}
-        icon={<PasswordIcon className="h-4 w-4" />}
-        hint={hint}
-        error={error}
-      />
-      <button
-        type="button"
-        className="justify-self-end text-xs font-semibold text-a transition-colors hover:text-a-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-a"
-        onClick={() => setVisible((current) => !current)}
-        aria-label={visible ? "Hide password" : "Show password"}
-      >
-        {visible ? "Hide" : "Show"}
-      </button>
-    </div>
+    <TextField
+      {...inputProps}
+      label={label}
+      type={visible ? "text" : "password"}
+      icon={<PasswordIcon className="h-4 w-4" />}
+      hint={hint}
+      error={error}
+      trailing={
+        <button
+          type="button"
+          className="font-mono text-[11px] font-medium text-faint transition-colors hover:text-a focus:outline-none focus-visible:ring-2 focus-visible:ring-a"
+          onClick={() => setVisible((current) => !current)}
+          aria-label={visible ? "Hide password" : "Show password"}
+        >
+          {visible ? "hide" : "show"}
+        </button>
+      }
+    />
   );
 }

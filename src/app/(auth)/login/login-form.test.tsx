@@ -15,4 +15,14 @@ describe("LoginForm", () => {
     expect(markup).toContain('href="/register"');
     expect(markup).not.toContain('role="alert"');
   });
+
+  it("renders the error banner when state.error is set", () => {
+    const markup = renderToStaticMarkup(
+      <LoginFormView state={{ error: "Incorrect email or password." }} action={vi.fn()} />,
+    );
+
+    expect(markup).toContain('role="alert"');
+    expect(markup).toContain("Incorrect email or password.");
+    expect(markup).toContain("<svg");
+  });
 });

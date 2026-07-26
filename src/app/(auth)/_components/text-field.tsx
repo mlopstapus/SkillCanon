@@ -6,6 +6,7 @@ type TextFieldProps = InputHTMLAttributes<HTMLInputElement> & {
   icon: ReactNode;
   hint?: string;
   error?: string;
+  trailing?: ReactNode;
 };
 
 export function TextField({
@@ -13,6 +14,7 @@ export function TextField({
   icon,
   hint,
   error,
+  trailing,
   className,
   id,
   name,
@@ -24,8 +26,8 @@ export function TextField({
     .join(" ") || undefined;
 
   return (
-    <label className="grid gap-2 text-sm font-semibold text-text" htmlFor={inputId}>
-      <span>{label}</span>
+    <label className="grid gap-2" htmlFor={inputId}>
+      <span className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-faint">{label}</span>
       <span
         className={cn(
           "flex min-h-12 items-center gap-3 rounded-control border border-border bg-surface px-3 text-dim transition-colors focus-within:border-a focus-within:text-a focus-within:shadow-glow",
@@ -43,6 +45,7 @@ export function TextField({
           aria-invalid={error ? true : undefined}
           className="min-w-0 flex-1 bg-transparent py-3 text-[16px] text-text outline-none placeholder:text-faint read-only:cursor-not-allowed sm:text-sm"
         />
+        {trailing ? <span className="shrink-0">{trailing}</span> : null}
       </span>
       {hint ? (
         <span id={`${inputId}-hint`} className="text-xs font-medium text-dim">

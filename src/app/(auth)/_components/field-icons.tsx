@@ -67,3 +67,55 @@ export function PersonIcon(props: IconProps) {
     </FieldIconShell>
   );
 }
+
+export function AlertIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5.5M12 16.5h.01" />
+    </FieldIconShell>
+  );
+}
+
+export function ShieldCheckIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <path d="M12 3l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V6z" />
+      <path d="M9 12l2 2 4-4" />
+    </FieldIconShell>
+  );
+}
+
+export function ClockIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </FieldIconShell>
+  );
+}
+
+export function CheckIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <path d="M5 12.5l4.5 4.5L19 7" />
+    </FieldIconShell>
+  );
+}
+
+export function XCircleIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M6.8 6.8l10.4 10.4" />
+    </FieldIconShell>
+  );
+}
+
+export function BrokenLinkIcon(props: IconProps) {
+  return (
+    <FieldIconShell {...props}>
+      <path d="M10.5 13.5l3-3M8 15l-1.2 1.2a3.3 3.3 0 0 1-4.7-4.7L4 10M16 9l1.2-1.2a3.3 3.3 0 0 1 4.7 4.7L20.5 14" />
+    </FieldIconShell>
+  );
+}

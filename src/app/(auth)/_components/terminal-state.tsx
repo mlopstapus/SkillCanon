@@ -1,6 +1,7 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-export type TerminalStateTone = "neutral" | "warning" | "success";
+export type TerminalStateTone = "accent" | "neutral" | "success" | "danger";
 
 type TerminalStateProps = {
   heading: string;
@@ -8,13 +9,24 @@ type TerminalStateProps = {
   buttonLabel: string;
   href: string;
   tone?: TerminalStateTone;
+  icon?: ReactNode;
 };
 
 const toneClass: Record<TerminalStateTone, string> = {
-  neutral: "border-a/30 bg-a-soft text-a",
-  warning: "border-red/35 bg-red-soft text-red",
+  accent: "border-a/35 bg-a-soft text-a",
+  neutral: "border-border-2 bg-surface-2 text-dim",
   success: "border-green/35 bg-green-soft text-green",
+  danger: "border-red/35 bg-red-soft text-red",
 };
+
+function DefaultIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6">
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5v5.5M12 16.5h.01" />
+    </svg>
+  );
+}
 
 export function TerminalState({
   heading,
@@ -22,14 +34,15 @@ export function TerminalState({
   buttonLabel,
   href,
   tone = "neutral",
+  icon,
 }: TerminalStateProps) {
   return (
     <section className="grid gap-6 text-center">
       <div
         aria-hidden="true"
-        className={`mx-auto grid h-14 w-14 place-items-center rounded-full border ${toneClass[tone]}`}
+        className={`mx-auto grid h-14 w-14 place-items-center rounded-2xl border ${toneClass[tone]}`}
       >
-        <span className="font-mono text-lg font-semibold">!</span>
+        {icon ?? <DefaultIcon />}
       </div>
       <div className="grid gap-3">
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">{heading}</h1>
