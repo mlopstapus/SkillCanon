@@ -17,6 +17,21 @@ export interface Policy {
   isInherited: false;
 }
 
+export type EffectivePolicy = Omit<Policy, "isInherited"> & {
+  isInherited: boolean;
+};
+
+export interface EffectivePolicySet {
+  inherited: EffectivePolicy[];
+  local: EffectivePolicy[];
+}
+
+export interface LocalGovernanceCount {
+  policyCount: number;
+  objectiveCount: number;
+  total: number;
+}
+
 export interface PolicyActor {
   organizationId: string;
   userId: string;

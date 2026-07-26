@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { PolicyEnforcementType, UpdatePolicyFields } from "../domain/policy";
 import { policies } from "./schema";
@@ -85,4 +85,19 @@ export async function listActiveByProject(tx: Tx, organizationId: string, projec
       ),
     )
     .orderBy(desc(policies.priority));
+}
+
+
+export async function countActiveByTeam(tx: Tx, organizationId: string, teamId: string): Promise<number> {
+  const [row] = await tx
+    .select({ count: count() })
+    .from(policies)
+    .where(
+      and(
+        eq(policies.organizationId, organizationId),
+        eq(policies.teamId, teamId),
+        eq(policies.isActive, true),
+      ),
+    );
+  return Number(row?.count ?? 0);
 }
