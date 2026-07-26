@@ -18,3 +18,25 @@ export {
   PolicyNotFoundError,
   PolicyScopeNotFoundError,
 } from "./domain/policy";
+
+export { createObjective } from "./application/create-objective";
+export { deleteObjective } from "./application/delete-objective";
+export { getObjective } from "./application/get-objective";
+export { listProjectObjectives } from "./application/list-project-objectives";
+export { listTeamObjectives } from "./application/list-team-objectives";
+export { listUserObjectives } from "./application/list-user-objectives";
+export { updateObjective } from "./application/update-objective";
+export type {
+  CreateObjectiveParams,
+  Objective,
+  ObjectiveActor,
+  ObjectiveScopeVerifier,
+  UpdateObjectiveFields,
+} from "./domain/objective";
+export {
+  InvalidObjectiveInputError,
+  ObjectiveCycleError,
+  ObjectiveNotFoundError,
+  ObjectiveParentNotFoundError,
+  ObjectiveScopeNotFoundError,
+} from "./domain/objective";
