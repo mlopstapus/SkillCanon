@@ -4,9 +4,16 @@
 
 **Created**: 2026-07-25
 
-**Status**: Draft
+**Status**: Clarified
 
 **Input**: User description: "Audit Event Schema & Write Path — remaining scope (backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md, issue SKI-27)"
+
+## Clarifications
+
+### Session 2026-07-26
+
+- Q: Should this feature's retrofit scope also cover the two existing user-update mutations (`update-user`, `deactivate-user`), or is user-update coverage intentionally deferred to a later item? → A: Yes — include `update-user` and `deactivate-user` in this feature's retrofit scope alongside user creation.
+- Q: Should the documented action-verb vocabulary be corrected to match what's actually shipped (drop `invited`, add `accepted`), or should shipped call sites be renamed to match the originally proposed list? → A: Yes — correct the documented vocabulary to match shipped code (drop `invited`, add `accepted`); no shipped call sites are renamed.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -14,7 +21,7 @@
 
 A compliance officer or org admin reviewing the audit log expects that any change to an organization, team, or user in their org — not just logins/logouts — shows up as an event, with no gaps.
 
-**Why this priority**: This is the core, tenet-C1-mandated guarantee ("every mutation captured, on every transport"). Today, organization creation, team creation/update/reparenting/insert-between, and user creation (and possibly user update/deactivation — see FR-003) mutate real rows with no corresponding audit row at all — the single biggest hole in the audit trail as it exists right now.
+**Why this priority**: This is the core, tenet-C1-mandated guarantee ("every mutation captured, on every transport"). Today, organization creation, team creation/update/reparenting/insert-between, and user creation/update/deactivation mutate real rows with no corresponding audit row at all — the single biggest hole in the audit trail as it exists right now.
 
 **Independent Test**: Perform each of these mutations against a real database and confirm exactly one `audit_events` row is written in the same transaction; force each mutation to fail partway through and confirm no audit row is written either.
 
@@ -22,7 +29,7 @@ A compliance officer or org admin reviewing the audit log expects that any chang
 
 1. **Given** an admin creates a new organization, **When** the creation succeeds, **Then** exactly one audit event is recorded describing that creation, in the same transaction as the row insert.
 2. **Given** an admin creates, updates, reparents, or inserts a team between two existing teams, **When** each of those operations succeeds, **Then** exactly one corresponding audit event is recorded for that operation, in the same transaction.
-3. **Given** a new user is created (self-registration, invitation acceptance, or first-run admin bootstrap), **When** that operation succeeds, **Then** exactly one corresponding audit event is recorded, in the same transaction. (Whether existing user-update/deactivation mutations are also in this feature's retrofit scope is an open question — see FR-003.)
+3. **Given** a new user is created (self-registration, invitation acceptance, or first-run admin bootstrap) or an existing user is updated or deactivated, **When** that operation succeeds, **Then** exactly one corresponding audit event is recorded, in the same transaction.
 4. **Given** any of the mutations above, **When** the mutation is forced to fail (e.g. a constraint violation or a thrown error mid-transaction), **Then** no audit event is written for that attempt — the mutation and its audit record roll back together.
 5. **Given** an admin invites a user, accepts an invitation, revokes an invitation, creates an API key, or revokes an API key, **When** each of those already-shipped operations is exercised, **Then** it continues to write exactly one corresponding audit event as it does today — this spec does not change their behavior (see Assumptions).
 
@@ -56,7 +63,7 @@ An engineer adding a new mutation type in any bounded context wants to know whic
 
 **Acceptance Scenarios**:
 
-1. **Given** the documented verb vocabulary, **When** it is compared against every `action` string currently produced by shipped code, **Then** every real verb in use today (`created`, `revoked`, `accepted`, `login`, `login_failed`, `logout`) appears in the documented list.
+1. **Given** the documented verb vocabulary, **When** it is compared against every `action` string currently produced by shipped code, **Then** every real verb in use today (`created`, `revoked`, `accepted`, `login`, `login_failed`, `logout`) appears in the documented list, and the list contains no verb (e.g. `invited`) that no shipped call site actually produces.
 2. **Given** a future bounded context needs a new mutation-type verb not yet in the list, **When** the contributor consults the documented vocabulary, **Then** they can either reuse an existing verb or extend the list through the same document, rather than inventing an unlisted one silently.
 
 ---
@@ -74,12 +81,12 @@ An engineer adding a new mutation type in any bounded context wants to know whic
 
 - **FR-001**: System MUST write exactly one audit event, in the same transaction as the mutation, whenever an organization is created.
 - **FR-002**: System MUST write exactly one audit event, in the same transaction as the mutation, whenever a team is created, updated, reparented, or inserted between two existing teams.
-- **FR-003**: System MUST write exactly one audit event, in the same transaction as the mutation, whenever a user is created (including via first-run admin bootstrap and invitation acceptance's user-creation path). [NEEDS CLARIFICATION: the parent backlog item's retrofit list names only "user creation" for this category (unlike its team bullet, which explicitly lists update/reparenting/insert-between too) — should this feature's retrofit scope also cover the two existing user-update mutations (`update-user`, `deactivate-user`), or is user-update coverage intentionally deferred to a later item?]
+- **FR-003**: System MUST write exactly one audit event, in the same transaction as the mutation, whenever a user is created (including via first-run admin bootstrap and invitation acceptance's user-creation path), updated, or deactivated.
 - **FR-004**: System MUST NOT write any audit event for a mutation from FR-001–FR-003 that fails or is rolled back partway through.
 - **FR-005**: System MUST add a `transport` field to the audit event record, restricted to exactly one of `web`, `api`, `cli`, or `system`, and MUST reject an attempt to record an event without one.
 - **FR-006**: System MUST add an optional `source_ip` field to the audit event record, populated when the originating request has a network source and left empty when it does not (e.g. `system`-transport events).
 - **FR-007**: Every call site that records an audit event as of this feature (existing: login, logout, invitation create/accept/revoke, API key create/revoke; new: the retrofitted mutations in FR-001–FR-003) MUST pass a real, specific `transport` value appropriate to how that call was made — none may pass a placeholder or leave it unset.
-- **FR-008**: System MUST provide a single documented, enumerable reference of canonical audit action verbs, covering at minimum every verb currently produced by shipped code (`created`, `revoked`, `accepted`, `login`, `login_failed`, `logout`) plus the verbs already anticipated by name for near-term future features (`updated`, `deleted`, `reparented`, `shared`, `synced`, `pruned`). [NEEDS CLARIFICATION: the parent backlog item's proposed vocabulary includes `invited`, but shipped code already records invitation creation as `invitation.created`, and there is no `accepted` verb in the parent item's list even though shipped code uses it — should the documented vocabulary be corrected to match what's actually shipped (drop `invited`, add `accepted`), or should shipped call sites be renamed to match the originally proposed list?]
+- **FR-008**: System MUST provide a single documented, enumerable reference of canonical audit action verbs: `created`, `updated`, `deleted`, `revoked`, `reparented`, `shared`, `accepted`, `login`, `logout`, `login_failed`, `synced`, `pruned` — corrected from the parent backlog item's originally proposed list to match what shipped code already records (`invited` dropped, since invitation creation is recorded as `invitation.created`; `accepted` added, since shipped code already records `invitation.accepted`). No shipped call site's `action` string is renamed by this feature.
 - **FR-009**: The documented verb reference MUST state, for each verb, its associated UI color-coding, so the audit log UI feature can consume it directly rather than re-deriving a mapping.
 
 ### Key Entities
@@ -98,7 +105,7 @@ An engineer adding a new mutation type in any bounded context wants to know whic
 
 ## Assumptions
 
-- Invitation (`invite`/`accept`/`revoke`) and API key (`create`/`revoke`) mutations already call `withAudit()` + `record()` today (shipped in `009-invitations` and `010-api-keys`) — the backlog item's retrofit list is treated as already satisfied for these two categories, and this feature's retrofit scope (FR-001–FR-003) is limited to what remains unwrapped: organization creation, team hierarchy mutations, and user creation (user update/deactivation pending the FR-003 clarification).
+- Invitation (`invite`/`accept`/`revoke`) and API key (`create`/`revoke`) mutations already call `withAudit()` + `record()` today (shipped in `009-invitations` and `010-api-keys`) — the backlog item's retrofit list is treated as already satisfied for these two categories, and this feature's retrofit scope (FR-001–FR-003) is limited to what remains unwrapped: organization creation, team hierarchy mutations, and user creation/update/deactivation.
 - `login`/`logout` continue to call `record()` directly inside a plain transaction rather than through `withAudit()` — per the parent backlog item, neither is a row-changing "mutation" in the sense `withAudit()` pairs with, so no change to that call pattern is in scope here; they are only touched to add a real `transport` value once that field exists.
 - The four-value `transport` taxonomy (`web`/`api`/`cli`/`system`) is a new, audit-trail-specific field distinct from any structured-request-log `transport` field elsewhere in the codebase; no existing code's meaning of "transport" is being changed, only this new column.
 - Determining the correct `transport` value at each call site (e.g. how a "web" request is distinguished from an "api" one at the point `record()` is called) is an implementation detail to be resolved during planning, not this spec — this spec only requires that the correct one of the four values reaches storage.
