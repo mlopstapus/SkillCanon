@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,7 +31,7 @@
 
 ## Notes
 
-- Two [NEEDS CLARIFICATION] markers remain, both escalated to the workspace owner rather than resolved by assumption:
-  - **FR-003**: whether the retrofit scope also covers the two existing user-update mutations (`update-user`, `deactivate-user`), since the parent backlog item's retrofit list names only "user creation" for this category.
-  - **FR-008**: the `invited`-vs-`created`/missing-`accepted` mismatch between the parent backlog item's proposed action-verb vocabulary and what shipped code already records — a real, high-impact ambiguity since the `action` naming scheme is a public-ish contract per `bcs/audit-compliance/CONTRACT.md`'s Breaking Change Policy once the audit UI/export ships.
+- Both [NEEDS CLARIFICATION] markers were resolved via the issue owner's (Benjamin Anderson) 2026-07-26 answers, recorded in spec.md's `## Clarifications` section:
+  - **FR-003**: retrofit scope now explicitly includes `update-user` and `deactivate-user` alongside user creation.
+  - **FR-008**: documented vocabulary corrected to match shipped code (`invited` dropped, `accepted` added); no shipped call sites renamed.
 - Named references to `withAudit()`, `record()`, and specific application-layer function names (e.g. `create-team`, `provision-team-and-admin`) appear in the Assumptions/Edge Cases sections rather than the Requirements — this is existing internal domain vocabulary already established by the shipped codebase and referenced the same way in this repo's other specs (e.g. `008-jwt-session-auth/spec.md`'s Clarifications), not new implementation detail being introduced here.
