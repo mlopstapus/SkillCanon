@@ -1,27 +1,28 @@
-# Audit & Compliance — Contract
+# Audit & Compliance - Contract
 
 **Owner:** Ben Anderson
 **Status:** Draft
 
 ## Purpose
 
-Owns the immutable `AuditEvent` log. Every mutating command in every other context writes here as a side effect, in the same database transaction as the mutation itself, so an audit write can never silently fail while the mutation it describes succeeds. Query/export access is gated by the calling org's `auditRetentionDays` entitlement. This exists from day one — not deferred to when Enterprise is built — because retrofitting audit coverage after the fact means every historical mutation site has to be found and patched, and anything already shipped without it is unrecoverable. It also directly serves the SOC2/NIST compliance expectations already noted in CLAUDE.md.
+Owns the immutable `AuditEvent` log. Every mutating command in every other context writes here as a side effect, in the same database transaction as the mutation itself, so an audit write can never silently fail while the mutation it describes succeeds. Query/export access is gated by the calling org's `auditRetentionDays` entitlement. This exists from day one - not deferred to when Enterprise is built - because retrofitting audit coverage after the fact means every historical mutation site has to be found and patched, and anything already shipped without it is unrecoverable. It also directly serves the SOC2/NIST compliance expectations already noted in CLAUDE.md.
 
 ## Exposed APIs
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Requires `transport` (`web`/`api`/`cli`/`system`) and accepts nullable `sourceIp`. Redacts known-sensitive fields (`password_hash`, `passwordHash`, `key_hash`, `keyHash`, raw tokens) from `before`/`after` before storage. | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements, VCS Integration (011-vcs-integration) |
-| `list(orgId, filters, { requestingUserId })` | Paginated query, filtered by the entitlement-resolved retention window | Distribution (audit log UI) |
-| `export(orgId, format)` | Bulk export (Enterprise-gated via entitlement) | Distribution |
+| `record(tx, event)` | Append one audit event; `tx` is a transaction handle - only callable from inside an open transaction, never a standalone unaudited write. Requires `transport` (`web`/`api`/`cli`/`system`) and accepts nullable `sourceIp`. Redacts known-sensitive fields (`password_hash`, `passwordHash`, `key_hash`, `keyHash`, raw tokens) from `before`/`after` before storage. | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements, VCS Integration (011-vcs-integration) |
+| `listAuditEvents(db, orgId, filters, { requestingUserId, now? })` | Paginated reverse-chronological query filtered by organization, the entitlement-resolved retention window, search/resource/actor/transport/date filters, and bounded page size. Until epic 009 lands, retention resolves to the hardcoded Free default: 7 days. Actor display-name search is resolved through the Identity & Access public contract before querying audit rows. | Distribution (audit log UI) |
+| `exportAuditEvents(db, orgId, "csv", { now? })` | Bulk CSV export of the organization's complete currently-retained history, including first-class transport/source IP metadata. Until epic 009 defines and resolves a real export entitlement, this fails closed for every org with `AuditExportEntitlementRequiredError`. | Distribution |
+| `pruneAuditEvents(db, orgId, { now? })` | Scheduled-job entry point for one organization. Deletes events older than the 7-day hardcoded retention cutoff and writes exactly one transactional `audit.pruned` system event with `transport: "system"` and `after: { deleted: <count> }`. | Scheduler / platform runtime |
 
 ## Events Published
 
-None — this context is a sink, not a source.
+None - this context is a sink, not a source.
 
 ## Events Consumed
 
-None directly — other contexts call `record()` inline rather than publishing events this context subscribes to, specifically so the write happens transactionally, not eventually.
+None directly - other contexts call `record()` inline rather than publishing events this context subscribes to, specifically so the write happens transactionally, not eventually.
 
 ## Data Contracts
 
@@ -62,8 +63,8 @@ Known noncanonical verb: `invited`. Invitation creation is `invitation.created`;
 
 ## Stability Guarantees
 
-`AuditEvent` rows are never updated or deleted by application code (append-only); only entitlement-driven retention pruning removes rows past an org's window, and pruning is a scheduled job owned by this BC, not ad hoc deletes from elsewhere.
+`AuditEvent` rows are never updated by application code. Only `pruneAuditEvents()` may delete rows, and only when they are older than the resolved retention window for that organization. Query/export callers also apply the same retention cutoff before physical deletion happens, so stale rows are never visible just because the scheduled job has not run yet.
 
 ## Breaking Change Policy
 
-The `action` naming scheme (`resource.verb`) is a public-ish contract once the audit UI/export ships to customers — renaming existing action strings breaks saved filters/exports and requires a PDR.
+The `action` naming scheme (`resource.verb`) is a public-ish contract once the audit UI/export ships to customers - renaming existing action strings breaks saved filters/exports and requires a PDR.

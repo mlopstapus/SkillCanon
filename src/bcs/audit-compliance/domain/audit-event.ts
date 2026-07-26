@@ -96,3 +96,96 @@ export const REDACTED_KEYS = [
   "rawToken",
   "jwt",
 ] as const;
+
+export const DEFAULT_AUDIT_RETENTION_DAYS = 7;
+export const DEFAULT_AUDIT_PAGE_SIZE = 50;
+export const MAX_AUDIT_PAGE_SIZE = 200;
+
+export type AuditExportFormat = "csv";
+
+export interface AuditEntitlements {
+  auditRetentionDays: number;
+  canExportAuditEvents: boolean;
+}
+
+export interface AuditEventFilters {
+  search?: string;
+  resourceType?: string;
+  actorUserId?: string;
+  actorApiKeyId?: string;
+  transport?: AuditTransport;
+  createdAtFrom?: Date;
+  createdAtTo?: Date;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface NormalizedAuditEventFilters extends Omit<AuditEventFilters, "page" | "pageSize"> {
+  retentionCutoff: Date;
+  actorUserIds?: string[];
+  limit?: number;
+  offset?: number;
+}
+
+export interface ListAuditEventsOptions {
+  requestingUserId: string;
+  now?: Date;
+}
+
+export interface AuditEventPage {
+  items: AuditEvent[];
+  page: number;
+  pageSize: number;
+  total: number;
+  retentionDays: number;
+}
+
+export interface AuditExportResult {
+  filename: string;
+  contentType: "text/csv";
+  body: string;
+}
+
+export class AuditExportEntitlementRequiredError extends Error {
+  code = "ENTITLEMENT_REQUIRED";
+
+  constructor() {
+    super('This feature requires the "auditExport" entitlement, which is not enabled.');
+    this.name = "AuditExportEntitlementRequiredError";
+  }
+}
+
+export class UnsupportedAuditExportFormatError extends Error {
+  constructor(format: string) {
+    super(`Unsupported audit export format: ${format}`);
+    this.name = "UnsupportedAuditExportFormatError";
+  }
+}
+
+export function resolveAuditEntitlements(): AuditEntitlements {
+  return {
+    auditRetentionDays: DEFAULT_AUDIT_RETENTION_DAYS,
+    canExportAuditEvents: false,
+  };
+}
+
+export function retentionCutoff(now: Date, retentionDays: number): Date {
+  return new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+}
+
+export function normalizeAuditPagination(filters: AuditEventFilters): {
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const page = Math.max(1, Math.trunc(filters.page ?? 1));
+  const requestedPageSize = Math.trunc(filters.pageSize ?? DEFAULT_AUDIT_PAGE_SIZE);
+  const pageSize = Math.min(MAX_AUDIT_PAGE_SIZE, Math.max(1, requestedPageSize));
+  return {
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
+}
