@@ -116,3 +116,79 @@ export async function queryObjectiveAuditEvents(
   );
   return Array.from(rows);
 }
+
+
+export async function createObjectiveFixtureTeam(
+  testDb: TestDb,
+  fixture: ObjectiveFixtureOrg,
+  params: { parentTeamId?: string | null; name?: string } = {},
+): Promise<string> {
+  const teamId = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.teams (id, organization_id, name, slug, parent_team_id)
+    values (
+      ${teamId},
+      ${fixture.organizationId},
+      ${params.name ?? `Team ${teamId}`},
+      ${`team-${randomUUID()}`},
+      ${params.parentTeamId ?? null}
+    )
+  `);
+  return teamId;
+}
+
+export async function createObjectiveFixtureUser(
+  testDb: TestDb,
+  fixture: ObjectiveFixtureOrg,
+  teamId: string,
+): Promise<string> {
+  const userId = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
+    values (
+      ${userId},
+      ${fixture.organizationId},
+      ${teamId},
+      ${`user-${randomUUID()}`},
+      'Fixture User',
+      ${`${randomUUID()}@example.com`},
+      'member',
+      true
+    )
+  `);
+  return userId;
+}
+
+export async function insertObjectiveRow(
+  testDb: TestDb,
+  params: {
+    organizationId: string;
+    teamId?: string | null;
+    projectId?: string | null;
+    userId?: string | null;
+    title: string;
+    status?: string;
+    createdAt?: Date;
+    parentObjectiveId?: string | null;
+  },
+): Promise<string> {
+  const id = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into governance.objectives
+      (id, organization_id, team_id, project_id, user_id, title, description, parent_objective_id, status, created_at)
+    values
+      (
+        ${id},
+        ${params.organizationId},
+        ${params.teamId ?? null},
+        ${params.projectId ?? null},
+        ${params.userId ?? null},
+        ${params.title},
+        null,
+        ${params.parentObjectiveId ?? null},
+        ${params.status ?? "active"},
+        ${(params.createdAt ?? new Date()).toISOString()}
+      )
+  `);
+  return id;
+}

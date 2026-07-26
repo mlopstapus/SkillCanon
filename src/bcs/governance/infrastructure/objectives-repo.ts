@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { UpdateObjectiveFields } from "../domain/objective";
 import { objectives } from "./schema";
@@ -98,4 +98,33 @@ export async function listActiveByUser(tx: Tx, organizationId: string, userId: s
       ),
     )
     .orderBy(asc(objectives.createdAt));
+}
+
+
+export async function countActiveByTeam(tx: Tx, organizationId: string, teamId: string): Promise<number> {
+  const [row] = await tx
+    .select({ count: count() })
+    .from(objectives)
+    .where(
+      and(
+        eq(objectives.organizationId, organizationId),
+        eq(objectives.teamId, teamId),
+        eq(objectives.status, "active"),
+      ),
+    );
+  return Number(row?.count ?? 0);
+}
+
+export async function countActiveByUser(tx: Tx, organizationId: string, userId: string): Promise<number> {
+  const [row] = await tx
+    .select({ count: count() })
+    .from(objectives)
+    .where(
+      and(
+        eq(objectives.organizationId, organizationId),
+        eq(objectives.userId, userId),
+        eq(objectives.status, "active"),
+      ),
+    );
+  return Number(row?.count ?? 0);
 }

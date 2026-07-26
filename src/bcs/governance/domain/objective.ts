@@ -12,6 +12,15 @@ export interface Objective {
   createdAt: Date;
 }
 
+export type EffectiveObjective = Objective & {
+  isInherited: boolean;
+};
+
+export interface EffectiveObjectiveSet {
+  inherited: EffectiveObjective[];
+  local: EffectiveObjective[];
+}
+
 export interface ObjectiveActor {
   organizationId: string;
   userId: string;

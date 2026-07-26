@@ -10,6 +10,7 @@ export interface PolicyFixtureOrg {
   actor: PolicyActor;
   teamId: string;
   projectId: string;
+  userId: string;
 }
 
 export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtureOrg> {
@@ -28,12 +29,17 @@ export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtur
     insert into identity_access.teams (id, organization_id, name, slug)
     values (${teamId}, ${organizationId}, 'Root', ${teamSlug})
   `);
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
+    values (${userId}, ${organizationId}, ${teamId}, ${`user-${randomUUID()}`}, 'Test User', ${`${randomUUID()}@example.com`}, 'member', true)
+  `);
 
   return {
     organizationId,
     actor: { organizationId, userId },
     teamId,
     projectId,
+    userId,
   };
 }
 
@@ -102,4 +108,77 @@ export async function queryPolicyAuditEvents(
     sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`,
   );
   return Array.from(rows);
+}
+
+
+export async function createPolicyFixtureTeam(
+  testDb: TestDb,
+  fixture: PolicyFixtureOrg,
+  params: { parentTeamId?: string | null; name?: string } = {},
+): Promise<string> {
+  const teamId = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.teams (id, organization_id, name, slug, parent_team_id)
+    values (
+      ${teamId},
+      ${fixture.organizationId},
+      ${params.name ?? `Team ${teamId}`},
+      ${`team-${randomUUID()}`},
+      ${params.parentTeamId ?? null}
+    )
+  `);
+  return teamId;
+}
+
+export async function createPolicyFixtureUser(
+  testDb: TestDb,
+  fixture: PolicyFixtureOrg,
+  teamId: string,
+): Promise<string> {
+  const userId = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
+    values (
+      ${userId},
+      ${fixture.organizationId},
+      ${teamId},
+      ${`user-${randomUUID()}`},
+      'Fixture User',
+      ${`${randomUUID()}@example.com`},
+      'member',
+      true
+    )
+  `);
+  return userId;
+}
+
+export async function insertPolicyRow(
+  testDb: TestDb,
+  params: {
+    organizationId: string;
+    teamId?: string | null;
+    projectId?: string | null;
+    name: string;
+    priority?: number;
+    isActive?: boolean;
+  },
+): Promise<string> {
+  const id = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into governance.policies
+      (id, organization_id, team_id, project_id, name, enforcement_type, content, priority, is_active)
+    values
+      (
+        ${id},
+        ${params.organizationId},
+        ${params.teamId ?? null},
+        ${params.projectId ?? null},
+        ${params.name},
+        'prepend',
+        ${`${params.name} content`},
+        ${params.priority ?? 0},
+        ${params.isActive ?? true}
+      )
+  `);
+  return id;
 }
