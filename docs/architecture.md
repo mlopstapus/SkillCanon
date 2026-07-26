@@ -1,6 +1,6 @@
 # Architecture: SkillCanon
 
-**Last updated:** 2026-07-23
+**Last updated:** 2026-07-25
 **Status:** Proposed
 
 ## Overview
@@ -9,7 +9,7 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 
 ## Architectural Style
 
-**Modular monolith**: a single Next.js/TypeScript application (pnpm-managed), internally organized into seven bounded contexts (`src/bcs/`) that communicate via synchronous in-process function calls, backed by one PostgreSQL database (per-context Postgres schemas for physical ownership clarity). Chosen over microservices or an event-driven architecture because the team is one person, the domain's hardest problems (governance resolution, audit completeness) need strong consistency rather than eventual consistency, and the operational simplicity of one deployable directly serves both the self-hosted OSS use case and a solo-maintained SaaS running on AWS. See [PDR-001](../docs/pdr/001-typescript-unification.md), [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md), and [PDR-009](../docs/pdr/009-aws-hosting-platform.md).
+**Modular monolith**: a single Next.js/TypeScript application (pnpm-managed), internally organized into eight bounded contexts (`src/bcs/`) that communicate via synchronous in-process function calls, backed by one PostgreSQL database (per-context Postgres schemas for physical ownership clarity). Chosen over microservices or an event-driven architecture because the team is one person, the domain's hardest problems (governance resolution, audit completeness) need strong consistency rather than eventual consistency, and the operational simplicity of one deployable directly serves both the self-hosted OSS use case and a solo-maintained SaaS running on AWS. See [PDR-001](../docs/pdr/001-typescript-unification.md), [PDR-007](../docs/pdr/007-synchronous-in-process-contexts.md), and [PDR-009](../docs/pdr/009-aws-hosting-platform.md).
 
 ## Bounded Contexts
 
@@ -22,13 +22,15 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 | Billing & Entitlements | Stripe subscriptions, plan defaults, per-org entitlement flags/limits | [Contract](../src/bcs/billing-entitlements/CONTRACT.md) | [Ownership](../src/bcs/billing-entitlements/OWNERSHIP.md) |
 | Audit & Compliance | Immutable audit log, retention/export | [Contract](../src/bcs/audit-compliance/CONTRACT.md) | [Ownership](../src/bcs/audit-compliance/OWNERSHIP.md) |
 | Distribution | REST API, Skill Sync CLI (Claude Code), UI composition, MCP protocol server (deprioritized) — the external boundary | [Contract](../src/bcs/distribution/CONTRACT.md) | [Ownership](../src/bcs/distribution/OWNERSHIP.md) |
+| VCS Integration | GitHub App integration — repo↔project linking, PR/commit↔skill-usage correlation, required-skill visibility checks (011-vcs-integration) | [Contract](../src/bcs/vcs-integration/CONTRACT.md) | [Ownership](../src/bcs/vcs-integration/OWNERSHIP.md) |
 
 **Context map:**
 - Identity & Access is a shared-identifier source for everyone (`organizationId`/`userId`/`teamId` as opaque IDs) — no context reads its tables directly, only its contract functions.
 - Prompt Registry → Governance and Workflow Orchestration → Prompt Registry are **customer/supplier** relationships, synchronous, read-heavy.
 - Every context → Billing & Entitlements is **customer/supplier**; Billing is the sole **anti-corruption layer** in front of Stripe — no other context imports the Stripe SDK.
 - Every context → Audit & Compliance is **customer/supplier**, write-only, transactional (not eventually consistent — see [PDR-005](../docs/pdr/005-audit-logging-core-infrastructure.md)).
-- Distribution is a **conformist consumer** of all six other contexts — it has no domain rules of its own, only composition and protocol translation. The primary path is REST — both directly and via the Skill Sync CLI's live calls to the expand route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)); MCP is a deprioritized secondary protocol.
+- Distribution is a **conformist consumer** of all other contexts — it has no domain rules of its own, only composition and protocol translation. The primary path is REST — both directly and via the Skill Sync CLI's live calls to the expand route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)); MCP is a deprioritized secondary protocol.
+- VCS Integration → Governance and VCS Integration → Distribution are **customer/supplier**, synchronous, triggered by inbound GitHub webhooks rather than by another BC's call. VCS Integration is the sole **anti-corruption layer** in front of GitHub's REST/webhook API and App credentials, mirroring Billing's isolation of Stripe. See [PDR-012](../docs/pdr/012-vcs-integration-new-bounded-context.md).
 
 ## Data Architecture
 
@@ -40,8 +42,9 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 | `workflow.*` | Workflow Orchestration | Postgres schema | Workflow, WorkflowRun (new — persists run history) |
 | `billing.*` | Billing & Entitlements | Postgres schema | Plan, Subscription, Entitlement |
 | `audit.*` | Audit & Compliance | Postgres schema | AuditEvent (append-only) |
-| `distribution.*` | Distribution | Postgres schema | PromptUsage (telemetry only) |
+| `distribution.*` | Distribution | Postgres schema | PromptUsage — telemetry, except rows carrying git context (see below), which are not freely truncatable — see [PDR-015](../docs/pdr/015-prompt-usage-retention-floor.md) |
 | MCP session cache | Distribution | In-process memory | Ephemeral optimization only, never a source of truth — see [PDR-008](../docs/pdr/008-mcp-session-state-in-memory.md) |
+| `vcs_integration.*` | VCS Integration | Postgres schema | Installation, RepoLink, PrCheck — real domain state (governance-compliance records), not telemetry |
 
 **Consistency:** strong consistency throughout — one Postgres database, transactional guarantees used deliberately for audit-write atomicity (see PDR-005) and read-fresh (never cached) governance resolution.
 
@@ -68,6 +71,10 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 - [PDR-009: AWS as the managed SaaS hosting platform](../docs/pdr/009-aws-hosting-platform.md)
 - [PDR-010: Skill-based prompt distribution via live REST resolution, not MCP](../docs/pdr/010-skill-based-distribution-not-mcp.md)
 - [PDR-011: Project linking and roster sync via CLI, SessionStart hook, and hash-based drift detection](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)
+- [PDR-012: New bounded context `vcs-integration`, not an extension of Distribution](../docs/pdr/012-vcs-integration-new-bounded-context.md)
+- [PDR-013: Client-side git-context tagging for skill-usage↔commit correlation](../docs/pdr/013-cli-side-git-context-tagging.md)
+- [PDR-014: GitHub App, not Personal Access Token, for GitHub integration](../docs/pdr/014-github-app-not-pat.md)
+- [PDR-015: `prompt_usage` needs a retention floor once PR checks depend on it](../docs/pdr/015-prompt-usage-retention-floor.md)
 
 ## Failure Model
 
@@ -78,12 +85,15 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 | Audit write | DB error during the same transaction as a mutation | The mutation itself | **Fails closed by construction** — the audit write happens in the same transaction as the mutation it describes, so either both commit or both roll back. No separate audit-specific failure mode exists. |
 | MCP session cache | Process restart | One extra DB round trip for affected sessions | Safe — cache is a pure optimization, re-resolves from the API key on the next call. |
 | Prompt Registry expansion (recursive inclusion) | Deep/cyclic inclusion | That expansion request | Bounded by `MAX_INCLUDE_DEPTH`, carried forward unchanged from the current implementation. |
+| VCS Integration — GitHub webhook delivery | GitHub delivery delayed/fails | That one PR's check stays at its last-known state | Degrades to stale-but-visible, not broken — GitHub retries delivery with backoff; no blocking behavior exists yet to fail (MVP is visibility-only) |
+| VCS Integration — PR evaluation itself errors (Governance/Distribution call fails) | Bug, transient DB error, etc. | That one evaluation | Posts a GitHub Check Run in **`neutral`** state rather than silently posting nothing — fails loud, not silent, even though it isn't a merge gate yet |
 
 ## Integrations
 
 - **Claude Code** (primary, day one) — the `skillcanon` CLI links a repo to a SkillCanon project, syncs a roster of thin Skill stub files, and resolves each one live via the REST expand route on invocation. See [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), [PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md), and `backlog/008-distribution/005-skill-sync-cli.md`.
 - **MCP clients** (Windsurf, Copilot, any MCP-compatible tool) — deprioritized (see PDR-010); if built, Streamable HTTP, bearer-authenticated via API key, tool surface `sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run` unchanged from today's plan.
 - **Stripe** — subscriptions, checkout, billing portal, webhooks; isolated entirely behind Billing & Entitlements ([PDR-006](../docs/pdr/006-single-repo-plan-gated.md)).
+- **GitHub** (011-vcs-integration) — a GitHub App installed per org/repo; receives `installation`/`pull_request` webhooks, posts Check Runs, isolated entirely behind VCS Integration ([PDR-012](../docs/pdr/012-vcs-integration-new-bounded-context.md), [PDR-014](../docs/pdr/014-github-app-not-pat.md)). MVP is visibility-only — a Check Run reports which required skills ran, but nothing blocks merge yet; a future pre-merge CI-execution feature (running a skill as an actual gate) would build on the same App installation rather than a second integration.
 
 ## Non-Functional Properties
 
@@ -124,3 +134,6 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 - **Existing `docs/architecture.md`** describes the current Python-era system and will be stale once this rewrite lands — recommend replacing it with a pointer to this document once implementation is underway, rather than maintaining two architecture docs in parallel.
 - **Skill Sync CLI beyond Claude Code**: the roster-sync mechanism ([PDR-011](../docs/pdr/011-skill-sync-cli-and-drift-detection.md)) is designed to be pluggable per IDE but only the Claude Code adapter is being built now — Copilot/Codex parity is unscheduled.
 - **MCP's actual fate**: deprioritized per [PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md), not cancelled — whether it's ever built depends on whether a real non-skill-capable MCP client or a workflow-orchestration need for `sh-workflow-run` materializes.
+- **`prompt_usage`'s 90-day retention floor** ([PDR-015](../docs/pdr/015-prompt-usage-retention-floor.md)) is a judgment call, not measured data — no production PR-lifetime distribution exists yet (pre-launch). Revisit once real usage data exists.
+- **Monorepo path-scoping**: MVP evaluates required-skill policies per-repo, not per-project-subdirectory, even though a repo can link to multiple projects. A PR touching only one project's directory in a monorepo still gets evaluated against every linked project's required skills. Flagged as a known simplification, not solved now.
+- **Pre-merge CI-gating** (running a skill as an actual merge-blocking check, not just visibility) is explicitly out of scope for 011-vcs-integration — deferred to a future epic once passive tracking proves the governance value. The GitHub App's `checks:write` permission and installation-token flow (PDR-014) are built now specifically so that future feature is additive, not a second integration.

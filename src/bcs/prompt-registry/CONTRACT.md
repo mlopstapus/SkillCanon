@@ -14,6 +14,7 @@ Owns `Project`, `Prompt`, `PromptVersion`, `PromptShare`, and the expansion engi
 | `expand(orgId, promptName, input, { userId?, projectId?, version? })` | Returns `{ systemMessage, userMessage, appliedPolicies }` | Workflow Orchestration, Distribution (`sh-run`) |
 | `listPrompts(orgId, userId, { page, pageSize })` | Prompts owned by or shared with the user | Distribution (`sh-list`, `sh-search`, UI) |
 | `getPrompt(orgId, name)` | Latest version + metadata | Distribution, Workflow Orchestration (step validation) |
+| `getProject(orgId, projectId)` | **New (011-vcs-integration).** Project metadata including its owning `teamId` | Governance (`resolveRequiredSkillPolicies`), VCS Integration (repo↔project linking), Distribution |
 | `createPrompt`, `publishVersion`, `sharePrompt`, `createProject`, `addProjectMember` | Standard write operations, org-scoped | Distribution (route handlers) |
 
 ## Events Published
@@ -43,6 +44,11 @@ interface PromptSummary {
   id: string; orgId: string; name: string; description: string | null;
   isDeprecated: boolean; ownerUserId: string | null;
   latestVersion: { version: string; tags: string[] } | null;
+}
+
+interface Project {
+  id: string; orgId: string; teamId: string; // owning team — every project belongs to exactly one team
+  name: string;
 }
 ```
 

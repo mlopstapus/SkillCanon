@@ -27,6 +27,21 @@ export interface InvitationSummary {
 }
 
 /**
+ * Display-only shape for an anonymous, pre-auth invitee viewing their own
+ * invite link before deciding to accept it — never includes `token`, `id`,
+ * or any identifier usable to look up a different invitation. Distinct from
+ * `InvitationSummary`, which is org-admin-only and lists many invitations
+ * by id.
+ */
+export interface InvitationPreview {
+  state: InvitationState;
+  email: string;
+  orgName: string;
+  teamName: string;
+  role: InvitationRole;
+}
+
+/**
  * Precedence is fixed and mutually exclusive: `revoked` first (a revoke can
  * happen after the clock has already passed `expiresAt`, and should still
  * reflect the deliberate action), then `accepted`, then the expiry

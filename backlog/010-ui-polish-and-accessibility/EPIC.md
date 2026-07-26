@@ -1,6 +1,6 @@
 # Epic 010: UI Polish & Accessibility
 
-**Priority:** 10
+**Priority:** 11
 **Status:** not-started
 **Goal:** A final consistency and accessibility pass across every page in the product, once every page already has its own real, finished design — the last thing that happens before go-live.
 
@@ -37,8 +37,11 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
 - `backlog/007-workflow-orchestration/005-workflow-views-ui.md`
 - `backlog/009-billing-entitlements/003-billing-portal-and-ui.md`
+- `backlog/011-vcs-integration/006-vcs-integration-dashboard-ui.md`
 
 ## Notes
+
+**Priority renumbered 10→11 (2026-07-25):** `011-vcs-integration` was slotted in at priority 9, ahead of Billing (now priority 10) and this epic — see `backlog/009-billing-entitlements/EPIC.md`'s own note. This epic still comes last since it depends on every other page (including VCS Integration's new dashboard) being built first.
 
 This epic no longer gates on `backlog/000-foundations/010-design-system.md` directly — that foundations item's deliverable (`context/design-system.md`) is now produced by `backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md`, much earlier in the backlog than this epic's original slot.
 

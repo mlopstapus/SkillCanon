@@ -18,7 +18,7 @@ Postgres schema: `distribution`
 
 | Schema / Table | Notes |
 |---|---|
-| `distribution.prompt_usage` | Telemetry only — status code, latency, prompt/version, timestamp. Not domain state; safe to truncate/roll up without affecting any bounded context's correctness |
+| `distribution.prompt_usage` | Telemetry — status code, latency, prompt/version, timestamp, plus (011-vcs-integration) nullable `git_remote_url`/`git_branch`/`git_commit_sha`. Rows with no git context remain freely truncatable/roll-uppable. **Rows with a non-null `git_commit_sha` are not** — VCS Integration's PR checks depend on them; retained a minimum of 90 days regardless of any rollup job — see [PDR-015](../../../docs/pdr/015-prompt-usage-retention-floor.md). Any future rollup job must carve out `WHERE git_commit_sha IS NULL`. |
 
 ## Shared Resource Ownership
 

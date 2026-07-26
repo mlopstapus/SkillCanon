@@ -1,3 +1,4 @@
+import { LogoMark, Wordmark } from "@/shared/ui";
 import { DOCS_URL, REPO_URL } from "./sections";
 
 const LINKS = [
@@ -12,12 +13,8 @@ export function Footer() {
     <footer className="border-t border-border bg-bg-2">
       <div className="mx-auto flex max-w-[1200px] flex-wrap items-center justify-between gap-5 px-6 py-9">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-6.5 place-items-center rounded-md border border-border2 bg-surface-2 font-display text-[13px] font-bold text-a">
-            S
-          </span>
-          <span className="font-display text-[15px] font-bold">
-            Skill<span className="text-a">Canon</span>
-          </span>
+          <LogoMark size={26} />
+          <Wordmark className="text-[15px]" />
           <span className="ml-2 font-mono text-[12.5px] text-faint">Apache-2.0</span>
         </div>
         <div className="flex gap-5.5 font-mono text-[13px] text-dim">

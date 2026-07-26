@@ -29,6 +29,7 @@ src/
     billing-entitlements/
     audit-compliance/
     distribution/
+    vcs-integration/
   shared/                        # owned by Distribution per its OWNERSHIP.md
     db/                          # Drizzle client instance, connection/pooling setup
     ui/                          # shared React components
