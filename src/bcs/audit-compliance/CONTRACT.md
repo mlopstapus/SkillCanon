@@ -11,7 +11,7 @@ Owns the immutable `AuditEvent` log. Every mutating command in every other conte
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Redacts known-sensitive fields (`password_hash`, `key_hash`, raw tokens) from `before`/`after` before storage. First real caller: Identity & Access's `login`/`logout` (008-jwt-session-auth) | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements, VCS Integration (011-vcs-integration) |
+| `record(tx, event)` | Append one audit event; `tx` is a transaction handle — only callable from inside an open transaction, never a standalone unaudited write. Requires `transport` (`web`/`api`/`cli`/`system`) and accepts nullable `sourceIp`. Redacts known-sensitive fields (`password_hash`, `passwordHash`, `key_hash`, `keyHash`, raw tokens) from `before`/`after` before storage. | Identity & Access, Governance, Prompt Registry, Workflow Orchestration, Billing & Entitlements, VCS Integration (011-vcs-integration) |
 | `list(orgId, filters, { requestingUserId })` | Paginated query, filtered by the entitlement-resolved retention window | Distribution (audit log UI) |
 | `export(orgId, format)` | Bulk export (Enterprise-gated via entitlement) | Distribution |
 
@@ -33,9 +33,32 @@ interface AuditEvent {
   action: string;        // e.g. "policy.updated", "apikey.created", "user.login"
   resourceType: string; resourceId: string | null; // resourceId null alongside orgId in the same unresolvable case above
   before: unknown | null; after: unknown | null; // jsonb diff, redacted of secrets
+  transport: "web" | "api" | "cli" | "system"; // audit trail source taxonomy, distinct from operational-log transport
+  sourceIp: string | null; // null for system/no-network-origin events
   createdAt: string;
 }
 ```
+
+## Canonical Action Verbs
+
+`action` values use `<resource>.<verb>`. The verb must come from this table unless this contract is extended in the same change that adds a new mutation type.
+
+| Verb | Meaning | UI Color |
+|---|---|---|
+| `created` | A resource was created. | Green |
+| `updated` | A resource's mutable fields changed. | Blue |
+| `deleted` | A resource was permanently deleted by a supported workflow. | Red |
+| `revoked` | A credential, invitation, or grant was revoked. | Red |
+| `reparented` | A hierarchical resource moved or a team was inserted into a hierarchy. | Violet |
+| `shared` | Access to a resource was shared. | Violet |
+| `accepted` | An invitation or similar pending workflow was accepted. | Green |
+| `login` | A user authenticated successfully. | Green |
+| `logout` | A user ended a session. | Neutral |
+| `login_failed` | An authentication attempt failed. | Red |
+| `synced` | An external or CLI sync completed. | Violet |
+| `pruned` | Retention pruning removed expired audit rows. | Neutral |
+
+Known noncanonical verb: `invited`. Invitation creation is `invitation.created`; invitation acceptance is `invitation.accepted`.
 
 ## Stability Guarantees
 

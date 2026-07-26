@@ -54,4 +54,7 @@ This machine runs multiple unrelated Docker Compose projects concurrently (tribe
 supabase stack, seamless-postgres). SkillCanon's default ports (5432 database, 3000 app — plus 8000 if
 running the legacy backend manually alongside) can collide with them. Confirmed resolution
 preference: stop the conflicting containers from the other project rather than remap SkillCanon's
-ports — ask before stopping anything, since it affects other in-progress work.
+ports — ask before stopping anything, since it affects other in-progress work. In managed Multica
+runs where the conflicting containers are platform services or otherwise should not be stopped, use a
+temporary Compose file/project to remap SkillCanon locally (for example app 3001, Postgres 5434) and
+leave docker-compose.yaml unchanged.

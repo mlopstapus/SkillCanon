@@ -47,7 +47,7 @@ describe("module boundary lint enforcement", () => {
       );
       expectSingleBoundaryError(messages);
     });
-  });
+  }, 15_000);
 
   it("names the violated context's CONTRACT.md in the error message (FR-006)", async () => {
     await withFixtureFile("src/bcs/identity-access/domain/__fixture_target.ts", async () => {

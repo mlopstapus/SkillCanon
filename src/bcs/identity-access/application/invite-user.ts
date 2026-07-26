@@ -1,6 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import { sendEmail } from "@/shared/email";
 import { getAppBaseUrl, getInvitationExpiryHours } from "@/shared/config";
@@ -37,6 +41,7 @@ export async function inviteUser(
   db: Db,
   actingUser: UserSummary,
   params: InviteUserParams,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<{ id: string; token: string }> {
   const team = await assertCanManageInvitationsForTeam(db, actingUser, params.teamId);
   const email = params.email.toLowerCase();
@@ -78,6 +83,8 @@ export async function inviteUser(
         action: "invitation.created",
         resourceType: "invitation",
         resourceId: invitationId,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       }),
   );
 

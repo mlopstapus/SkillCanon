@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
@@ -97,4 +97,42 @@ describe("updateTeam", () => {
     );
     expect(row?.name).toBe("B Team");
   });
+
+  it("records exactly one team.updated audit event on success", async () => {
+    const org = await testDb.authDb.transaction((tx) =>
+      createOrganization(tx, { name: "org-update-audit", slug: `org-update-audit-${randomUUID()}` }),
+    );
+    const team = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Before", slug: "before" }),
+    );
+
+    await withTenantContext(testDb.appDb, org.id, (tx) =>
+      updateTeam(
+        tx,
+        org.id,
+        team.id,
+        { name: "After" },
+        { auditContext: { transport: "web", sourceIp: "203.0.113.44" } },
+      ),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${team.id} and action = 'team.updated'`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "team.updated",
+        resource_id: team.id,
+        transport: "web",
+        source_ip: "203.0.113.44",
+      },
+    ]);
+  });
+
 });

@@ -16,6 +16,8 @@ export async function insert(tx: Tx, event: NewAuditEvent) {
       resourceId: event.resourceId,
       before: event.before ?? null,
       after: event.after ?? null,
+      transport: event.transport,
+      sourceIp: event.sourceIp ?? null,
     })
     .returning();
   if (!row) {

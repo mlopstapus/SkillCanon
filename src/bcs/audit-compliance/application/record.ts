@@ -1,8 +1,11 @@
-import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { REDACTED_KEYS, type NewAuditEvent } from "../domain/audit-event";
+import {
+  AUDIT_TRANSPORTS,
+  REDACTED_KEYS,
+  type NewAuditEvent,
+} from "../domain/audit-event";
 import { insert } from "../infrastructure/audit-events-repo";
 
-type Tx = Parameters<Parameters<PostgresJsDatabase["transaction"]>[0]>[0];
+type Tx = Parameters<typeof insert>[0];
 
 const REDACTED_PLACEHOLDER = "[REDACTED]";
 
@@ -29,6 +32,10 @@ function redact(value: unknown): unknown {
  * (backlog/003-audit-compliance/001-audit-event-schema-and-write-path.md).
  */
 export async function record(tx: Tx, event: NewAuditEvent): Promise<void> {
+  if (!(AUDIT_TRANSPORTS as readonly string[]).includes(event.transport)) {
+    throw new Error("Audit event transport must be one of web, api, cli, or system.");
+  }
+
   await insert(tx, {
     ...event,
     before: event.before == null ? null : redact(event.before),

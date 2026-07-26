@@ -138,4 +138,33 @@ describe("createOrganization", () => {
       expect(rows).toHaveLength(1);
     });
   });
+
+  it("records exactly one organization.created audit event on success", async () => {
+    const result = await testDb.authDb.transaction((tx) =>
+      createOrganization(
+        tx,
+        { name: "Audited", slug: `audited-${randomUUID()}` },
+        { auditContext: { transport: "cli", sourceIp: null } },
+      ),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${result.id}`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "organization.created",
+        resource_id: result.id,
+        transport: "cli",
+        source_ip: null,
+      },
+    ]);
+  });
+
 });

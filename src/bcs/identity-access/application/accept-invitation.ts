@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import type { UserSummary } from "../domain/user";
 import {
@@ -45,6 +49,7 @@ export async function acceptInvitation(
   db: Db,
   token: string,
   params: AcceptInvitationParams,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<{ user: UserSummary }> {
   const invitation = await findByToken(db, token);
   if (!invitation) {
@@ -100,6 +105,8 @@ export async function acceptInvitation(
         action: "invitation.accepted",
         resourceType: "invitation",
         resourceId: invitation.id,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       }),
   );
 }

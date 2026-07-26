@@ -6,7 +6,7 @@ import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
 import { insertTeamBetween } from "./insert-team-between";
 import { teams } from "../infrastructure/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 describe("insertTeamBetween", () => {
   let testDb: TestDb;
@@ -145,4 +145,39 @@ describe("insertTeamBetween", () => {
     expect(siblingRow?.parentTeamId).toBe(root.id);
     expect(rootRow?.parentTeamId).toBeNull();
   });
+
+  it("records exactly one operation-level team.reparented audit event", async () => {
+    const org = await makeOrg("org-audited-splice");
+    const child = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Child", slug: "audited-child" }),
+    );
+
+    const inserted = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      insertTeamBetween(
+        tx,
+        { organizationId: org.id, name: "Middle", slug: "audited-middle" },
+        child.id,
+        { auditContext: { transport: "cli", sourceIp: null } },
+      ),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${inserted.id}`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "team.reparented",
+        resource_id: inserted.id,
+        transport: "cli",
+        source_ip: null,
+      },
+    ]);
+  });
+
 });
