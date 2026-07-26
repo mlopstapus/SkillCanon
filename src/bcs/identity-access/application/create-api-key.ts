@@ -1,6 +1,10 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import {
   InvalidScopeError,
@@ -40,6 +44,7 @@ export async function createApiKey(
   db: Db,
   actingUser: UserSummary,
   params: CreateApiKeyParams,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<{ id: string; rawKey: string }> {
   if (params.scopes.length === 0) {
     throw new NoScopesSelectedError();
@@ -84,6 +89,8 @@ export async function createApiKey(
         action: "api_key.created",
         resourceType: "api_key",
         resourceId: id,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       }),
   );
 

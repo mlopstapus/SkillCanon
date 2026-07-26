@@ -24,7 +24,9 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
     actor_user_id: string | null;
     organization_id: string | null;
     resource_id: string | null;
-  }>(sql`select action, actor_user_id, organization_id, resource_id from audit.audit_events where ${whereSql}`);
+    transport: string;
+    source_ip: string | null;
+  }>(sql`select action, actor_user_id, organization_id, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`);
   return Array.from(result);
 }
 
@@ -126,12 +128,17 @@ describe("login", () => {
   it("writes a user.login audit event on success", async () => {
     const { userId, organizationId, email } = await makeOrgTeamUser(testDb);
 
-    await login(testDb.authDb, email, "correct-horse-battery");
+    await login(testDb.authDb, email, "correct-horse-battery", {
+      transport: "web",
+      sourceIp: "203.0.113.66",
+    });
 
     const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login");
     expect(rows[0]?.organization_id).toBe(organizationId);
+    expect(rows[0]?.transport).toBe("web");
+    expect(rows[0]?.source_ip).toBe("203.0.113.66");
   });
 
   it("writes a user.login_failed audit event for a failed attempt against a real account", async () => {

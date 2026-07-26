@@ -6,7 +6,7 @@ import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
 import { CrossOrgReparentError } from "../domain/team";
 import { teams } from "../infrastructure/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 describe("createTeam", () => {
   let testDb: TestDb;
@@ -93,4 +93,39 @@ describe("createTeam", () => {
       ),
     ).rejects.toThrow(CrossOrgReparentError);
   });
+
+  it("records exactly one team.created audit event on success", async () => {
+    const org = await makeOrg("org-audited-team");
+
+    const result = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(
+        tx,
+        {
+          organizationId: org.id,
+          name: "Audit Team",
+          slug: "audit-team",
+        },
+        { auditContext: { transport: "api", sourceIp: "198.51.100.11" } },
+      ),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${result.id}`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "team.created",
+        resource_id: result.id,
+        transport: "api",
+        source_ip: "198.51.100.11",
+      },
+    ]);
+  });
+
 });

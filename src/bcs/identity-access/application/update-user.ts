@@ -1,4 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { isUniqueViolation } from "@/shared/db";
 import {
   CrossOrgUserAccessError,
@@ -18,19 +23,19 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
 
 const SELF_EDITABLE_FIELDS = new Set<keyof UpdateUserFields>(["displayName"]);
 
+export interface UpdateUserOptions {
+  auditContext?: AuditContext;
+}
+
 /**
- * Updates a user's fields, scoped to `actingUser.orgId` (FR-004). A
- * non-admin caller may only change their own `displayName`; an admin may
- * change any field (except `organization_id`, which is never updatable —
- * no legitimate cross-tenant reassignment flow exists) for any user in
- * their own organization, including `teamId` (validated the same way
- * `createUser` validates it).
+ * Updates a user's fields, scoped to `actingUser.orgId` (FR-004).
  */
 export async function updateUser(
   tx: Tx,
   actingUser: UserSummary,
   targetUserId: string,
   fields: UpdateUserFields,
+  options: UpdateUserOptions = {},
 ): Promise<void> {
   const target = await findByOrgAndId(tx, actingUser.orgId, targetUserId);
   if (!target) {
@@ -78,4 +83,18 @@ export async function updateUser(
     }
     throw err;
   }
+
+  const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
+  await record(tx, {
+    organizationId: actingUser.orgId,
+    actorUserId: actingUser.id,
+    actorApiKeyId: null,
+    action: "user.updated",
+    resourceType: "user",
+    resourceId: targetUserId,
+    before: target,
+    after: { ...target, ...normalizedFields },
+    transport: auditContext.transport,
+    sourceIp: auditContext.sourceIp ?? null,
+  });
 }

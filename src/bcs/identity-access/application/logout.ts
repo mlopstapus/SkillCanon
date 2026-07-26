@@ -1,5 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import type { SessionCookieDescriptor } from "../domain/session";
 import { SESSION_COOKIE_NAME } from "../domain/session";
 import { getUser } from "./get-user";
@@ -16,6 +20,7 @@ type Db = PostgresJsDatabase<Record<string, never>>;
 export async function logout(
   db: Db,
   userId: string,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<{ cookie: SessionCookieDescriptor }> {
   const user = await getUser(db, userId);
 
@@ -27,6 +32,8 @@ export async function logout(
       action: "user.logout",
       resourceType: "user",
       resourceId: user.id,
+      transport: auditContext.transport,
+      sourceIp: auditContext.sourceIp ?? null,
     });
   });
 

@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
@@ -202,4 +203,42 @@ describe("createUser", () => {
       ),
     ).rejects.toThrow(WeakPasswordError);
   });
+
+  it("records exactly one user.created audit event on success without storing the raw password", async () => {
+    const org = await makeOrgWithTeam(testDb);
+    const acting = adminActingUser(org.organizationId, org.teamId);
+    const password = `password-${randomUUID()}`;
+
+    const result = await withTenantContext(testDb.appDb, org.organizationId, (tx) =>
+      createUser(
+        tx,
+        acting,
+        {
+          teamId: org.teamId,
+          username: `audited-${randomUUID()}`,
+          email: `audited-${randomUUID()}@example.com`,
+          password,
+        },
+        { auditContext: { transport: "web", sourceIp: "203.0.113.55" } },
+      ),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+      after: unknown;
+    }>(
+      sql`select action, resource_id, transport, source_ip, after from audit.audit_events where resource_id = ${result.id}`,
+    );
+    const materialized = Array.from(rows);
+
+    expect(materialized).toHaveLength(1);
+    expect(materialized[0]?.action).toBe("user.created");
+    expect(materialized[0]?.transport).toBe("web");
+    expect(materialized[0]?.source_ip).toBe("203.0.113.55");
+    expect(JSON.stringify(materialized)).not.toContain(password);
+  });
+
 });

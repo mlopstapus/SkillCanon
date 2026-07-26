@@ -28,6 +28,8 @@ describe("audit-events-repo insert", () => {
       resourceId,
       before: null,
       after: null,
+      transport: "web",
+      sourceIp: "203.0.113.10",
     });
 
     expect(row.id).toBeTruthy();
@@ -36,6 +38,8 @@ describe("audit-events-repo insert", () => {
     expect(row.action).toBe("user.login");
     expect(row.resourceType).toBe("user");
     expect(row.resourceId).toBe(resourceId);
+    expect(row.transport).toBe("web");
+    expect(row.sourceIp).toBe("203.0.113.10");
     expect(row.createdAt).toBeTruthy();
   });
 
@@ -49,11 +53,15 @@ describe("audit-events-repo insert", () => {
       resourceId: null,
       before: null,
       after: null,
+      transport: "web",
+      sourceIp: null,
     });
 
     expect(row.id).toBeTruthy();
     expect(row.organizationId).toBeNull();
     expect(row.actorUserId).toBeNull();
     expect(row.resourceId).toBeNull();
+    expect(row.transport).toBe("web");
+    expect(row.sourceIp).toBeNull();
   });
 });

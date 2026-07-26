@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
@@ -127,4 +128,35 @@ describe("deactivateUser", () => {
       ),
     ).rejects.toThrow(CrossOrgUserAccessError);
   });
+
+  it("records exactly one user.updated audit event on successful deactivation", async () => {
+    const { organizationId, teamId } = await makeOrgWithTeam(testDb);
+    const admin = await makeUser(testDb, organizationId, teamId, "admin");
+    const otherAdmin = await makeUser(testDb, organizationId, teamId, "admin");
+
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      deactivateUser(tx, admin, otherAdmin.id, {
+        auditContext: { transport: "web", sourceIp: "203.0.113.99" },
+      }),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${otherAdmin.id} and action = 'user.updated'`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "user.updated",
+        resource_id: otherAdmin.id,
+        transport: "web",
+        source_ip: "203.0.113.99",
+      },
+    ]);
+  });
+
 });

@@ -8,7 +8,7 @@ import { getTeamChain } from "./get-team-chain";
 import { reparentTeam } from "./reparent-team";
 import { CycleError } from "../domain/team";
 import { teams } from "../infrastructure/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 describe("reparentTeam", () => {
   let testDb: TestDb;
@@ -150,4 +150,39 @@ describe("reparentTeam", () => {
     expect(rejected).toHaveLength(1);
     expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(CycleError);
   });
+
+  it("records exactly one team.reparented audit event on success", async () => {
+    const org = await makeOrg("org-audited-reparent");
+    const parent = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Parent", slug: "audit-parent" }),
+    );
+    const child = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Child", slug: "audit-child" }),
+    );
+
+    await withTenantContext(testDb.appDb, org.id, (tx) =>
+      reparentTeam(tx, child.id, parent.id, {
+        auditContext: { transport: "web", sourceIp: "203.0.113.77" },
+      }),
+    );
+
+    const rows = await testDb.appDb.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(
+      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${child.id} and action = 'team.reparented'`,
+    );
+
+    expect(Array.from(rows)).toEqual([
+      {
+        action: "team.reparented",
+        resource_id: child.id,
+        transport: "web",
+        source_ip: "203.0.113.77",
+      },
+    ]);
+  });
+
 });

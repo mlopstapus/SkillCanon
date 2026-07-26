@@ -1,5 +1,10 @@
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { isSelfHosted } from "../domain/deployment-mode";
 import { SecondOrganizationNotAllowedError } from "../domain/organization";
 import {
@@ -9,6 +14,11 @@ import {
 } from "../infrastructure/organizations-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
+
+export interface AuditMutationOptions {
+  audit?: boolean;
+  auditContext?: AuditContext;
+}
 
 /**
  * Arbitrary, application-specific advisory-lock key — serializes concurrent
@@ -26,21 +36,13 @@ const UNIQUE_VIOLATION = "23505";
  * constraint (enforced at the DB level regardless of mode) surfaces as a
  * clean thrown error rather than a raw driver error.
  *
- * The advisory lock is only acquired in self-hosted mode — it exists solely
- * to close the count-then-insert TOCTOU race on the single-org guard
- * (research.md §3). SaaS mode has no such guard to protect and legitimately
- * creates many organizations concurrently, so it skips the lock entirely
- * rather than serializing every organization creation platform-wide behind
- * one global key; slug-uniqueness concurrency there is already handled
- * correctly by the DB-level unique constraint alone.
- *
- * Must be called from within an existing transaction (`tx`) — the advisory
- * lock, when taken, is transaction-scoped (`pg_advisory_xact_lock`) and
- * auto-releases on commit/rollback.
+ * Must be called from within an existing transaction (`tx`) so the
+ * organization row and audit event commit or roll back together.
  */
 export async function createOrganization(
   tx: Tx,
   params: InsertOrganizationParams,
+  options: AuditMutationOptions = {},
 ): Promise<{ id: string }> {
   const selfHosted = isSelfHosted();
 
@@ -54,7 +56,23 @@ export async function createOrganization(
   }
 
   try {
-    return await insert(tx, params);
+    const result = await insert(tx, params);
+    if (options.audit !== false) {
+      const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
+      await record(tx, {
+        organizationId: result.id,
+        actorUserId: null,
+        actorApiKeyId: null,
+        action: "organization.created",
+        resourceType: "organization",
+        resourceId: result.id,
+        before: null,
+        after: { id: result.id, ...params },
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
+      });
+    }
+    return result;
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new Error(
@@ -72,8 +90,6 @@ function isUniqueViolation(err: unknown): boolean {
   if ("code" in err && (err as { code?: unknown }).code === UNIQUE_VIOLATION) {
     return true;
   }
-  // drizzle-orm's postgres-js driver wraps the real Postgres error (which
-  // carries the SQLSTATE `.code`) as `.cause` on a DrizzleQueryError.
   const cause = (err as { cause?: unknown }).cause;
   return (
     typeof cause === "object" &&

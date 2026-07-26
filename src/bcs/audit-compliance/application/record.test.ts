@@ -28,6 +28,8 @@ describe("record", () => {
         action: "user.login",
         resourceType: "user",
         resourceId: actorUserId,
+        transport: "web",
+        sourceIp: "203.0.113.10",
       });
     });
 
@@ -39,6 +41,8 @@ describe("record", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login");
     expect(rows[0]?.organizationId).toBe(organizationId);
+    expect(rows[0]?.transport).toBe("web");
+    expect(rows[0]?.sourceIp).toBe("203.0.113.10");
   });
 
   it("strips password_hash/key_hash/raw-token fields nested inside before/after before storage", async () => {
@@ -53,6 +57,8 @@ describe("record", () => {
         action: "user.updated",
         resourceType: "user",
         resourceId,
+        transport: "web",
+        sourceIp: null,
         before: { email: "old@example.com", password_hash: "$2b$12$secret" },
         after: {
           email: "new@example.com",

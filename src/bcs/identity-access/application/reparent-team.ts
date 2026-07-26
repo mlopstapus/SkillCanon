@@ -1,23 +1,29 @@
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { CrossOrgReparentError, CycleError } from "../domain/team";
 import { findById, updateParent } from "../infrastructure/teams-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
+export interface ReparentTeamOptions {
+  audit?: boolean;
+  auditContext?: AuditContext;
+}
+
 /**
- * Reparents a team, enforcing (FR-009, FR-010): the new parent must belong
- * to the same organization, and the move must not create a cycle. Both
- * checks run inside a per-organization Postgres advisory lock (research.md
- * §3) so two concurrent reparents that would jointly create a cycle
- * serialize instead of racing — unlike `005-org-tenant-model`'s single
- * global bootstrap lock, this is scoped to the organization, since the
- * invariant it protects is itself per-organization.
+ * Reparents a team, enforcing: the new parent must belong to the same
+ * organization, and the move must not create a cycle.
  */
 export async function reparentTeam(
   tx: Tx,
   teamId: string,
   newParentId: string,
+  options: ReparentTeamOptions = {},
 ): Promise<void> {
   const team = await findById(tx, teamId);
   if (!team) {
@@ -40,9 +46,6 @@ export async function reparentTeam(
     throw new CycleError();
   }
 
-  // Walk the prospective new parent's ancestor chain — if `teamId` appears
-  // anywhere in it, `teamId` is already an ancestor of `newParentId`, and
-  // making `newParentId` its parent would create a cycle (research.md §2).
   const seen = new Set<string>();
   let currentId: string | null = newParentId;
   while (currentId && !seen.has(currentId)) {
@@ -55,4 +58,19 @@ export async function reparentTeam(
   }
 
   await updateParent(tx, teamId, newParentId);
+  if (options.audit !== false) {
+    const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
+    await record(tx, {
+      organizationId: team.organizationId,
+      actorUserId: null,
+      actorApiKeyId: null,
+      action: "team.reparented",
+      resourceType: "team",
+      resourceId: teamId,
+      before: team,
+      after: { ...team, parentTeamId: newParentId },
+      transport: auditContext.transport,
+      sourceIp: auditContext.sourceIp ?? null,
+    });
+  }
 }

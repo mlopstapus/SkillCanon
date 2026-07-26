@@ -1,5 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import { ApiKeyNotFoundError } from "../domain/api-key";
 import { NotAuthorizedError, type UserSummary } from "../domain/user";
@@ -17,6 +21,7 @@ export async function revokeApiKey(
   db: Db,
   actingUser: UserSummary,
   keyId: string,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<void> {
   const key = await findByOrgAndId(db, actingUser.orgId, keyId);
   if (!key) {
@@ -40,6 +45,8 @@ export async function revokeApiKey(
         action: "api_key.revoked",
         resourceType: "api_key",
         resourceId: keyId,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       }),
   );
 }

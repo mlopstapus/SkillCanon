@@ -1,4 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import type { ProvisionTeamAndAdmin } from "./bootstrap-organization";
 import { createTeam } from "./create-team";
 import { insertValidatedUser } from "./insert-validated-user";
@@ -18,21 +23,22 @@ export interface ProvisionTeamAndAdminParams {
 
 /**
  * The real `provisionTeamAndAdmin` callback (FR-010), replacing
- * `bootstrapOrganization`'s test-only stub. Mirrors the legacy Python
- * `register_admin`'s create-team → create-user → set-owner sequence
- * (research.md §3): creates the root team, creates the admin user via the
- * shared `insertValidatedUser` core (no caller to authorize against — this
- * *is* the first user), then sets the new team's `owner_id`.
+ * `bootstrapOrganization`'s test-only stub.
  */
 export function makeProvisionTeamAndAdmin(
   params: ProvisionTeamAndAdminParams,
 ): ProvisionTeamAndAdmin {
-  return async (tx: Tx, organizationId: string) => {
-    const { id: teamId } = await createTeam(tx, {
-      organizationId,
-      name: params.team.name,
-      slug: params.team.slug,
-    });
+  return async (tx: Tx, organizationId: string, auditContext?: AuditContext) => {
+    const context = auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
+    const { id: teamId } = await createTeam(
+      tx,
+      {
+        organizationId,
+        name: params.team.name,
+        slug: params.team.slug,
+      },
+      { auditContext: context },
+    );
 
     const { id: userId } = await insertValidatedUser(tx, {
       organizationId,
@@ -42,6 +48,28 @@ export function makeProvisionTeamAndAdmin(
       email: params.admin.email,
       password: params.admin.password,
       role: "admin",
+    });
+
+    await record(tx, {
+      organizationId,
+      actorUserId: null,
+      actorApiKeyId: null,
+      action: "user.created",
+      resourceType: "user",
+      resourceId: userId,
+      before: null,
+      after: {
+        id: userId,
+        organizationId,
+        teamId,
+        username: params.admin.username.toLowerCase(),
+        displayName: params.admin.displayName ?? params.admin.username,
+        email: params.admin.email.toLowerCase(),
+        role: "admin",
+        isActive: true,
+      },
+      transport: context.transport,
+      sourceIp: context.sourceIp ?? null,
     });
 
     await updateTeam(tx, teamId, { ownerId: userId });

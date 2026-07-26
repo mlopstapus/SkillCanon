@@ -1,5 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import { NotAuthorizedError, type UserSummary } from "../domain/user";
 import { deriveInvitationState, InvitationAlreadyAcceptedError, InvitationNotFoundError } from "../domain/invitation";
@@ -19,6 +23,7 @@ export async function revokeInvitation(
   db: Db,
   actingUser: UserSummary,
   invitationId: string,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<void> {
   const invitation = await findByOrgAndId(db, actingUser.orgId, invitationId);
   if (!invitation) {
@@ -52,6 +57,8 @@ export async function revokeInvitation(
         action: "invitation.revoked",
         resourceType: "invitation",
         resourceId: invitationId,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       }),
   );
 }

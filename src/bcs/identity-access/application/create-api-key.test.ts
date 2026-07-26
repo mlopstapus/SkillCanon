@@ -19,8 +19,13 @@ async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>
   // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
   // schema (011-tenant-isolation-rls scopes it to identity_access only);
   // skillcanon_app can already read every schema (0000_create_schemas.sql).
-  const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
-    sql`select action, resource_id from audit.audit_events where ${whereSql}`,
+  const result = await testDb.appDb.execute<{
+    action: string;
+    resource_id: string | null;
+    transport: string;
+    source_ip: string | null;
+  }>(
+    sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`,
   );
   return Array.from(result);
 }
@@ -182,7 +187,12 @@ describe("createApiKey", () => {
     const admin = await makeUser(testDb, "admin");
 
     const result = await withTenantContext(testDb.appDb, admin.orgId, (tx) =>
-      createApiKey(tx, admin, { name: "My IDE", scopes: ["prompts:read"] }),
+      createApiKey(
+        tx,
+        admin,
+        { name: "My IDE", scopes: ["prompts:read"] },
+        { transport: "api", sourceIp: "198.51.100.99" },
+      ),
     );
 
     const rows = await queryAuditEvents(
@@ -190,6 +200,8 @@ describe("createApiKey", () => {
       sql`action = 'api_key.created' and resource_id = ${result.id}`,
     );
     expect(rows).toHaveLength(1);
+    expect(rows[0]?.transport).toBe("api");
+    expect(rows[0]?.source_ip).toBe("198.51.100.99");
   });
 
   it("never logs any portion of the raw key (FR-011, tenet S3)", async () => {

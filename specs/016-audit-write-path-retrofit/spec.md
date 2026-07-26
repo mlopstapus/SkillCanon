@@ -59,11 +59,11 @@ An engineer adding a new mutation type in any bounded context wants to know whic
 
 **Why this priority**: Lower risk than the two gaps above (nothing is broken today without this), but it's a real, recurring cost — every future bounded context adding a mutation currently has to invent an `action` verb from scratch or copy an existing one by guesswork, and the audit-log UI needs a fixed, known set of verbs to color-code.
 
-**Independent Test**: Read the documented verb list and confirm every `action` string actually produced by code in this repository maps to one of the documented verbs, with no undocumented verb in use and no documented verb that's pure aspiration with zero real callers.
+**Independent Test**: Read the documented verb list and confirm every `action` string actually produced by code in this repository maps to one of the documented verbs, with no undocumented verb in use. Future-oriented canonical verbs may be documented before their first caller, but known-noncanonical verbs such as `invited` must not appear.
 
 **Acceptance Scenarios**:
 
-1. **Given** the documented verb vocabulary, **When** it is compared against every `action` string currently produced by shipped code, **Then** every real verb in use today (`created`, `revoked`, `accepted`, `login`, `login_failed`, `logout`) appears in the documented list, and the list contains no verb (e.g. `invited`) that no shipped call site actually produces.
+1. **Given** the documented verb vocabulary, **When** it is compared against every `action` string currently produced by shipped code, **Then** every real verb in use today (`created`, `revoked`, `accepted`, `login`, `login_failed`, `logout`) appears in the documented list, and the list does not include known-noncanonical verbs such as `invited`.
 2. **Given** a future bounded context needs a new mutation-type verb not yet in the list, **When** the contributor consults the documented vocabulary, **Then** they can either reuse an existing verb or extend the list through the same document, rather than inventing an unlisted one silently.
 
 ---

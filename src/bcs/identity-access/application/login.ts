@@ -1,6 +1,10 @@
 import bcrypt from "bcryptjs";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { record } from "@/bcs/audit-compliance";
+import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
 import type { UserSummary } from "../domain/user";
 import type { SessionCookieDescriptor } from "../domain/session";
 import { SESSION_COOKIE_NAME } from "../domain/session";
@@ -32,6 +36,7 @@ export async function login(
   db: Db,
   email: string,
   password: string,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ): Promise<{ user: UserSummary; cookie: SessionCookieDescriptor } | null> {
   const normalizedEmail = email.toLowerCase();
   const candidates = await findByEmail(db, normalizedEmail);
@@ -59,6 +64,8 @@ export async function login(
         action: "user.login",
         resourceType: "user",
         resourceId: matched.id,
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
       });
       const user: UserSummary = {
         id: matched.id,
@@ -83,6 +90,8 @@ export async function login(
       action: "user.login_failed",
       resourceType: "user",
       resourceId: single?.id ?? null,
+      transport: auditContext.transport,
+      sourceIp: auditContext.sourceIp ?? null,
     });
     return null;
   });

@@ -16,6 +16,8 @@ Self-hosted prompt registry distributed via MCP, with hierarchical team/policy/o
 
 ## Notes
 
+- In managed Multica workspaces where `pnpm` is not installed globally, use `corepack pnpm <script>` for the same project commands rather than switching package managers.
+- If unrelated Multica-managed containers occupy SkillCanon default ports and cannot be stopped, health-check the app with a temporary Compose file/project that remaps ports (for example app 3001 and Postgres 5434); leave `docker-compose.yaml` defaults unchanged.
 - The commands above run against the new root-level scaffold, which currently has no business logic (empty bounded-context barrels — see `docs/context/repo-structure.md`). Real functionality is ported over epic by epic from `legacy/backend/` and `legacy/frontend/`.
 - `docker compose up -d` builds and runs the new unified scaffold (`app` service, from the root `Dockerfile`) plus Postgres (`database` service) — see epic `001-typescript-refactor-foundation`'s `005-docker-compose-dev-environment`. It no longer builds or runs `legacy/backend/`/`legacy/frontend/`; run those manually (see README.md's Quickstart) if you need the fully-functional legacy app during the transition. The database container no longer bundles a pre-initialized schema — `pnpm db:migrate` (Drizzle) owns schema creation from an empty database.
 - Legacy backend has no type checker configured (no mypy/pyright); it was already slated for the TypeScript rewrite now underway.
