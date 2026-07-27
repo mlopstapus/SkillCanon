@@ -29,6 +29,7 @@ export const AUDIT_ACTION_VERBS = [
   "login_failed",
   "synced",
   "pruned",
+  "published",
 ] as const;
 
 export type AuditActionVerb = (typeof AUDIT_ACTION_VERBS)[number];
@@ -46,6 +47,7 @@ export const AUDIT_ACTION_VERB_COLORS: Record<AuditActionVerb, string> = {
   login_failed: "red",
   synced: "violet",
   pruned: "neutral",
+  published: "green",
 };
 
 export function getAuditActionVerb(action: string): string {
