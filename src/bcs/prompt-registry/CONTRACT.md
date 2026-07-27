@@ -14,8 +14,11 @@ Owns `Project`, `Prompt`, `PromptVersion`, `PromptShare`, and the expansion engi
 | `expand(orgId, promptName, input, { userId?, projectId?, version? })` | Returns `{ systemMessage, userMessage, appliedPolicies }` | Workflow Orchestration, Distribution (`sh-run`) |
 | `listPrompts(orgId, userId, { page, pageSize })` | Prompts owned by or shared with the user | Distribution (`sh-list`, `sh-search`, UI) |
 | `getPrompt(orgId, name)` | Latest version + metadata | Distribution, Workflow Orchestration (step validation) |
-| `getProject(orgId, projectId)` | **New (011-vcs-integration).** Project metadata including its owning `teamId` | Governance (`resolveRequiredSkillPolicies`), VCS Integration (repo↔project linking), Distribution |
-| `createPrompt`, `publishVersion`, `sharePrompt`, `createProject`, `addProjectMember` | Standard write operations, org-scoped | Distribution (route handlers) |
+| `getProject(orgId, projectId)` | Project metadata including its owning `teamId`; returns no row for nonexistent or cross-organization ids. | Governance (`resolveRequiredSkillPolicies`), VCS Integration (repo↔project linking), Distribution |
+| `listProjectsByOrganization(orgId)` / `listProjectsByTeam(orgId, teamId)` | Organization- and team-scoped project lists in project-name order. | Distribution, Governance, VCS Integration |
+| `createProject`, `updateProject`, `deleteProject` | Project lifecycle operations; validate Identity references through Identity & Access read contracts and write `project.created` / `project.updated` / `project.deleted` audit events transactionally. | Distribution (route handlers) |
+| `addProjectMember`, `listProjectMembers`, `removeProjectMember` | Project membership operations; same-organization users from any team may be members, duplicate `(projectId, userId)` grants are rejected, and member mutations are audited transactionally. | Distribution (route handlers) |
+| `createPrompt`, `publishVersion`, `sharePrompt` | Future prompt write operations, org-scoped. | Distribution (route handlers) |
 
 ## Events Published
 
@@ -48,11 +51,15 @@ interface PromptSummary {
 
 interface Project {
   id: string; orgId: string; teamId: string; // owning team — every project belongs to exactly one team
-  name: string;
+  leadUserId: string | null; name: string; slug: string; description: string | null;
+  createdAt: Date; updatedAt: Date;
+}
+interface ProjectMember {
+  id: string; projectId: string; userId: string; role: string; createdAt: Date;
 }
 ```
 
-`name` is unique **within an organization**, not globally — corrected from the current single-tenant schema.
+`name` and `slug` are unique **within an organization**, not globally — corrected from the current single-tenant schema. Project member uniqueness is persisted on `(project_id, user_id)`.
 
 ## Stability Guarantees
 
