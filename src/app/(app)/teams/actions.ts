@@ -6,8 +6,11 @@ import {
   authenticateSession,
   createTeam,
   insertTeamBetween,
+  inviteUser,
+  removeTeamMember,
   reparentTeam,
   updateTeam,
+  updateUser,
 } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
@@ -87,6 +90,52 @@ export async function insertTeamBetweenAction(params: {
         childTeamId,
         actingUser,
       ),
+    );
+    revalidatePath("/teams");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function inviteMemberAction(params: {
+  teamId: string;
+  email: string;
+  role?: "admin" | "member";
+}): Promise<TeamActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) => inviteUser(tx, actingUser, params));
+    revalidatePath("/teams");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function removeMemberAction(params: {
+  targetUserId: string;
+}): Promise<TeamActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      removeTeamMember(tx, actingUser, params.targetUserId),
+    );
+    revalidatePath("/teams");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function assignUserToTeamAction(params: {
+  targetUserId: string;
+  teamId: string;
+}): Promise<TeamActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      updateUser(tx, actingUser, params.targetUserId, { teamId: params.teamId }),
     );
     revalidatePath("/teams");
     return { ok: true };

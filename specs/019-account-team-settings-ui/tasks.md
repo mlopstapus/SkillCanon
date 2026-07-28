@@ -141,17 +141,17 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 - [X] T046 [US3] Create `src/bcs/identity-access/application/list-unassigned-users.ts`: admin-only (`NotAuthorizedError` otherwise), org-scoped via `users-repo.listUnassigned` (from T009)
 - [X] T047 [US3] Edit `src/bcs/identity-access/index.ts`: export `removeTeamMember`, `listUnassignedUsers`
 - [X] T048 [US3] Edit `src/bcs/identity-access/CONTRACT.md`: add the `removeTeamMember`/`listUnassignedUsers` rows to Exposed APIs per data-model.md
-- [ ] T049 [P] [US3] Write structural test `src/app/(app)/teams/invite-member-drawer.test.tsx`
-- [ ] T050 [P] [US3] Write structural test `src/app/(app)/teams/remove-member-confirm.test.tsx`
-- [ ] T051 [P] [US3] Write structural test `src/app/(app)/teams/unassigned-users-panel.test.tsx`
-- [ ] T052 [US3] Create `src/app/(app)/teams/invite-member-drawer.tsx`: client — email + role form, calls `inviteUser` via a Server Action, surfaces `DuplicateInvitationError` inline
-- [ ] T053 [US3] Create `src/app/(app)/teams/remove-member-confirm.tsx`: client — lightweight confirm step explaining the member becomes unassigned (not deactivated) and their API keys stop working until reassigned, per `contracts/account-team-settings-ui.md`
-- [ ] T054 [US3] Create `src/app/(app)/teams/unassigned-users-panel.tsx`: client — admin-only list from `listUnassignedUsers`, each row with an "Assign to team" select calling `updateUser(..., { teamId })`
-- [ ] T055 [US3] Edit `src/app/(app)/teams/actions.ts`: add `"use server"` `inviteMemberAction`, `removeMemberAction`, `assignUserToTeamAction`
-- [ ] T056 [US3] Edit `src/app/(app)/teams/teams-explorer.tsx`: wire the Members tab's invite/remove controls (admin-or-team-owner gated) and a sidebar "Unassigned" entry (admin-only) opening `unassigned-users-panel.tsx`
-- [ ] T057 [US3] Manual verification: quickstart.md steps 6–8 (invite, remove + reassign, sign-in-while-unassigned)
+- [X] T049 [P] [US3] Write structural test `src/app/(app)/teams/invite-member-drawer.test.tsx`
+- [X] T050 [P] [US3] Write structural test `src/app/(app)/teams/remove-member-confirm.test.tsx`
+- [X] T051 [P] [US3] Write structural test `src/app/(app)/teams/unassigned-users-panel.test.tsx`
+- [X] T052 [US3] Create `src/app/(app)/teams/invite-member-drawer.tsx`: client — email + role form, calls `inviteUser` via a Server Action, surfaces `DuplicateInvitationError` inline
+- [X] T053 [US3] Create `src/app/(app)/teams/remove-member-confirm.tsx`: client — lightweight confirm step explaining the member becomes unassigned (not deactivated) and their API keys stop working until reassigned, per `contracts/account-team-settings-ui.md`
+- [X] T054 [US3] Create `src/app/(app)/teams/unassigned-users-panel.tsx`: client — admin-only list, each row with an "Assign to team" select calling `updateUser(..., { teamId })`. **Deviation**: doesn't call `listUnassignedUsers` directly — `page.tsx` already fetches the whole org roster via `listUsers` (no role restriction by design, per that function's own docstring) for the Members tab/owner-select elsewhere on this same page, so the unassigned subset is derived client-side (`users.filter(u => u.teamId === null)`) rather than double-fetching. `listUnassignedUsers` stays real, tested, and contract-documented for a future narrower consumer (e.g. an MCP tool) — the actual admin-only enforcement for the *mutating* action lives in `assignUserToTeamAction` → `updateUser`'s existing gate, consistent with how every other admin-only control on this page is enforced (UI-gated + server-enforced, not a separately-scoped fetch).
+- [X] T055 [US3] Edit `src/app/(app)/teams/actions.ts`: add `"use server"` `inviteMemberAction`, `removeMemberAction`, `assignUserToTeamAction`
+- [X] T056 [US3] Edit `src/app/(app)/teams/teams-explorer.tsx`: wire the Members tab's invite/remove controls (admin-or-team-owner gated) and a sidebar "Unassigned" entry (admin-only) opening `unassigned-users-panel.tsx`. Extracted the sidebar into a standalone `TeamsSidebar` component in the same file (now rendered from two different states — normal team view and the unassigned-users view) rather than duplicating its JSX.
+- [ ] T057 [US3] Manual verification: quickstart.md steps 6–8 — deferred to the same consolidated browser pass as T025/T041
 
-**Checkpoint**: User Stories 1, 2, and 3 all work independently.
+**Checkpoint**: User Stories 1, 2, and 3 all work independently. (pending only the deferred manual browser check)
 
 ---
 
