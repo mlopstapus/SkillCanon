@@ -131,16 +131,16 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 
 ### Tests for User Story 3
 
-- [ ] T042 [P] [US3] Write failing test `src/bcs/identity-access/application/remove-team-member.test.ts`: admin removes a member → target's `teamId` becomes `null`; the team's own owner (non-admin) removes a member of that same team → succeeds; a non-admin, non-owner caller → `NotAuthorizedError`; a cross-org target id → `CrossOrgUserAccessError`
-- [ ] T043 [P] [US3] Write failing test `src/bcs/identity-access/application/list-unassigned-users.test.ts`: admin sees every unassigned user in their own org; non-admin caller → `NotAuthorizedError`; a different org's unassigned users never appear
-- [ ] T044 [P] [US3] Add an end-to-end test case (to `authenticate-api-key.test.ts` or a new integration test) covering the full loop: issue a key, remove the owner from their team, confirm `authenticateApiKey` now returns `null`, reassign the owner to a team, confirm it authenticates again with no change to the key row
+- [X] T042 [P] [US3] Write failing test `src/bcs/identity-access/application/remove-team-member.test.ts`: admin removes a member → target's `teamId` becomes `null`; the team's own owner (non-admin) removes a member of that same team → succeeds; a non-admin, non-owner caller → `NotAuthorizedError`; a cross-org target id → `CrossOrgUserAccessError`; audit event recorded — 5 tests
+- [X] T043 [P] [US3] Write failing test `src/bcs/identity-access/application/list-unassigned-users.test.ts`: admin sees every unassigned user in their own org; non-admin caller → `NotAuthorizedError`; a different org's unassigned users never appear — 3 tests
+- [X] T044 [P] [US3] Add an end-to-end test case to `authenticate-api-key.test.ts` covering the full loop: issue a key, remove the owner from their team, confirm `authenticateApiKey` now returns `null`, reassign the owner to a *different* team, confirm it authenticates again with no change to the key row
 
 ### Implementation for User Story 3
 
-- [ ] T045 [US3] Create `src/bcs/identity-access/application/remove-team-member.ts`: reuse `authorize-invitation-management.ts`'s `assertCanManageInvitationsForTeam` for the admin-or-team-owner check (research.md §2), then `users-repo.update(tx, targetUserId, { teamId: null })`, then `record()` an audit event with action `"user.updated"` (before/after showing the `teamId` change)
-- [ ] T046 [US3] Create `src/bcs/identity-access/application/list-unassigned-users.ts`: admin-only (`NotAuthorizedError` otherwise), org-scoped via `users-repo.listUnassigned` (from T009)
-- [ ] T047 [US3] Edit `src/bcs/identity-access/index.ts`: export `removeTeamMember`, `listUnassignedUsers`
-- [ ] T048 [US3] Edit `src/bcs/identity-access/CONTRACT.md`: add the `removeTeamMember`/`listUnassignedUsers` rows to Exposed APIs per data-model.md
+- [X] T045 [US3] Create `src/bcs/identity-access/application/remove-team-member.ts`: reuses `authorize-invitation-management.ts`'s `assertCanManageInvitationsForTeam` for the admin-or-team-owner check, then `users-repo.update(tx, targetUserId, { teamId: null })`, then `record()` an audit event with action `"user.updated"`. **Edge case handled beyond the original task description**: an already-unassigned target has no team to authorize against — admin-only no-op in that case (idempotent, matching `revokeInvitation`'s existing terminal-state convention).
+- [X] T046 [US3] Create `src/bcs/identity-access/application/list-unassigned-users.ts`: admin-only (`NotAuthorizedError` otherwise), org-scoped via `users-repo.listUnassigned` (from T009)
+- [X] T047 [US3] Edit `src/bcs/identity-access/index.ts`: export `removeTeamMember`, `listUnassignedUsers`
+- [X] T048 [US3] Edit `src/bcs/identity-access/CONTRACT.md`: add the `removeTeamMember`/`listUnassignedUsers` rows to Exposed APIs per data-model.md
 - [ ] T049 [P] [US3] Write structural test `src/app/(app)/teams/invite-member-drawer.test.tsx`
 - [ ] T050 [P] [US3] Write structural test `src/app/(app)/teams/remove-member-confirm.test.tsx`
 - [ ] T051 [P] [US3] Write structural test `src/app/(app)/teams/unassigned-users-panel.test.tsx`
