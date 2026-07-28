@@ -1,16 +1,25 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
 import { Badge } from "@/shared/ui";
+import { TeamFormDrawer, type TeamFormMode } from "./team-form-drawer";
 
 type Tab = "details" | "subteams" | "members";
+
+type DrawerState = { mode: TeamFormMode; contextTeam: Team | null };
 
 export type TeamsExplorerProps = {
   currentUser: AppSessionUser;
   teams: Team[];
   users: UserAccountSummary[];
   initialSelectedTeamId: string;
+};
+
+type TeamsExplorerViewProps = TeamsExplorerProps & {
+  /** Injected rather than calling `useRouter()` internally, so this pure view can render outside an App Router context (e.g. `renderToStaticMarkup` in tests) — mirrors `app-navigation.tsx`'s `NavigationList`/`AppNavigation` split. */
+  refresh: () => void;
 };
 
 function depthOf(teamId: string, byId: Map<string, Team>): number {
@@ -33,15 +42,26 @@ function chainRootFirst(teamId: string, byId: Map<string, Team>): Team[] {
   return chain;
 }
 
-export function TeamsExplorer({
+export function TeamsExplorerView({
   currentUser,
   teams,
   users,
   initialSelectedTeamId,
-}: TeamsExplorerProps) {
+  refresh,
+}: TeamsExplorerViewProps) {
   const [selectedTeamId, setSelectedTeamId] = useState(initialSelectedTeamId);
   const [tab, setTab] = useState<Tab>("details");
   const [filterText, setFilterText] = useState("");
+  const [drawer, setDrawer] = useState<DrawerState | null>(null);
+
+  function closeDrawer() {
+    setDrawer(null);
+  }
+
+  function onDrawerSuccess() {
+    setDrawer(null);
+    refresh();
+  }
 
   const byId = useMemo(() => new Map(teams.map((t) => [t.id, t])), [teams]);
   const membersByTeam = useMemo(() => {
@@ -127,6 +147,17 @@ export function TeamsExplorer({
             );
           })}
         </nav>
+        {isAdmin ? (
+          <div className="border-t border-border p-3.5">
+            <button
+              type="button"
+              onClick={() => setDrawer({ mode: "new", contextTeam: null })}
+              className="flex w-full items-center justify-center gap-1.5 rounded-control border border-border-2 bg-surface py-2.5 text-[12.5px] font-semibold text-dim"
+            >
+              + New team
+            </button>
+          </div>
+        ) : null}
       </aside>
 
       <main className="flex min-w-0 flex-col overflow-hidden">
@@ -158,6 +189,31 @@ export function TeamsExplorer({
                 </div>
               </div>
             </div>
+            {isAdmin ? (
+              <div className="flex flex-none flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ mode: "insert", contextTeam: selectedTeam })}
+                  className="rounded-control border border-border-2 bg-surface px-2.5 py-2 font-mono text-[11.5px] text-dim"
+                >
+                  Insert above
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ mode: "edit", contextTeam: selectedTeam })}
+                  className="rounded-control border border-border-2 bg-surface px-2.5 py-2 font-mono text-[11.5px] text-dim"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ mode: "sub", contextTeam: selectedTeam })}
+                  className="rounded-control bg-a px-3.5 py-2 text-[13px] font-semibold text-a-fg shadow-glow"
+                >
+                  New sub-team
+                </button>
+              </div>
+            ) : null}
           </div>
           <div className="mt-4 flex gap-0.5">
             <button
@@ -238,10 +294,8 @@ export function TeamsExplorer({
                 {isAdmin ? (
                   <button
                     type="button"
-                    disabled
-                    aria-disabled="true"
-                    title="Coming soon"
-                    className="inline-flex items-center gap-1.5 rounded-control bg-a px-3.5 py-2 font-semibold text-[12.5px] text-a-fg opacity-60"
+                    onClick={() => setDrawer({ mode: "sub", contextTeam: selectedTeam })}
+                    className="inline-flex items-center gap-1.5 rounded-control bg-a px-3.5 py-2 font-semibold text-[12.5px] text-a-fg shadow-glow"
                   >
                     New sub-team
                   </button>
@@ -301,6 +355,22 @@ export function TeamsExplorer({
           </div>
         </div>
       </main>
+
+      {drawer ? (
+        <TeamFormDrawer
+          mode={drawer.mode}
+          contextTeam={drawer.contextTeam}
+          teams={teams}
+          users={users}
+          onClose={closeDrawer}
+          onSuccess={onDrawerSuccess}
+        />
+      ) : null}
     </div>
   );
+}
+
+export function TeamsExplorer(props: TeamsExplorerProps) {
+  const router = useRouter();
+  return <TeamsExplorerView {...props} refresh={() => router.refresh()} />;
 }

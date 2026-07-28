@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
-import { TeamsExplorer } from "./teams-explorer";
+import { TeamsExplorerView } from "./teams-explorer";
 
 const now = new Date("2026-01-01T00:00:00Z");
 
@@ -71,14 +71,17 @@ const memberSession: AppSessionUser = {
   teamId: platform.id,
 };
 
+const noop = () => {};
+
 describe("TeamsExplorer", () => {
   it("renders every team in the hierarchy with a member count", () => {
     const markup = renderToStaticMarkup(
-      <TeamsExplorer
+      <TeamsExplorerView
         currentUser={adminSession}
         teams={teams}
         users={users}
         initialSelectedTeamId={root.id}
+      refresh={noop}
       />,
     );
 
@@ -90,11 +93,12 @@ describe("TeamsExplorer", () => {
 
   it("shows the full root-to-team breadcrumb for a deeply-nested selected team", () => {
     const markup = renderToStaticMarkup(
-      <TeamsExplorer
+      <TeamsExplorerView
         currentUser={adminSession}
         teams={teams}
         users={users}
         initialSelectedTeamId={platform.id}
+      refresh={noop}
       />,
     );
 
@@ -106,11 +110,12 @@ describe("TeamsExplorer", () => {
 
   it("lists the selected team's members (all tab panels render in markup; visibility is CSS-toggled, not unmounted)", () => {
     const markup = renderToStaticMarkup(
-      <TeamsExplorer
+      <TeamsExplorerView
         currentUser={adminSession}
         teams={teams}
         users={users}
         initialSelectedTeamId={platform.id}
+      refresh={noop}
       />,
     );
 
@@ -118,28 +123,29 @@ describe("TeamsExplorer", () => {
     expect(markup).toContain("carol@acme.com");
   });
 
-  it("renders an admin-gated, disabled 'New sub-team' CTA in the empty sub-teams state (US2 wires it)", () => {
+  it("renders an admin-gated 'New sub-team' CTA in the empty sub-teams state", () => {
     const markup = renderToStaticMarkup(
-      <TeamsExplorer
+      <TeamsExplorerView
         currentUser={adminSession}
         teams={[root]}
         users={[]}
         initialSelectedTeamId={root.id}
+      refresh={noop}
       />,
     );
 
     expect(markup).toContain("No sub-teams under Acme Corp");
     expect(markup).toContain("New sub-team");
-    expect(markup).toContain("disabled");
   });
 
   it("does not show the admin-only 'New sub-team' CTA to a non-admin", () => {
     const markup = renderToStaticMarkup(
-      <TeamsExplorer
+      <TeamsExplorerView
         currentUser={memberSession}
         teams={[root]}
         users={[]}
         initialSelectedTeamId={root.id}
+      refresh={noop}
       />,
     );
 
