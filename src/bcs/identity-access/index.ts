@@ -48,4 +48,3 @@ export { authenticateApiKey } from "./application/authenticate-api-key";
 export { revokeApiKey } from "./application/revoke-api-key";
 export { listApiKeys } from "./application/list-api-keys";
 export type { ApiKey, ApiKeySummary } from "./domain/api-key";
-export { isScopeAllowedForRole } from "./domain/api-key";

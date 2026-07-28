@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { isScopeAllowedForRole, type UserRole } from "@/bcs/identity-access";
+import type { UserRole } from "@/bcs/identity-access";
 import { createApiKeyAction } from "./actions";
 
 export type IssueKeyDrawerProps = {
@@ -9,6 +9,21 @@ export type IssueKeyDrawerProps = {
   onClose: () => void;
   onIssued: (rawKey: string) => void;
 };
+
+/**
+ * Mirrors `identity-access/domain/api-key.ts`'s `isScopeAllowedForRole`
+ * exactly — duplicated (not imported) on purpose: that module's real export
+ * pulls the whole `identity-access` barrel (including `createApiKey`,
+ * `inviteUser`, etc.) into this client component's browser bundle, which
+ * transitively drags in `nodemailer`/`postgres` and fails the Next.js build
+ * (`Module not found: Can't resolve 'tls'`) — Node-only deps have no
+ * browser build. `createApiKey`'s own server-side check remains the real
+ * enforcement; a drift here would only be a UX inconvenience, never a
+ * security gap.
+ */
+function isScopeAllowedForRole(scope: string, role: UserRole): boolean {
+  return role === "admin" || scope.endsWith(":read");
+}
 
 const AVAILABLE_SCOPES = ["prompts:read", "prompts:write", "workflows:run"];
 const EXPIRY_OPTIONS = [
