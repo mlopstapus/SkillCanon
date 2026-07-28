@@ -93,6 +93,28 @@ describe("authenticateSession", () => {
     ).resolves.toBeNull();
   });
 
+  it("resolves a session with teamId/teamName null for a user unassigned from every team (019-account-team-settings-ui)", async () => {
+    const { organizationId, userId } = await makeOrgTeamUser(testDb);
+    const token = await signSessionJwt({ sub: userId, role: "member" });
+
+    await updateUserRow(testDb.authDb, userId, { teamId: null });
+
+    const resolved = await authenticateSession(
+      testDb.authDb,
+      `${SESSION_COOKIE_NAME}=${token}`,
+    );
+
+    expect(resolved).toEqual({
+      id: userId,
+      orgId: organizationId,
+      teamId: null,
+      role: "member",
+      email: resolved?.email,
+      displayName: "Jane Doe",
+      teamName: null,
+    });
+  });
+
   it("resolves null when the user's current team belongs to a different organization", async () => {
     const { userId } = await makeOrgTeamUser(testDb);
     const { id: otherOrgId } = await insertOrg(testDb.authDb, {

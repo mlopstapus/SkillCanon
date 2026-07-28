@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { AccessUnavailable } from "./access-unavailable";
 import { AppNavigation } from "./_components/app-navigation";
 import { AppShell } from "./_components/app-shell";
+import { UnassignedNotice } from "./_components/unassigned-notice";
 import { resolveAppShellAccess } from "./app-shell-access";
 
 export default async function AuthenticatedAppLayout({
@@ -17,6 +18,12 @@ export default async function AuthenticatedAppLayout({
   }
   if (access.status === "entitlement-denied") {
     return <AccessUnavailable />;
+  }
+  if (access.user.teamId === null) {
+    // Signed in, but removed from every team (019-account-team-settings-ui)
+    // — restricted view instead of the full shell, since nav/dashboard
+    // content across this app assumes a real team to scope against.
+    return <UnassignedNotice />;
   }
   return (
     <AppShell

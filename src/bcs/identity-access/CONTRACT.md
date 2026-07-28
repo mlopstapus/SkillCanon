@@ -74,13 +74,13 @@ interface OrgSummary {
 interface UserSummary {
   id: UserId;
   orgId: OrganizationId;
-  teamId: TeamId;
+  teamId: TeamId | null; // null once removed from a team (019-account-team-settings-ui) — "unassigned," not deactivated
   role: "admin" | "member";
   email: string;
 }
 interface AppSessionUser extends UserSummary {
   displayName: string;
-  teamName: string;
+  teamName: string | null; // null exactly when teamId is null
 }
 interface TeamChainEntry {
   id: TeamId;

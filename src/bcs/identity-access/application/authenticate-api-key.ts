@@ -13,7 +13,8 @@ function hashKey(rawKey: string): string {
 /**
  * Resolves `rawKey` to its owning user, organization, and scopes (FR-006).
  * Never throws — any unrecognized, malformed, expired, or revoked key (or
- * one whose owning user no longer exists or is deactivated, research.md
+ * one whose owning user no longer exists, is deactivated, or has been
+ * unassigned from every team (019-account-team-settings-ui), research.md
  * §4) resolves to `null`. Only a successful resolution updates
  * `last_used_at` (FR-007).
  */
@@ -31,7 +32,7 @@ export async function authenticateApiKey(
   }
 
   const owner = await findUserById(db, key.userId);
-  if (!owner || !owner.isActive) {
+  if (!owner || !owner.isActive || owner.teamId === null) {
     return null;
   }
 

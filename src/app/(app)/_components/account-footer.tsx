@@ -9,6 +9,7 @@ export function AccountFooter({ user }: { user: AccountIdentity }) {
   const initial = user.displayName.trim().charAt(0).toUpperCase() || "?";
   const role =
     user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase();
+  const teamLabel = user.teamName ?? "Unassigned";
 
   return (
     <footer className="flex items-center gap-2.5 border-t border-border px-4 py-3.5">
@@ -23,7 +24,7 @@ export function AccountFooter({ user }: { user: AccountIdentity }) {
           {user.displayName}
         </span>
         <span className="mt-0.5 block truncate text-[10.5px] text-faint">
-          {role} · {user.teamName}
+          {role} · {teamLabel}
         </span>
       </span>
       <svg

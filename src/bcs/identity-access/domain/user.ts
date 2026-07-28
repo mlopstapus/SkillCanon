@@ -3,7 +3,8 @@ export type UserRole = "admin" | "member";
 export interface User {
   id: string;
   organizationId: string;
-  teamId: string;
+  /** Nullable since 019-account-team-settings-ui — null means "removed from their team, unassigned." */
+  teamId: string | null;
   username: string;
   displayName: string;
   email: string;
@@ -18,7 +19,7 @@ export interface User {
 export interface UserAccountSummary {
   id: string;
   organizationId: string;
-  teamId: string;
+  teamId: string | null;
   username: string;
   displayName: string;
   email: string;
@@ -32,7 +33,8 @@ export interface UserAccountSummary {
 export interface UserSummary {
   id: string;
   orgId: string;
-  teamId: string;
+  /** Nullable since 019-account-team-settings-ui — null means the user has been removed from their team and is awaiting reassignment. */
+  teamId: string | null;
   role: UserRole;
   email: string;
 }
@@ -40,7 +42,8 @@ export interface UserSummary {
 /** Presentation-safe live identity returned only by browser session resolution. */
 export interface AppSessionUser extends UserSummary {
   displayName: string;
-  teamName: string;
+  /** Null exactly when `teamId` is null (019-account-team-settings-ui). */
+  teamName: string | null;
 }
 
 /** Thrown when a `(organization_id, email)` or `(organization_id, username)` uniqueness constraint is violated (FR-002). */

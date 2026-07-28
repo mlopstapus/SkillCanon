@@ -105,6 +105,18 @@ describe("authenticateApiKey", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when the owning user has been unassigned from every team (019-account-team-settings-ui)", async () => {
+    const admin = await makeUser(testDb, "admin");
+    const { rawKey } = await createApiKey(testDb.authDb, admin, {
+      name: "My IDE",
+      scopes: ["prompts:read"],
+    });
+    await updateUserRow(testDb.authDb, admin.id, { teamId: null });
+
+    const result = await authenticateApiKey(testDb.authDb, rawKey);
+    expect(result).toBeNull();
+  });
+
   it("updates last_used_at on a successful authentication", async () => {
     const admin = await makeUser(testDb, "admin");
     const { rawKey } = await createApiKey(testDb.authDb, admin, {

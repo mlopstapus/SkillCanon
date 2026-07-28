@@ -186,3 +186,40 @@ describe("api_keys schema (real migration)", () => {
     expect(fkRows).toHaveLength(0);
   });
 });
+
+describe("users schema (real migration)", () => {
+  let testDb: TestDb;
+
+  beforeAll(async () => {
+    testDb = await startTestDb();
+  }, 120_000);
+
+  afterAll(async () => {
+    await testDb.teardown();
+  });
+
+  it("team_id is nullable — a user can be unassigned from every team (019-account-team-settings-ui)", async () => {
+    const rows = await testDb.ownerDb.execute<{ is_nullable: string }>(
+      sql`select is_nullable from information_schema.columns
+          where table_schema = 'identity_access' and table_name = 'users'
+            and column_name = 'team_id'`,
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.is_nullable).toBe("YES");
+  });
+
+  it("still has a foreign key on team_id, unaffected by the nullability change", async () => {
+    const rows = await testDb.ownerDb.execute<{ column_name: string }>(
+      sql`select kcu.column_name
+          from information_schema.table_constraints tc
+          join information_schema.key_column_usage kcu
+            on tc.constraint_name = kcu.constraint_name
+           and tc.table_schema = kcu.table_schema
+          where tc.table_schema = 'identity_access'
+            and tc.table_name = 'users'
+            and tc.constraint_type = 'FOREIGN KEY'
+            and kcu.column_name = 'team_id'`,
+    );
+    expect(rows).toHaveLength(1);
+  });
+});

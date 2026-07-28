@@ -45,6 +45,14 @@ export async function authenticateSession(
   if (!user || !user.isActive) {
     return null;
   }
+  // `teamId` set but `teamName` null means the join found no same-org team
+  // for it — a cross-org data-integrity violation (M3), not a legitimate
+  // unassigned user (whose `teamId` is null to begin with). Reject only the
+  // former; a genuinely unassigned user resolves with both null
+  // (019-account-team-settings-ui).
+  if (user.teamId !== null && user.teamName === null) {
+    return null;
+  }
   return {
     id: user.id,
     orgId: user.orgId,

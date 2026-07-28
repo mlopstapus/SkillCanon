@@ -30,7 +30,7 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 
 **Purpose**: Confirm the baseline is green before touching anything.
 
-- [ ] T001 Confirm local stack is current: `docker compose up -d database`, `pnpm db:migrate`, then `pnpm vitest run src/bcs/identity-access` — all green before starting (no code change; this is the baseline this feature's diffs are measured against)
+- [X] T001 Confirm local stack is current: `docker compose up -d database`, `pnpm db:migrate`, then `pnpm vitest run src/bcs/identity-access` — all green before starting (no code change; this is the baseline this feature's diffs are measured against)
 
 ---
 
@@ -42,29 +42,30 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 
 ### Tests for Foundational (write first, confirm they fail)
 
-- [ ] T002 [P] Add a test to `src/bcs/identity-access/infrastructure/schema.test.ts` asserting `identity_access.users.team_id` is nullable (`information_schema.columns.is_nullable = 'YES'`)
-- [ ] T003 [P] Add a test to `src/bcs/identity-access/application/authenticate-session.test.ts` asserting a session for a user with `team_id = null` still resolves (non-null `AppSessionUser`, with `teamId: null` and `teamName: null`)
-- [ ] T004 [P] Add a test to `src/bcs/identity-access/application/authenticate-api-key.test.ts` asserting a key whose owner has `team_id = null` resolves to `null` (auth rejected)
-- [ ] T005 [P] Add a test to `src/bcs/identity-access/application/update-user.test.ts` asserting an admin can set `fields.teamId = null` with no team-existence check firing
+- [X] T002 [P] Add a test to `src/bcs/identity-access/infrastructure/schema.test.ts` asserting `identity_access.users.team_id` is nullable (`information_schema.columns.is_nullable = 'YES'`)
+- [X] T003 [P] Add a test to `src/bcs/identity-access/application/authenticate-session.test.ts` asserting a session for a user with `team_id = null` still resolves (non-null `AppSessionUser`, with `teamId: null` and `teamName: null`)
+- [X] T004 [P] Add a test to `src/bcs/identity-access/application/authenticate-api-key.test.ts` asserting a key whose owner has `team_id = null` resolves to `null` (auth rejected)
+- [X] T005 [P] Add a test to `src/bcs/identity-access/application/update-user.test.ts` asserting an admin can set `fields.teamId = null` with no team-existence check firing
 
 ### Implementation for Foundational
 
-- [ ] T006 Edit `src/bcs/identity-access/infrastructure/schema.ts`: drop `.notNull()` from `users.teamId` (data-model.md's schema change)
-- [ ] T007 Generate and rename the migration: `MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/skillcanon" pnpm db:generate`, then rename the `.sql` file and its `_journal.json` `tag` to `<timestamp>_identity_access_users_team_id_nullable` per `docs/context/database-conventions.md`
-- [ ] T008 [P] Edit `src/bcs/identity-access/domain/user.ts`: `UserSummary.teamId` → `TeamId | null`; `AppSessionUser.teamName` → `string | null`
-- [ ] T009 Edit `src/bcs/identity-access/infrastructure/users-repo.ts`: `findAppSessionUserById`'s `innerJoin(teams, ...)` → `leftJoin`; `UpdateUserFields.teamId` → `string | null`; add `listUnassigned(tx, organizationId)` using `isNull(users.teamId)` (new export, consumed by US3)
-- [ ] T010 Edit `src/bcs/identity-access/application/authenticate-session.ts`: confirm the nullable `teamName`/`teamId` pass through unchanged from the now-`leftJoin`ed repo row (makes T003 pass)
-- [ ] T011 Edit `src/bcs/identity-access/application/authenticate-api-key.ts`: add `owner.teamId === null` to the existing `!owner.isActive` rejection branch (makes T004 pass)
-- [ ] T012 Edit `src/bcs/identity-access/application/update-user.ts`: change the `if (fields.teamId !== undefined)` branch to skip the team-existence lookup when `fields.teamId === null` (makes T005 pass)
-- [ ] T013 Edit `src/bcs/identity-access/CONTRACT.md`: apply data-model.md's `UserSummary`/`AppSessionUser` type diff to the Data Contracts section
-- [ ] T014 [P] Add a null-`teamName` case to the existing `src/app/(app)/_components/account-footer.test.tsx`, asserting the footer renders "Unassigned" (not a crash or blank) when `user.teamName` is `null` — write it failing before T015
-- [ ] T015 [P] Edit `src/app/(app)/_components/account-footer.tsx`: render `user.teamName ?? "Unassigned"` instead of assuming a non-null string (makes T014 pass)
-- [ ] T016 [P] Create `src/app/(app)/_components/unassigned-notice.tsx`, mirroring `access-unavailable.tsx`'s shape ("You're signed in, but not yet assigned to a team — ask an admin to assign you.")
-- [ ] T017 [P] Create `src/app/(app)/_components/unassigned-notice.test.tsx`: `renderToStaticMarkup` structural test for T016
-- [ ] T018 Edit `src/app/(app)/layout.tsx`: after resolving `access`, if `access.status === "allowed"` and `access.user.teamId === null`, render `<UnassignedNotice />` instead of `<AppShell>...</AppShell>`
-- [ ] T019 Run `pnpm vitest run src/bcs/identity-access` and `pnpm vitest run "src/app/(app)/_components"` and confirm T002–T005 and T014 now pass
+- [X] T006 Edit `src/bcs/identity-access/infrastructure/schema.ts`: drop `.notNull()` from `users.teamId` (data-model.md's schema change)
+- [X] T007 Generate and rename the migration: `MIGRATION_DATABASE_URL="postgresql://x:x@localhost:5432/skillcanon" pnpm db:generate`, then rename the `.sql` file and its `_journal.json` `tag` to `<timestamp>_identity_access_users_team_id_nullable` per `docs/context/database-conventions.md` — **note**: `pnpm db:generate` produced a bogus diff bundling unrelated already-applied catch-up DDL, because `drizzle/migrations/meta/0007,0008,0010-0013_snapshot.json` are missing from this repo (a pre-existing gap predating this feature — those migrations' `.sql` files exist and are applied, but their snapshot JSON was never committed). Fixed by keeping the auto-generated (accurate) `0014_snapshot.json` and hand-trimming `0014`'s `.sql` to just the real delta (`ALTER TABLE ... DROP NOT NULL`). Filed as a backlog item in Phase 7 (see T075a) rather than backfilling the historical gap here.
+- [X] T008 [P] Edit `src/bcs/identity-access/domain/user.ts`: `UserSummary.teamId` → `TeamId | null`; `AppSessionUser.teamName` → `string | null` (also `User.teamId`, `UserAccountSummary.teamId` for consistency with the now-nullable DB column)
+- [X] T009 Edit `src/bcs/identity-access/infrastructure/users-repo.ts`: `findAppSessionUserById`'s `innerJoin(teams, ...)` → `leftJoin`; `UpdateUserFields.teamId` → `string | null`; add `listUnassigned(tx, organizationId)` using `isNull(users.teamId)` (new export, consumed by US3)
+- [X] T010 Edit `src/bcs/identity-access/application/authenticate-session.ts`: distinguish "teamId null" (legit unassigned, allow) from "teamId set but leftJoin found no same-org team" (M3 cross-org violation, still reject) — makes T003 pass without breaking the pre-existing cross-org test
+- [X] T011 Edit `src/bcs/identity-access/application/authenticate-api-key.ts`: add `owner.teamId === null` to the existing `!owner.isActive` rejection branch (makes T004 pass)
+- [X] T012 Edit `src/bcs/identity-access/application/update-user.ts`: change the `if (fields.teamId !== undefined)` branch to skip the team-existence lookup when `fields.teamId === null` (makes T005 pass)
+- [X] T013 Edit `src/bcs/identity-access/CONTRACT.md`: apply data-model.md's `UserSummary`/`AppSessionUser` type diff to the Data Contracts section
+- [X] T014 [P] Add a null-`teamName` case to the existing `src/app/(app)/_components/account-footer.test.tsx`, asserting the footer renders "Unassigned" (not a crash or blank) when `user.teamName` is `null` — write it failing before T015
+- [X] T015 [P] Edit `src/app/(app)/_components/account-footer.tsx`: render `user.teamName ?? "Unassigned"` instead of assuming a non-null string (makes T014 pass)
+- [X] T016 [P] Create `src/app/(app)/_components/unassigned-notice.tsx`, mirroring `access-unavailable.tsx`'s shape ("You're signed in, but not yet assigned to a team — ask an admin to assign you.")
+- [X] T017 [P] Create `src/app/(app)/_components/unassigned-notice.test.tsx`: `renderToStaticMarkup` structural test for T016
+- [X] T018 Edit `src/app/(app)/layout.tsx`: after resolving `access`, if `access.status === "allowed"` and `access.user.teamId === null`, render `<UnassignedNotice />` instead of `<AppShell>...</AppShell>`
+- [X] T018a (discovered via `pnpm typecheck`) Edit `src/bcs/governance/application/resolve-effective-policies.ts` and `resolve-effective-objectives.ts`: both called `getTeamChain(db, orgId, user.teamId)` assuming non-null `teamId`. Fixed by skipping the team-chain resolution (empty chain) for an unassigned user rather than erroring — their own directly-assigned objectives/project-scoped items still resolve. Not anticipated in plan.md/research.md; a real cross-BC consumer of `UserSummary.teamId` this feature's type change touches.
+- [X] T019 Run `pnpm vitest run src/bcs/identity-access` and `pnpm vitest run "src/app/(app)/_components"` and confirm T002–T005 and T014 now pass — 38 files/219 tests green; `pnpm typecheck` clean; `pnpm vitest run src/bcs/governance` (54 tests) confirmed green after T018a
 
-**Checkpoint**: An unassigned (`teamId: null`) user can exist, sign in (restricted view), and their API keys correctly stop authenticating — even though no code path creates one yet until US3 ships.
+**Checkpoint**: An unassigned (`teamId: null`) user can exist, sign in (restricted view), and their API keys correctly stop authenticating — even though no code path creates one yet until US3 ships. ✅ Foundational phase complete.
 
 ---
 

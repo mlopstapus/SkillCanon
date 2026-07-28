@@ -58,7 +58,7 @@ export async function updateUser(
     }
   }
 
-  if (fields.teamId !== undefined) {
+  if (fields.teamId !== undefined && fields.teamId !== null) {
     const team = await findTeamById(tx, fields.teamId);
     if (!team || team.organizationId !== actingUser.orgId) {
       throw new InvalidTeamAssignmentError();

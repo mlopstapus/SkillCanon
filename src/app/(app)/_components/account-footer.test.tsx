@@ -24,4 +24,18 @@ describe("AccountFooter", () => {
     expect(markup).not.toContain("jane@example.com");
     expect(markup).not.toContain("placeholder");
   });
+
+  it("renders \"Unassigned\" instead of crashing/blanking when teamName is null (019-account-team-settings-ui)", () => {
+    const unassignedUser: AppSessionUser = {
+      ...user,
+      teamId: null,
+      teamName: null,
+    };
+
+    const markup = renderToStaticMarkup(
+      <AccountFooter user={unassignedUser} />,
+    );
+
+    expect(markup).toContain("Admin · Unassigned");
+  });
 });

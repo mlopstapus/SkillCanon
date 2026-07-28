@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { teams, users } from "./schema";
 
@@ -22,7 +22,8 @@ export interface UpdateUserFields {
   username?: string;
   role?: "admin" | "member";
   isActive?: boolean;
-  teamId?: string;
+  /** `null` unassigns the user from every team (019-account-team-settings-ui). */
+  teamId?: string | null;
 }
 
 export async function insert(
@@ -58,6 +59,16 @@ export async function findById(tx: Tx, id: string) {
  * app shell in one query. The join includes organization equality explicitly:
  * `users.team_id` has an FK to teams, but that FK alone does not prove the
  * referenced team belongs to the same tenant.
+ *
+ * `leftJoin` (not `innerJoin`) since 019-account-team-settings-ui: a user can
+ * legitimately have `team_id = null` (unassigned) and must still resolve —
+ * `teamName` comes back `null` in that case. The join's `and(...)` condition
+ * still fails to match (and therefore still yields `teamName: null`) for a
+ * `team_id` pointing at a team in a *different* organization — the caller
+ * (`authenticateSession`) is responsible for telling these two null-teamName
+ * cases apart (`teamId === null` vs. `teamId` set but the join found
+ * nothing), since only the latter is the M3 cross-org violation that must
+ * still be rejected outright.
  */
 export async function findAppSessionUserById(tx: Tx, id: string) {
   const [row] = await tx
@@ -72,7 +83,7 @@ export async function findAppSessionUserById(tx: Tx, id: string) {
       isActive: users.isActive,
     })
     .from(users)
-    .innerJoin(
+    .leftJoin(
       teams,
       and(
         eq(teams.id, users.teamId),
@@ -81,6 +92,16 @@ export async function findAppSessionUserById(tx: Tx, id: string) {
     )
     .where(eq(users.id, id));
   return row;
+}
+
+/** Every user in `organizationId` currently unassigned from any team (019-account-team-settings-ui). */
+export async function listUnassigned(tx: Tx, organizationId: string) {
+  return tx
+    .select()
+    .from(users)
+    .where(
+      and(eq(users.organizationId, organizationId), isNull(users.teamId)),
+    );
 }
 
 /**
