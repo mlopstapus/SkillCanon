@@ -163,22 +163,22 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 
 ### Tests for User Story 4
 
-- [ ] T058 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/page.test.tsx`
-- [ ] T059 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/api-keys-list.test.tsx`: revoked keys stay visible, marked revoked, with no Revoke control
-- [ ] T060 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/issue-key-drawer.test.tsx`: a `member`-role caller sees write/run scopes present but disabled
-- [ ] T061 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/key-reveal-modal.test.tsx`
+- [X] T058 [P] [US4] ~~Write structural test `page.test.tsx`~~ — same deviation as T020 (US1): `page.tsx` is a thin async Server Component with no pure sub-component; assertions folded into `api-keys-list.test.tsx` (T059) against the exported pure `ApiKeysListView`.
+- [X] T059 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/api-keys-list.test.tsx`: revoked keys stay visible, marked revoked, with no Revoke control; empty state; raw key never appears — 3 tests
+- [X] T060 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/issue-key-drawer.test.tsx`: a `member`-role caller sees write/run scopes present but disabled ("admin only" ×2), admin sees all three enabled — 2 tests
+- [X] T061 [P] [US4] Write structural test `src/app/(app)/settings/api-keys/key-reveal-modal.test.tsx` — 1 test
 
 ### Implementation for User Story 4
 
-- [ ] T062 [US4] Create `src/app/(app)/settings/api-keys/page.tsx`: server — resolve session, `listApiKeys(db, actingUser)`
-- [ ] T063 [US4] Create `src/app/(app)/settings/api-keys/api-keys-list.tsx`: client — key rows (name, prefix, scope chips, dates, status badge, Revoke for active keys only)
-- [ ] T064 [US4] Create `src/app/(app)/settings/api-keys/issue-key-drawer.tsx`: client — name/scopes/expiry form; disables (not hides) non-`:read` scopes for `member` callers per `isScopeAllowedForRole`; requires ≥1 scope
-- [ ] T065 [US4] Create `src/app/(app)/settings/api-keys/key-reveal-modal.tsx`: client — one-time raw-key display, copy-to-clipboard, explicit "won't be shown again" warning; raw value held only in transient client state
-- [ ] T066 [US4] Create `src/app/(app)/settings/api-keys/actions.ts`: `"use server"` `createApiKeyAction`, `revokeApiKeyAction`
-- [ ] T067 [US4] Verify `src/app/(app)/_components/nav-model.ts`'s existing `/settings/api-keys` entry needs no change (confirm only — mirrors T024's `/teams` equivalent)
-- [ ] T068 [US4] Manual verification: quickstart.md step 9 (issue/reveal/copy, scope capping, revoke)
+- [X] T062 [US4] Create `src/app/(app)/settings/api-keys/page.tsx`: server — resolve session (redirect `/login` if none — no defensive unassigned-redirect needed here since the layout guard already blocks this whole route group for `teamId === null`, see contracts.md's corrected routes table), `listApiKeys(db, actingUser)` via `withTenantContext`
+- [X] T063 [US4] Create `src/app/(app)/settings/api-keys/api-keys-list.tsx`: client — key rows (name, prefix, scope chips, dates, status badge, Revoke for active keys only). Split into pure `ApiKeysListView` (testable) + thin `ApiKeysList` (`useRouter()` wrapper), same pattern as `teams-explorer.tsx`'s `TeamsExplorerView`/`TeamsExplorer` split
+- [X] T064 [US4] Create `src/app/(app)/settings/api-keys/issue-key-drawer.tsx`: client — name/scopes/expiry form; disables (not hides) non-`:read` scopes for `member` callers per `isScopeAllowedForRole`; requires ≥1 scope. **Gap found**: `isScopeAllowedForRole` wasn't exported from the barrel — added it (plus `UserRole`) to `index.ts`/`CONTRACT.md` so the UI mirrors the exact same rule `createApiKey` enforces server-side, rather than re-deriving it
+- [X] T065 [US4] Create `src/app/(app)/settings/api-keys/key-reveal-modal.tsx`: client — one-time raw-key display, copy-to-clipboard, explicit "won't be shown again" warning; raw value held only in transient client state
+- [X] T066 [US4] Create `src/app/(app)/settings/api-keys/actions.ts`: `"use server"` `createApiKeyAction`, `revokeApiKeyAction`
+- [X] T067 [US4] Verify `src/app/(app)/_components/nav-model.ts`'s existing `/settings/api-keys` entry needs no change (confirmed)
+- [ ] T068 [US4] Manual verification: quickstart.md step 9 — deferred to the consolidated browser pass
 
-**Checkpoint**: All four user stories are independently functional.
+**Checkpoint**: All four user stories are independently functional. (pending only the deferred manual browser check) **Correction discovered during T062**: `contracts/account-team-settings-ui.md` originally claimed `/settings/api-keys` stays reachable for an unassigned user since keys are personal, not team-scoped — false in practice, since the `(app)` layout's unassigned guard (Foundational, T018) is a single route-group-wide gate with no per-route exception. Fixed in the contract doc; accepted as a minor, documented scope reduction rather than adding per-route layout logic for one edge case.
 
 ---
 

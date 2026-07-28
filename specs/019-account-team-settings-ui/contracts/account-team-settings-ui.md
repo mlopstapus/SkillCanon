@@ -5,7 +5,7 @@
 | Route | Auth requirement | Behavior on wrong state |
 |---|---|---|
 | `/teams` | Authenticated, assigned to a team | Unauthenticated → `/login`; unassigned (`teamId === null`) → the unassigned-notice screen instead of the full shell (no redirect — same session, restricted content, per research.md §1) |
-| `/settings/api-keys` | Authenticated | Unauthenticated → `/login`; reachable even for an unassigned user (keys are personal, not team-scoped) |
+| `/settings/api-keys` | Authenticated, assigned to a team | Unauthenticated → `/login`; unassigned → the unassigned-notice screen. **Correction from the original plan**: the `(app)` layout's unassigned guard (research.md §1) is a single route-group-wide gate with no per-route exception mechanism (Next.js layouts don't carry pathname info without added complexity) — so despite keys being personal, not team-scoped, an unassigned user still can't reach this page. Accepted as a minor, documented scope reduction rather than adding per-route layout logic for one edge case. |
 
 Both render inside the existing `(app)` route group's shell (`AppShell`/`AppNavigation`), matching every other authenticated page — no standalone layout.
 
