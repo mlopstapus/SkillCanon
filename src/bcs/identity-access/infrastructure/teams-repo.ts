@@ -33,6 +33,11 @@ export async function findByOrgAndId(tx: Tx, organizationId: string, id: string)
   return row;
 }
 
+/** Every team in `organizationId`, flat (019-account-team-settings-ui — the full hierarchy view needs the whole tree, not one level at a time). */
+export async function findAllByOrg(tx: Tx, organizationId: string) {
+  return tx.select().from(teams).where(eq(teams.organizationId, organizationId));
+}
+
 /** `null` parentTeamId lists an organization's root-level teams. */
 export async function findByParent(
   tx: Tx,
