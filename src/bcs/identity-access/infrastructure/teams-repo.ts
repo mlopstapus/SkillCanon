@@ -15,6 +15,8 @@ export interface InsertTeamParams {
 
 export interface UpdateTeamFields {
   name?: string;
+  /** 019-account-team-settings-ui — the edit form makes slug editable (FR-005). */
+  slug?: string;
   description?: string;
   ownerId?: string;
 }

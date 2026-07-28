@@ -4,7 +4,9 @@ import {
   record,
   type AuditContext,
 } from "@/bcs/audit-compliance";
-import { CrossOrgReparentError } from "../domain/team";
+import { isUniqueViolation } from "@/shared/db";
+import { CrossOrgReparentError, DuplicateTeamSlugError } from "../domain/team";
+import { NotAuthorizedError, type UserSummary } from "../domain/user";
 import { findById, insert, type InsertTeamParams } from "../infrastructure/teams-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -12,6 +14,12 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
 export interface TeamAuditOptions {
   audit?: boolean;
   auditContext?: AuditContext;
+  /**
+   * Admin-only gate when present (019-account-team-settings-ui); omitted
+   * entirely by bootstrap/system callers (e.g. `provisionTeamAndAdmin`),
+   * which have no acting user yet and are not reachable via any route.
+   */
+  actingUser?: UserSummary;
 }
 
 /**
@@ -23,6 +31,10 @@ export async function createTeam(
   params: InsertTeamParams,
   options: TeamAuditOptions = {},
 ): Promise<{ id: string }> {
+  if (options.actingUser && options.actingUser.role !== "admin") {
+    throw new NotAuthorizedError();
+  }
+
   if (params.parentTeamId) {
     const parent = await findById(tx, params.parentTeamId);
     if (!parent || parent.organizationId !== params.organizationId) {
@@ -30,7 +42,15 @@ export async function createTeam(
     }
   }
 
-  const result = await insert(tx, params);
+  let result: { id: string };
+  try {
+    result = await insert(tx, params);
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new DuplicateTeamSlugError();
+    }
+    throw err;
+  }
   if (options.audit !== false) {
     const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
     await record(tx, {

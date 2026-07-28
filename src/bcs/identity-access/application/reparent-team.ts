@@ -6,6 +6,7 @@ import {
   type AuditContext,
 } from "@/bcs/audit-compliance";
 import { CrossOrgReparentError, CycleError } from "../domain/team";
+import { NotAuthorizedError, type UserSummary } from "../domain/user";
 import { findById, updateParent } from "../infrastructure/teams-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -17,14 +18,20 @@ export interface ReparentTeamOptions {
 
 /**
  * Reparents a team, enforcing: the new parent must belong to the same
- * organization, and the move must not create a cycle.
+ * organization, and the move must not create a cycle. Admin-only
+ * (019-account-team-settings-ui).
  */
 export async function reparentTeam(
   tx: Tx,
   teamId: string,
   newParentId: string,
+  actingUser: UserSummary,
   options: ReparentTeamOptions = {},
 ): Promise<void> {
+  if (actingUser.role !== "admin") {
+    throw new NotAuthorizedError();
+  }
+
   const team = await findById(tx, teamId);
   if (!team) {
     throw new Error(`No team found with id "${teamId}".`);

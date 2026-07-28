@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
+import type { UserSummary } from "../domain/user";
+import { NotAuthorizedError } from "../domain/user";
 import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
 import { getTeamChain } from "./get-team-chain";
@@ -9,6 +11,10 @@ import { reparentTeam } from "./reparent-team";
 import { CycleError } from "../domain/team";
 import { teams } from "../infrastructure/schema";
 import { eq, sql } from "drizzle-orm";
+
+function fakeUser(orgId: string, role: "admin" | "member"): UserSummary {
+  return { id: randomUUID(), orgId, teamId: null, role, email: "acting@example.com" };
+}
 
 describe("reparentTeam", () => {
   let testDb: TestDb;
@@ -52,7 +58,9 @@ describe("reparentTeam", () => {
     // no row change — RLS getting there first is the M2 backstop working,
     // not a bug (research.md §6a-adjacent finding, tracked for T044's audit).
     await expect(
-      withTenantContext(testDb.appDb, orgA.id, (tx) => reparentTeam(tx, teamA.id, teamB.id)),
+      withTenantContext(testDb.appDb, orgA.id, (tx) =>
+        reparentTeam(tx, teamA.id, teamB.id, fakeUser(orgA.id, "admin")),
+      ),
     ).rejects.toThrow();
 
     const [row] = await withTenantContext(testDb.appDb, orgA.id, (tx) =>
@@ -72,7 +80,9 @@ describe("reparentTeam", () => {
 
     // X is Y's parent; reparenting X under Y would create a cycle.
     await expect(
-      withTenantContext(testDb.appDb, org.id, (tx) => reparentTeam(tx, x.id, y.id)),
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        reparentTeam(tx, x.id, y.id, fakeUser(org.id, "admin")),
+      ),
     ).rejects.toThrow(CycleError);
 
     const [row] = await withTenantContext(testDb.appDb, org.id, (tx) =>
@@ -98,7 +108,9 @@ describe("reparentTeam", () => {
       }),
     );
 
-    await withTenantContext(testDb.appDb, org.id, (tx) => reparentTeam(tx, child.id, newParent.id));
+    await withTenantContext(testDb.appDb, org.id, (tx) =>
+      reparentTeam(tx, child.id, newParent.id, fakeUser(org.id, "admin")),
+    );
 
     const chain = await withTenantContext(testDb.appDb, org.id, (tx) =>
       getTeamChain(tx, org.id, child.id),
@@ -121,7 +133,9 @@ describe("reparentTeam", () => {
     );
 
     await expect(
-      withTenantContext(testDb.appDb, org.id, (tx) => reparentTeam(tx, child.id, parent.id)),
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        reparentTeam(tx, child.id, parent.id, fakeUser(org.id, "admin")),
+      ),
     ).resolves.not.toThrow();
 
     const [row] = await withTenantContext(testDb.appDb, org.id, (tx) =>
@@ -140,8 +154,12 @@ describe("reparentTeam", () => {
     );
 
     const results = await Promise.allSettled([
-      withTenantContext(testDb.appDb, org.id, (tx) => reparentTeam(tx, a.id, b.id)),
-      withTenantContext(testDb.appDb, org.id, (tx) => reparentTeam(tx, b.id, a.id)),
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        reparentTeam(tx, a.id, b.id, fakeUser(org.id, "admin")),
+      ),
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        reparentTeam(tx, b.id, a.id, fakeUser(org.id, "admin")),
+      ),
     ]);
 
     const fulfilled = results.filter((r) => r.status === "fulfilled");
@@ -149,6 +167,22 @@ describe("reparentTeam", () => {
     expect(fulfilled).toHaveLength(1);
     expect(rejected).toHaveLength(1);
     expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(CycleError);
+  });
+
+  it("rejects a non-admin actingUser (019-account-team-settings-ui)", async () => {
+    const org = await makeOrg("org-reparent-nonadmin");
+    const parent = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Parent", slug: "np-parent" }),
+    );
+    const child = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Child", slug: "np-child" }),
+    );
+
+    await expect(
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        reparentTeam(tx, child.id, parent.id, fakeUser(org.id, "member")),
+      ),
+    ).rejects.toThrow(NotAuthorizedError);
   });
 
   it("records exactly one team.reparented audit event on success", async () => {
@@ -161,7 +195,7 @@ describe("reparentTeam", () => {
     );
 
     await withTenantContext(testDb.appDb, org.id, (tx) =>
-      reparentTeam(tx, child.id, parent.id, {
+      reparentTeam(tx, child.id, parent.id, fakeUser(org.id, "admin"), {
         auditContext: { transport: "web", sourceIp: "203.0.113.77" },
       }),
     );

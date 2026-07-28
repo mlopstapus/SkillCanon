@@ -2,9 +2,11 @@ import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
+import type { UserSummary } from "../domain/user";
+import { NotAuthorizedError } from "../domain/user";
 import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
-import { CrossOrgReparentError } from "../domain/team";
+import { CrossOrgReparentError, DuplicateTeamSlugError } from "../domain/team";
 import { teams } from "../infrastructure/schema";
 import { eq, sql } from "drizzle-orm";
 
@@ -92,6 +94,63 @@ describe("createTeam", () => {
         }),
       ),
     ).rejects.toThrow(CrossOrgReparentError);
+  });
+
+  function fakeUser(orgId: string, role: "admin" | "member"): UserSummary {
+    return { id: randomUUID(), orgId, teamId: null, role, email: "acting@example.com" };
+  }
+
+  it("rejects a non-admin actingUser (019-account-team-settings-ui)", async () => {
+    const org = await makeOrg("org-nonadmin-create");
+    const member = fakeUser(org.id, "member");
+
+    await expect(
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        createTeam(
+          tx,
+          { organizationId: org.id, name: "Blocked", slug: "blocked" },
+          { actingUser: member },
+        ),
+      ),
+    ).rejects.toThrow(NotAuthorizedError);
+  });
+
+  it("allows an admin actingUser to create a team", async () => {
+    const org = await makeOrg("org-admin-create");
+    const admin = fakeUser(org.id, "admin");
+
+    const result = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(
+        tx,
+        { organizationId: org.id, name: "Allowed", slug: "allowed" },
+        { actingUser: admin },
+      ),
+    );
+
+    expect(result.id).toBeTruthy();
+  });
+
+  it("skips the authorization check entirely when actingUser is omitted (bootstrap/system callers)", async () => {
+    const org = await makeOrg("org-bootstrap-create");
+
+    const result = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Bootstrap", slug: "bootstrap" }),
+    );
+
+    expect(result.id).toBeTruthy();
+  });
+
+  it("rejects a slug that collides with another team in the same organization (019-account-team-settings-ui)", async () => {
+    const org = await makeOrg("org-dup-slug-create");
+    await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "First", slug: "shared-slug" }),
+    );
+
+    await expect(
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        createTeam(tx, { organizationId: org.id, name: "Second", slug: "shared-slug" }),
+      ),
+    ).rejects.toThrow(DuplicateTeamSlugError);
   });
 
   it("records exactly one team.created audit event on success", async () => {

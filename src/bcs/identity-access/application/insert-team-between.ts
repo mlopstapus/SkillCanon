@@ -4,6 +4,7 @@ import {
   record,
   type AuditContext,
 } from "@/bcs/audit-compliance";
+import { NotAuthorizedError, type UserSummary } from "../domain/user";
 import { createTeam } from "./create-team";
 import { reparentTeam } from "./reparent-team";
 import { findById } from "../infrastructure/teams-repo";
@@ -24,14 +25,20 @@ export interface InsertTeamBetweenOptions {
 
 /**
  * Creates a new team taking `childTeamId`'s current parent position, then
- * reparents `childTeamId` under the new team.
+ * reparents `childTeamId` under the new team. Admin-only
+ * (019-account-team-settings-ui).
  */
 export async function insertTeamBetween(
   tx: Tx,
   params: InsertTeamBetweenParams,
   childTeamId: string,
+  actingUser: UserSummary,
   options: InsertTeamBetweenOptions = {},
 ): Promise<{ id: string }> {
+  if (actingUser.role !== "admin") {
+    throw new NotAuthorizedError();
+  }
+
   const child = await findById(tx, childTeamId);
   if (!child) {
     throw new Error(`No team found with id "${childTeamId}".`);
@@ -43,10 +50,10 @@ export async function insertTeamBetween(
       ...params,
       parentTeamId: child.parentTeamId ?? undefined,
     },
-    { audit: false },
+    { audit: false, actingUser },
   );
 
-  await reparentTeam(tx, childTeamId, inserted.id, { audit: false });
+  await reparentTeam(tx, childTeamId, inserted.id, actingUser, { audit: false });
 
   const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
   await record(tx, {

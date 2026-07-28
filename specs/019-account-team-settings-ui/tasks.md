@@ -99,20 +99,20 @@ Single Next.js project at repository root — `src/bcs/identity-access/**` (back
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Add test cases to `src/bcs/identity-access/application/create-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`; admin `actingUser` → succeeds; `actingUser` omitted (bootstrap path) → succeeds unchanged
-- [ ] T027 [P] [US2] Add test cases to `src/bcs/identity-access/application/update-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`
-- [ ] T028 [P] [US2] Add test cases to `src/bcs/identity-access/application/reparent-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`
-- [ ] T029 [P] [US2] Add test cases to `src/bcs/identity-access/application/insert-team-between.test.ts`: non-admin `actingUser` → `NotAuthorizedError`; admin `actingUser` is threaded through to the internal `createTeam` call
-- [ ] T030 [P] [US2] Add test cases to `src/bcs/identity-access/application/create-team.test.ts` and `update-team.test.ts`: a slug colliding with another team in the same org → `DuplicateTeamSlugError`, not a raw Postgres error
+- [X] T026 [P] [US2] Add test cases to `src/bcs/identity-access/application/create-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`; admin `actingUser` → succeeds; `actingUser` omitted (bootstrap path) → succeeds unchanged
+- [X] T027 [P] [US2] Add test cases to `src/bcs/identity-access/application/update-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`
+- [X] T028 [P] [US2] Add test cases to `src/bcs/identity-access/application/reparent-team.test.ts`: non-admin `actingUser` → `NotAuthorizedError`
+- [X] T029 [P] [US2] Add test cases to `src/bcs/identity-access/application/insert-team-between.test.ts`: non-admin `actingUser` → `NotAuthorizedError`; admin `actingUser` is threaded through to the internal `createTeam` call
+- [X] T030 [P] [US2] Add test cases to `src/bcs/identity-access/application/create-team.test.ts` and `update-team.test.ts`: a slug colliding with another team in the same org → `DuplicateTeamSlugError`, not a raw Postgres error — **gap found**: `UpdateTeamFields` had no `slug` field at all (only `name`/`description`/`ownerId`), so the edit form's slug field (FR-005) would have had nothing to call; added it to `teams-repo.ts`.
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Edit `src/bcs/identity-access/domain/team.ts`: add `DuplicateTeamSlugError`
-- [ ] T032 [US2] Edit `src/bcs/identity-access/application/create-team.ts`: add optional `actingUser` to `TeamAuditOptions` (throw `NotAuthorizedError` when present and not admin; skip the check when omitted); wrap `insert()` with `isUniqueViolation()` → `DuplicateTeamSlugError` (makes T026, T030 pass)
-- [ ] T033 [US2] Edit `src/bcs/identity-access/application/update-team.ts`: add required `actingUser: UserSummary` parameter (admin-only); wrap `update()` with the same duplicate-slug handling (makes T027, T030 pass)
-- [ ] T034 [US2] Edit `src/bcs/identity-access/application/reparent-team.ts`: add required `actingUser: UserSummary` parameter (admin-only) (makes T028 pass)
-- [ ] T035 [US2] Edit `src/bcs/identity-access/application/insert-team-between.ts`: add required `actingUser: UserSummary` parameter (admin-only), pass `{ actingUser, ... }` through to its internal `createTeam` call (makes T029 pass)
-- [ ] T036 [US2] Edit `src/bcs/identity-access/CONTRACT.md`: note the `actingUser`/admin-gate addition on `createTeam`/`updateTeam`/`reparentTeam`/`insertTeamBetween`'s rows
+- [X] T031 [US2] Edit `src/bcs/identity-access/domain/team.ts`: add `DuplicateTeamSlugError`
+- [X] T032 [US2] Edit `src/bcs/identity-access/application/create-team.ts`: add optional `actingUser` to `TeamAuditOptions` (throw `NotAuthorizedError` when present and not admin; skip the check when omitted); wrap `insert()` with `isUniqueViolation()` → `DuplicateTeamSlugError` (makes T026, T030 pass)
+- [X] T033 [US2] Edit `src/bcs/identity-access/application/update-team.ts`: add required `actingUser: UserSummary` parameter (admin-only); wrap `update()` with the same duplicate-slug handling (makes T027, T030 pass)
+- [X] T034 [US2] Edit `src/bcs/identity-access/application/reparent-team.ts`: add required `actingUser: UserSummary` parameter (admin-only) (makes T028 pass)
+- [X] T035 [US2] Edit `src/bcs/identity-access/application/insert-team-between.ts`: add required `actingUser: UserSummary` parameter (admin-only), pass `{ actingUser, ... }` through to its internal `createTeam` call (makes T029 pass)
+- [X] T036 [US2] Edit `src/bcs/identity-access/CONTRACT.md`: note the `actingUser`/admin-gate addition on `createTeam`/`updateTeam`/`reparentTeam`/`insertTeamBetween`'s rows — done in the same edit as T035/CONTRACT's Foundational update, verified accurate
 - [ ] T037 [P] [US2] Write structural test `src/app/(app)/teams/team-form-drawer.test.tsx`
 - [ ] T038 [US2] Create `src/app/(app)/teams/team-form-drawer.tsx`: client component — create/edit/new-sub-team/insert-above modes per `contracts/account-team-settings-ui.md`'s Team form drawer table, surfacing `DuplicateTeamSlugError`/`CrossOrgReparentError`/cycle-rejection inline
 - [ ] T039 [US2] Create `src/app/(app)/teams/actions.ts`: `"use server"` `createTeamAction`, `updateTeamAction`, `insertTeamBetweenAction` — each resolves the acting user via `authenticateSession(authDb, cookieHeader)` before calling into `@/bcs/identity-access`
