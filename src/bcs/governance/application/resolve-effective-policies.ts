@@ -22,7 +22,12 @@ export async function resolveEffectivePolicies(
     return { inherited: [], local: [] };
   }
 
-  const chain = await getTeamChain(db, actor.organizationId, user.teamId);
+  // An unassigned user (019-account-team-settings-ui) has no team to derive
+  // an inheritance chain from — no team-level policies apply, not an error.
+  const chain =
+    user.teamId === null
+      ? []
+      : await getTeamChain(db, actor.organizationId, user.teamId);
   const inherited: EffectivePolicy[] = [];
   const local: EffectivePolicy[] = [];
 

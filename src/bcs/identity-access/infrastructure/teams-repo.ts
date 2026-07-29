@@ -15,6 +15,8 @@ export interface InsertTeamParams {
 
 export interface UpdateTeamFields {
   name?: string;
+  /** 019-account-team-settings-ui — the edit form makes slug editable (FR-005). */
+  slug?: string;
   description?: string;
   ownerId?: string;
 }
@@ -31,6 +33,11 @@ export async function findByOrgAndId(tx: Tx, organizationId: string, id: string)
     .from(teams)
     .where(and(eq(teams.id, id), eq(teams.organizationId, organizationId)));
   return row;
+}
+
+/** Every team in `organizationId`, flat (019-account-team-settings-ui — the full hierarchy view needs the whole tree, not one level at a time). */
+export async function findAllByOrg(tx: Tx, organizationId: string) {
+  return tx.select().from(teams).where(eq(teams.organizationId, organizationId));
 }
 
 /** `null` parentTeamId lists an organization's root-level teams. */

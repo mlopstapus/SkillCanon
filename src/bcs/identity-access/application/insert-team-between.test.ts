@@ -2,11 +2,17 @@ import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
+import type { UserSummary } from "../domain/user";
+import { NotAuthorizedError } from "../domain/user";
 import { createOrganization } from "./create-organization";
 import { createTeam } from "./create-team";
 import { insertTeamBetween } from "./insert-team-between";
 import { teams } from "../infrastructure/schema";
 import { eq, sql } from "drizzle-orm";
+
+function fakeUser(orgId: string, role: "admin" | "member"): UserSummary {
+  return { id: randomUUID(), orgId, teamId: null, role, email: "acting@example.com" };
+}
 
 describe("insertTeamBetween", () => {
   let testDb: TestDb;
@@ -52,6 +58,7 @@ describe("insertTeamBetween", () => {
         tx,
         { organizationId: org.id, name: "Backend", slug: "backend" },
         child.id,
+        fakeUser(org.id, "admin"),
       ),
     );
 
@@ -75,6 +82,7 @@ describe("insertTeamBetween", () => {
         tx,
         { organizationId: org.id, name: "New Root", slug: "new-root" },
         child.id,
+        fakeUser(org.id, "admin"),
       ),
     );
 
@@ -97,6 +105,7 @@ describe("insertTeamBetween", () => {
           tx,
           { organizationId: org.id, name: "Backend", slug: uniqueSlug },
           randomUUID(),
+          fakeUser(org.id, "admin"),
         ),
       ),
     ).rejects.toThrow();
@@ -134,6 +143,7 @@ describe("insertTeamBetween", () => {
         tx,
         { organizationId: org.id, name: "Middle", slug: "middle" },
         child.id,
+        fakeUser(org.id, "admin"),
       ),
     );
 
@@ -144,6 +154,24 @@ describe("insertTeamBetween", () => {
     });
     expect(siblingRow?.parentTeamId).toBe(root.id);
     expect(rootRow?.parentTeamId).toBeNull();
+  });
+
+  it("rejects a non-admin actingUser (019-account-team-settings-ui)", async () => {
+    const org = await makeOrg("org-splice-nonadmin");
+    const child = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      createTeam(tx, { organizationId: org.id, name: "Child", slug: "np-splice-child" }),
+    );
+
+    await expect(
+      withTenantContext(testDb.appDb, org.id, (tx) =>
+        insertTeamBetween(
+          tx,
+          { organizationId: org.id, name: "Middle", slug: "np-splice-middle" },
+          child.id,
+          fakeUser(org.id, "member"),
+        ),
+      ),
+    ).rejects.toThrow(NotAuthorizedError);
   });
 
   it("records exactly one operation-level team.reparented audit event", async () => {
@@ -157,6 +185,7 @@ describe("insertTeamBetween", () => {
         tx,
         { organizationId: org.id, name: "Middle", slug: "audited-middle" },
         child.id,
+        fakeUser(org.id, "admin"),
         { auditContext: { transport: "cli", sourceIp: null } },
       ),
     );

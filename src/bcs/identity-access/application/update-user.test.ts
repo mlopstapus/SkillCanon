@@ -113,6 +113,21 @@ describe("updateUser", () => {
     expect(row?.displayName).toBe("Updated");
   });
 
+  it("allows an admin to set teamId to null (unassign) with no team-existence check firing (019-account-team-settings-ui)", async () => {
+    const { organizationId, teamId } = await makeOrgWithTeam(testDb);
+    const admin = await makeUser(testDb, organizationId, teamId, "admin");
+    const target = await makeUser(testDb, organizationId, teamId, "member");
+
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      updateUser(tx, admin, target.id, { teamId: null }),
+    );
+
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      findById(tx, target.id),
+    );
+    expect(row?.teamId).toBeNull();
+  });
+
   it("rejects a cross-org teamId the same way createUser does", async () => {
     const { organizationId, teamId } = await makeOrgWithTeam(testDb);
     const otherOrg = await makeOrgWithTeam(testDb);

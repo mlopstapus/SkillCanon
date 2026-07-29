@@ -32,3 +32,11 @@ export class CycleError extends Error {
     this.name = "CycleError";
   }
 }
+
+/** Thrown when a team's slug collides with another team in the same organization (019-account-team-settings-ui). */
+export class DuplicateTeamSlugError extends Error {
+  constructor() {
+    super("A team with this slug already exists in this organization.");
+    this.name = "DuplicateTeamSlugError";
+  }
+}

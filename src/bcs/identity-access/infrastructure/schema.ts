@@ -73,9 +73,15 @@ export const users = identityAccessSchema.table(
   {
     id: id(),
     organizationId: organizationId(),
-    teamId: uuid("team_id")
-      .notNull()
-      .references(() => teams.id),
+    /**
+     * Nullable since 019-account-team-settings-ui: a user removed from
+     * their team becomes "unassigned" (null) rather than deactivated —
+     * the account stays active, but no team owns it until an admin
+     * reassigns one. Always non-null at creation (`createUser`/
+     * `acceptInvitation` always assign into a real team); only removal
+     * ever sets it to null.
+     */
+    teamId: uuid("team_id").references(() => teams.id),
     username: text("username").notNull(),
     displayName: text("display_name").notNull(),
     email: text("email").notNull(),

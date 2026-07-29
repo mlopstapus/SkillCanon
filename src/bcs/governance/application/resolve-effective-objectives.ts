@@ -28,7 +28,13 @@ export async function resolveEffectiveObjectives(
     return { inherited: [], local: [] };
   }
 
-  const chain = await getTeamChain(db, actor.organizationId, user.teamId);
+  // An unassigned user (019-account-team-settings-ui) has no team to derive
+  // an inheritance chain from — no team-level objectives apply, not an
+  // error. Their own directly-assigned objectives (below) still resolve.
+  const chain =
+    user.teamId === null
+      ? []
+      : await getTeamChain(db, actor.organizationId, user.teamId);
   const inherited: EffectiveObjective[] = [];
   const local: EffectiveObjective[] = [];
 

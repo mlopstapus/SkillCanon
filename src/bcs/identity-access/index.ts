@@ -9,6 +9,7 @@ export type {
   AppSessionUser,
   UserSummary,
   UserAccountSummary,
+  UserRole,
 } from "./domain/user";
 export { bootstrapOrganization } from "./application/bootstrap-organization";
 export type { ProvisionTeamAndAdmin } from "./application/bootstrap-organization";
@@ -21,6 +22,10 @@ export { insertTeamBetween } from "./application/insert-team-between";
 export type { InsertTeamBetweenParams } from "./application/insert-team-between";
 export { listSubTeams } from "./application/list-sub-teams";
 export type { TeamSummary } from "./application/list-sub-teams";
+export { listTeams } from "./application/list-teams";
+export { getTeam } from "./application/get-team";
+export { removeTeamMember } from "./application/remove-team-member";
+export { listUnassignedUsers } from "./application/list-unassigned-users";
 export type { Team, TeamChainEntry } from "./domain/team";
 export { login } from "./application/login";
 export { authenticateSession } from "./application/authenticate-session";
