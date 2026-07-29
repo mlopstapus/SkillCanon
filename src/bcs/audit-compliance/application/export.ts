@@ -5,10 +5,10 @@ import {
   type AuditExportResult,
   AuditExportEntitlementRequiredError,
   UnsupportedAuditExportFormatError,
-  resolveAuditEntitlements,
   retentionCutoff,
 } from "../domain/audit-event";
 import { queryByOrganization } from "../infrastructure/audit-events-repo";
+import { resolveAuditEntitlementsForOrg } from "./resolve-audit-entitlements-for-org";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -53,7 +53,7 @@ export async function exportAuditEvents(
     throw new UnsupportedAuditExportFormatError(format);
   }
 
-  const entitlements = resolveAuditEntitlements();
+  const entitlements = await resolveAuditEntitlementsForOrg(organizationId);
   if (!entitlements.canExportAuditEvents) {
     throw new AuditExportEntitlementRequiredError();
   }

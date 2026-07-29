@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lt, lte, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { NewAuditEvent, NormalizedAuditEventFilters } from "../domain/audit-event";
@@ -95,6 +95,48 @@ export async function countByOrganization(
     .from(auditEvents)
     .where(buildWhere(organizationId, filters));
   return row?.count ?? 0;
+}
+
+/**
+ * Distinct `(actorUserId, actorApiKeyId)` pairs within the retained window
+ * — powers the Actor filter's option list (020-audit-log-ui), which must
+ * include every actor who actually appears in retained history, not just
+ * currently-active org members.
+ */
+export async function listDistinctActors(
+  tx: Tx,
+  organizationId: string,
+  retentionCutoff: Date,
+): Promise<{ actorUserId: string | null; actorApiKeyId: string | null }[]> {
+  return tx
+    .selectDistinct({
+      actorUserId: auditEvents.actorUserId,
+      actorApiKeyId: auditEvents.actorApiKeyId,
+    })
+    .from(auditEvents)
+    .where(
+      and(eq(auditEvents.organizationId, organizationId), gte(auditEvents.createdAt, retentionCutoff)),
+    );
+}
+
+/**
+ * Distinct `resourceType` values within the retained window — powers the
+ * Resource filter's option list with the org's real, currently-retained
+ * resource types (never a hardcoded list).
+ */
+export async function listDistinctResourceTypes(
+  tx: Tx,
+  organizationId: string,
+  retentionCutoff: Date,
+): Promise<string[]> {
+  const rows = await tx
+    .selectDistinct({ resourceType: auditEvents.resourceType })
+    .from(auditEvents)
+    .where(
+      and(eq(auditEvents.organizationId, organizationId), gte(auditEvents.createdAt, retentionCutoff)),
+    )
+    .orderBy(asc(auditEvents.resourceType));
+  return rows.map((row) => row.resourceType);
 }
 
 export async function deleteOlderThan(
