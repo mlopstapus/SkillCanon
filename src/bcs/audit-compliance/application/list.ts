@@ -5,10 +5,10 @@ import {
   type AuditEventPage,
   type ListAuditEventsOptions,
   normalizeAuditPagination,
-  resolveAuditEntitlements,
   retentionCutoff,
 } from "../domain/audit-event";
 import { countByOrganization, queryByOrganization } from "../infrastructure/audit-events-repo";
+import { resolveAuditEntitlementsForOrg } from "./resolve-audit-entitlements-for-org";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -41,7 +41,7 @@ export async function listAuditEvents(
   filters: AuditEventFilters = {},
   options: ListAuditEventsOptions,
 ): Promise<AuditEventPage> {
-  const entitlements = resolveAuditEntitlements();
+  const entitlements = await resolveAuditEntitlementsForOrg(organizationId);
   const now = options.now ?? new Date();
   const pagination = normalizeAuditPagination(filters);
   const actorUserIds = await resolveActorUserIdsByDisplayName(

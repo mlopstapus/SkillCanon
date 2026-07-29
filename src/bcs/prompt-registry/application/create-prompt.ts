@@ -9,30 +9,24 @@ import { withAudit } from "@/shared/db";
 import { isUniqueViolation } from "@/shared/db/postgres-errors";
 import {
   DuplicatePromptNameError,
-  PromptOwnerNotInOrganizationError,
   type CreatePromptParams,
   type PromptActor,
-  type PromptIdentityVerifier,
 } from "../domain/prompt";
 import { findPromptByOrgAndName, insertPrompt } from "../infrastructure/prompts-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
+/**
+ * A skill's owner is always the creating user (PDR-016) — there is no
+ * "create as team-owned" path; a skill only becomes team-owned via
+ * subscribeSkill/forkSkill (future work).
+ */
 export async function createPrompt(
   db: Db,
   actor: PromptActor,
   params: CreatePromptParams,
-  verifier: PromptIdentityVerifier,
   auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ) {
-  // Validate optional owner user belongs to the organization.
-  if (
-    params.userId &&
-    !(await verifier.userBelongsToOrganization(params.organizationId, params.userId))
-  ) {
-    throw new PromptOwnerNotInOrganizationError(params.userId);
-  }
-
   // Check for duplicate name within the org before attempting insert.
   if (await findPromptByOrgAndName(db, params.organizationId, params.name)) {
     throw new DuplicatePromptNameError(params.name);
@@ -46,7 +40,9 @@ export async function createPrompt(
     description: params.description ?? null,
     isDeprecated: false,
     activeVersionId: null,
-    userId: params.userId ?? null,
+    ownerType: "user" as const,
+    ownerId: actor.userId,
+    forkedFromSkillId: null,
   };
 
   try {

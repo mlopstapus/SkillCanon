@@ -1,7 +1,8 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { resolveAuditEntitlements, retentionCutoff } from "../domain/audit-event";
+import { retentionCutoff } from "../domain/audit-event";
 import { record } from "./record";
 import { deleteOlderThan } from "../infrastructure/audit-events-repo";
+import { resolveAuditEntitlementsForOrg } from "./resolve-audit-entitlements-for-org";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -10,7 +11,7 @@ export async function pruneAuditEvents(
   organizationId: string,
   options?: { now?: Date },
 ): Promise<{ deleted: number; retentionDays: number }> {
-  const entitlements = resolveAuditEntitlements();
+  const entitlements = await resolveAuditEntitlementsForOrg(organizationId);
   const cutoff = retentionCutoff(options?.now ?? new Date(), entitlements.auditRetentionDays);
 
   const deleted = await db.transaction(async (tx) => {

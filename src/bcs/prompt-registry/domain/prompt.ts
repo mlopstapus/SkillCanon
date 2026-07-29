@@ -5,9 +5,9 @@ export interface PromptActor {
   userId: string;
 }
 
-export interface PromptIdentityVerifier {
-  userBelongsToOrganization: (organizationId: string, userId: string) => Promise<boolean>;
-}
+// A skill (Prompt) is owned by exactly one user or exactly one team, never
+// derived from a project (PDR-016).
+export type PromptOwnerType = "user" | "team";
 
 // ---------------------------------------------------------------------------
 // Read summaries
@@ -20,7 +20,10 @@ export interface PromptSummary {
   description: string | null;
   isDeprecated: boolean;
   activeVersionId: string | null;
-  userId: string | null;
+  ownerType: PromptOwnerType;
+  ownerId: string;
+  /** Lineage pointer, set only when this skill was created via forkSkill (future work). */
+  forkedFromSkillId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -44,7 +47,6 @@ export interface CreatePromptParams {
   organizationId: string;
   name: string;
   description?: string | null;
-  userId?: string | null;
 }
 
 export interface PublishVersionParams {
@@ -72,13 +74,6 @@ export class DuplicatePromptNameError extends Error {
   constructor(name: string) {
     super(`A prompt named "${name}" already exists in this organization.`);
     this.name = "DuplicatePromptNameError";
-  }
-}
-
-export class PromptOwnerNotInOrganizationError extends Error {
-  constructor(userId: string) {
-    super(`User "${userId}" does not belong to the prompt's organization.`);
-    this.name = "PromptOwnerNotInOrganizationError";
   }
 }
 

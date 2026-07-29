@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { PromptOwnerType } from "../domain/prompt";
 import { prompts } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -11,11 +12,16 @@ export interface InsertPromptParams {
   description: string | null;
   isDeprecated: boolean;
   activeVersionId: string | null;
-  userId: string | null;
+  ownerType: PromptOwnerType;
+  ownerId: string;
+  forkedFromSkillId?: string | null;
 }
 
 export async function insertPrompt(tx: Tx, params: InsertPromptParams) {
-  const [row] = await tx.insert(prompts).values(params).returning();
+  const [row] = await tx
+    .insert(prompts)
+    .values({ forkedFromSkillId: null, ...params })
+    .returning();
   if (!row) {
     throw new Error("Prompt insert returned no row.");
   }

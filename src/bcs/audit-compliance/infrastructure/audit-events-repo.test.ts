@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { auditEvents } from "./schema";
-import { countByOrganization, deleteOlderThan, insert, queryByOrganization } from "./audit-events-repo";
+import {
+  countByOrganization,
+  deleteOlderThan,
+  insert,
+  listDistinctActors,
+  listDistinctResourceTypes,
+  queryByOrganization,
+} from "./audit-events-repo";
 
 async function insertEvent(
   testDb: TestDb,
@@ -228,5 +235,66 @@ describe("audit-events-repo", () => {
     expect(deleted).toBe(1);
     expect(remainingA.map((row) => row.id)).toEqual([retained.id]);
     expect(remainingB.map((row) => row.id)).toEqual([otherOrgOld.id]);
+  });
+
+  it("listDistinctActors returns every distinct (actorUserId, actorApiKeyId) pair within the retained window, deduped", async () => {
+    const organizationId = randomUUID();
+    const userA = randomUUID();
+    const apiKeyA = randomUUID();
+
+    await insertEvent(testDb, { organizationId, actorUserId: userA, action: "team.updated", createdAt: new Date() });
+    await insertEvent(testDb, { organizationId, actorUserId: userA, action: "team.updated", createdAt: new Date() });
+    await insertEvent(testDb, {
+      organizationId,
+      actorUserId: null,
+      actorApiKeyId: apiKeyA,
+      action: "prompt.created",
+      createdAt: new Date(),
+    });
+    await insertEvent(testDb, {
+      organizationId,
+      actorUserId: null,
+      actorApiKeyId: null,
+      action: "audit.pruned",
+      createdAt: new Date(),
+    });
+    // Outside the retention window — must not appear.
+    const staleUser = randomUUID();
+    await insertEvent(testDb, {
+      organizationId,
+      actorUserId: staleUser,
+      action: "user.login",
+      createdAt: new Date("2020-01-01T00:00:00Z"),
+    });
+
+    const actors = await listDistinctActors(testDb.appDb, organizationId, new Date("2026-01-01T00:00:00Z"));
+
+    expect(actors).toHaveLength(3);
+    expect(actors).toEqual(
+      expect.arrayContaining([
+        { actorUserId: userA, actorApiKeyId: null },
+        { actorUserId: null, actorApiKeyId: apiKeyA },
+        { actorUserId: null, actorApiKeyId: null },
+      ]),
+    );
+    expect(actors.some((a) => a.actorUserId === staleUser)).toBe(false);
+  });
+
+  it("listDistinctResourceTypes returns every distinct resourceType within the retained window, sorted, deduped", async () => {
+    const organizationId = randomUUID();
+
+    await insertEvent(testDb, { organizationId, resourceType: "team", action: "team.updated", createdAt: new Date() });
+    await insertEvent(testDb, { organizationId, resourceType: "policy", action: "policy.created", createdAt: new Date() });
+    await insertEvent(testDb, { organizationId, resourceType: "team", action: "team.reparented", createdAt: new Date() });
+    await insertEvent(testDb, {
+      organizationId,
+      resourceType: "user",
+      action: "user.login",
+      createdAt: new Date("2020-01-01T00:00:00Z"),
+    });
+
+    const types = await listDistinctResourceTypes(testDb.appDb, organizationId, new Date("2026-01-01T00:00:00Z"));
+
+    expect(types).toEqual(["policy", "team"]);
   });
 });

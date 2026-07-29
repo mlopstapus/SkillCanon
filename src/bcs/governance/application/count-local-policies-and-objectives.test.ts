@@ -72,11 +72,6 @@ describe("countLocalPoliciesAndObjectives", () => {
     });
     await insertPolicyRow(testDb, {
       organizationId: policyFixture.organizationId,
-      projectId: policyFixture.projectId,
-      name: "Project policy",
-    });
-    await insertPolicyRow(testDb, {
-      organizationId: policyFixture.organizationId,
       teamId: policyFixture.childTeamId,
       name: "Inactive policy",
       isActive: false,

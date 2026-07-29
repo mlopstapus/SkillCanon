@@ -1,7 +1,7 @@
 import { getTeamChain, getUser } from "@/bcs/identity-access";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { EffectivePolicy, EffectivePolicySet, PolicyActor } from "../domain/policy";
-import { listActiveByProject, listActiveByTeam } from "../infrastructure/policies-repo";
+import { listActiveByTeam } from "../infrastructure/policies-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -13,7 +13,6 @@ export async function resolveEffectivePolicies(
   db: Db,
   actor: PolicyActor,
   userId: string,
-  projectId?: string | null,
 ): Promise<EffectivePolicySet> {
   let user: Awaited<ReturnType<typeof getUser>>;
   try {
@@ -36,13 +35,6 @@ export async function resolveEffectivePolicies(
     const target = index === 0 ? local : inherited;
     for (const policy of policies) {
       target.push(asEffectivePolicy(policy, index !== 0));
-    }
-  }
-
-  if (projectId) {
-    const projectPolicies = await listActiveByProject(db, actor.organizationId, projectId);
-    for (const policy of projectPolicies) {
-      local.push(asEffectivePolicy(policy, false));
     }
   }
 

@@ -164,13 +164,6 @@ export class UnsupportedAuditExportFormatError extends Error {
   }
 }
 
-export function resolveAuditEntitlements(): AuditEntitlements {
-  return {
-    auditRetentionDays: DEFAULT_AUDIT_RETENTION_DAYS,
-    canExportAuditEvents: false,
-  };
-}
-
 export function retentionCutoff(now: Date, retentionDays: number): Date {
   return new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
 }

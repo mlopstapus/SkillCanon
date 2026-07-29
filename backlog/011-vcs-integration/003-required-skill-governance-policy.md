@@ -5,35 +5,30 @@ status: open
 dependencies: []
 ---
 
-# Required-Skill Governance Policy
+# Required-Skill Project Assignment
 
-Extend Governance's existing `Policy` model with a new `enforcementType: "require-skill"`, and add the project-scoped resolution entrypoint PR evaluation needs — reusing the hierarchical team-chain resolution engine rather than building a parallel rules system, per the architecture decision.
+**Superseded design, same problem.** Originally speced as a new Governance `Policy.enforcementType: "require-skill"` resolved via a project-scoped team-chain walk. [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md) rejected that — Governance is purely team + invoking-user scoped and has no notion of "project" at all (its `Policy.projectId` scope was removed entirely). "Required for this project" is instead a plain Prompt Registry catalog fact: `backlog/006-prompt-registry/007-project-skill-assignment.md`'s `assignSkillToProject(..., { requirement: "required" | "optional" })` and `listRequiredSkillsForProject(orgId, projectId)`. This feature file now just tracks the VCS-Integration-side dependency on that Prompt Registry capability landing before PR evaluation (feature 005) can be built.
 
 ## Requirements
 
-- [ ] `Policy.enforcementType` union gains `"require-skill"`; for this type, `content` holds the required skill/prompt name — one `Policy` row per required skill, not a delimited list (consistent with every other enforcement type).
-- [ ] Prompt Registry's `getProject(orgId, projectId)` is implemented, returning at minimum `{ id, orgId, teamId, name }`.
-- [ ] Governance's `resolveRequiredSkillPolicies(orgId, projectId)` is implemented: looks up the project's owning team via `getProject`, walks that team's chain via `getTeamChain`, merges inherited + local `require-skill` policies by the same priority rules `resolveEffectivePolicies` already uses, and returns a flat list of required skill names.
-- [ ] Existing `resolveEffectivePolicies`/`resolveAllPolicies`/`resolveEffectiveObjectives` behavior is unchanged — this is a pure addition, not a modification of existing resolution paths.
-- [ ] A minimal UI to create/edit `require-skill` policies exists (can reuse whatever Policy CRUD UI Governance's own `005-governance-views-ui.md` already builds, adding this enforcement type as a selectable option).
+- [ ] `backlog/006-prompt-registry/007-project-skill-assignment.md` is done — this feature has no work of its own beyond confirming that dependency and wiring VCS Integration's calls to it.
+- [ ] `src/bcs/vcs-integration/` calls `listRequiredSkillsForProject(orgId, projectId)` from Prompt Registry's contract — never Governance, and never a direct `prompt_registry.*` table query.
 
 ## Acceptance Criteria
 
-- [ ] Creating a `require-skill` policy at a team level and resolving it for a project owned by a descendant team returns that policy in the inherited list.
-- [ ] Creating a `require-skill` policy directly on a project returns it in the local list, and it doesn't leak to a sibling project under the same team.
-- [ ] `resolveRequiredSkillPolicies` requires no `userId` argument and produces a correct result purely from `orgId`/`projectId`.
-- [ ] Existing Governance tests for `resolveEffectivePolicies`/`resolveAllPolicies` still pass unmodified.
+- [ ] `listRequiredSkillsForProject` requires no `userId` argument and produces a correct result purely from `orgId`/`projectId` (unchanged expectation from the original design, just a different owning BC).
+- [ ] No import of anything from `src/bcs/governance/` appears anywhere in `src/bcs/vcs-integration/` for this purpose.
 
 ## Open Questions
 
-None — the mechanism (extend existing enforcementType union, reuse resolution engine) was settled during architecture.
+- None — the mechanism (a direct Prompt Registry catalog read, not a Governance resolution) was settled in PDR-016.
 
 ## Dependencies
 
-- `backlog/005-governance/003-hierarchical-resolution-engine.md` must be done (this feature extends it, doesn't replace it)
-- `backlog/006-prompt-registry/001-project-model-and-membership.md` must be done (`Project`/`getProject`)
+- `backlog/006-prompt-registry/001-project-model-and-membership.md` (owner/collaborator team list)
+- `backlog/006-prompt-registry/007-project-skill-assignment.md` (this feature's actual dependency — supersedes the original `005-governance/003-hierarchical-resolution-engine.md` dependency)
 
 ## Technical Notes
 
-- See `src/bcs/governance/CONTRACT.md`'s `resolveRequiredSkillPolicies` row and updated `EnforcementType`, and `src/bcs/prompt-registry/CONTRACT.md`'s new `getProject` row and `Project` interface — both already updated during architecture, this feature just implements what's documented there.
-- Per Governance's own Breaking Change Policy (`CONTRACT.md`), this addition does **not** require a PDR — it reuses existing ordering/tiebreak rules rather than changing them. Don't invent a separate resolution algorithm for this enforcement type.
+- See `src/bcs/prompt-registry/CONTRACT.md`'s `listRequiredSkillsForProject`/`assignSkillToProject` rows and `src/bcs/vcs-integration/CONTRACT.md`'s updated Events Consumed section — both already updated per PDR-016, this feature (now essentially a dependency-tracking stub) just confirms the wiring once 007 is implemented.
+- This file is kept (not deleted) rather than silently removed, per this repo's convention of tracking design pivots explicitly rather than erasing the backlog trail — see PDR-016's "Related changes" list.

@@ -5,8 +5,8 @@ export type PolicyEnforcementType = (typeof POLICY_ENFORCEMENT_TYPES)[number];
 export interface Policy {
   id: string;
   organizationId: string;
-  teamId: string | null;
-  projectId: string | null;
+  // Always team-scoped — never project-scoped (PDR-016).
+  teamId: string;
   name: string;
   description: string | null;
   enforcementType: PolicyEnforcementType;
@@ -39,12 +39,10 @@ export interface PolicyActor {
 
 export interface PolicyScopeVerifier {
   teamBelongsToOrganization?: (organizationId: string, teamId: string) => Promise<boolean>;
-  projectBelongsToOrganization?: (organizationId: string, projectId: string) => Promise<boolean>;
 }
 
 export interface CreatePolicyParams {
-  teamId?: string | null;
-  projectId?: string | null;
+  teamId: string;
   name: string;
   description?: string | null;
   enforcementType: PolicyEnforcementType;
@@ -62,7 +60,7 @@ export interface UpdatePolicyFields {
 
 export class InvalidPolicyScopeError extends Error {
   constructor() {
-    super("A policy must be scoped to exactly one team or project.");
+    super("A policy must be scoped to a team.");
     this.name = "InvalidPolicyScopeError";
   }
 }

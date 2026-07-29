@@ -32,6 +32,8 @@ export {
 export { createPrompt } from "./application/create-prompt";
 export { deprecatePrompt } from "./application/deprecate-prompt";
 export { getPrompt } from "./application/get-prompt";
+export { getPromptById } from "./application/get-prompt-by-id";
+export { getPromptVersion } from "./application/get-prompt-version";
 export { listPrompts } from "./application/list-prompts";
 export { listVersions } from "./application/list-versions";
 export { publishVersion } from "./application/publish-version";
@@ -39,7 +41,7 @@ export { rollbackPrompt } from "./application/rollback-prompt";
 export type {
   CreatePromptParams,
   PromptActor,
-  PromptIdentityVerifier,
+  PromptOwnerType,
   PromptSummary,
   PromptVersionSummary,
   PublishVersionParams,
@@ -48,6 +50,5 @@ export {
   DuplicatePromptNameError,
   DuplicatePromptVersionError,
   PromptNotFoundError,
-  PromptOwnerNotInOrganizationError,
   PromptVersionNotFoundError,
 } from "./domain/prompt";

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import type { TestDb } from "@/shared/db/test-helpers";
-import type { PromptActor, PromptIdentityVerifier } from "../domain/prompt";
+import type { PromptActor } from "../domain/prompt";
 import { createPrompt } from "./create-prompt";
 
 export interface PromptFixtureOrg {
@@ -55,19 +55,6 @@ export async function makePromptFixtureOrg(testDb: TestDb): Promise<PromptFixtur
   };
 }
 
-export function verifierFor(...fixtures: PromptFixtureOrg[]): PromptIdentityVerifier {
-  const users = new Map<string, string>();
-  for (const f of fixtures) {
-    users.set(f.actorUserId, f.organizationId);
-    users.set(f.otherUserId, f.organizationId);
-    users.set(f.otherOrgActorUserId, f.otherOrgId);
-  }
-  return {
-    userBelongsToOrganization: async (organizationId, userId) =>
-      users.get(userId) === organizationId,
-  };
-}
-
 export async function createPromptInOrg(
   testDb: TestDb,
   fixture: PromptFixtureOrg,
@@ -75,12 +62,7 @@ export async function createPromptInOrg(
 ) {
   const name = nameOverride ?? `prompt-${randomUUID()}`;
   return withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-    createPrompt(
-      tx,
-      fixture.actor,
-      { organizationId: fixture.organizationId, name },
-      verifierFor(fixture),
-    ),
+    createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name }),
   );
 }
 

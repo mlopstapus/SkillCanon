@@ -45,7 +45,6 @@ describe("createPolicy", () => {
     );
 
     expect(result.teamId).toBe(fixture.teamId);
-    expect(result.projectId).toBeNull();
     expect(result.isActive).toBe(true);
     const rows = await queryPolicyRows(testDb, sql`id = ${result.id}`);
     expect(rows).toHaveLength(1);
@@ -58,62 +57,7 @@ describe("createPolicy", () => {
     expect(events[0]?.source_ip).toBe("198.51.100.10");
   });
 
-  it("creates an active project-scoped policy", async () => {
-    const fixture = await makePolicyFixtureOrg(testDb);
-    const verifier = makeScopeVerifier([{ id: fixture.projectId, organizationId: fixture.organizationId }]);
-
-    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      createPolicy(
-        tx,
-        fixture.actor,
-        {
-          projectId: fixture.projectId,
-          name: "Validate output",
-          enforcementType: "validate",
-          content: "Must cite sources.",
-          priority: 7,
-        },
-        verifier,
-      ),
-    );
-
-    expect(result.projectId).toBe(fixture.projectId);
-    expect(result.teamId).toBeNull();
-    expect(result.enforcementType).toBe("validate");
-  });
-
-  it("rejects creation with both team and project scopes without persisting or auditing", async () => {
-    const fixture = await makePolicyFixtureOrg(testDb);
-    const before = await countPolicies(testDb);
-    const eventsBefore = await queryPolicyAuditEvents(testDb, sql`action = 'policy.created'`);
-    const verifier = makeScopeVerifier([
-      { id: fixture.teamId, organizationId: fixture.organizationId },
-      { id: fixture.projectId, organizationId: fixture.organizationId },
-    ]);
-
-    await expect(
-      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        createPolicy(
-          tx,
-          fixture.actor,
-          {
-            teamId: fixture.teamId,
-            projectId: fixture.projectId,
-            name: "Ambiguous",
-            enforcementType: "append",
-            content: "No ambiguity.",
-          },
-          verifier,
-        ),
-      ),
-    ).rejects.toThrow(InvalidPolicyScopeError);
-
-    expect(await countPolicies(testDb)).toBe(before);
-    const eventsAfter = await queryPolicyAuditEvents(testDb, sql`action = 'policy.created'`);
-    expect(eventsAfter).toHaveLength(eventsBefore.length);
-  });
-
-  it("rejects creation with neither team nor project scope", async () => {
+  it("rejects creation without a team scope", async () => {
     const fixture = await makePolicyFixtureOrg(testDb);
     const before = await countPolicies(testDb);
 
@@ -123,6 +67,8 @@ describe("createPolicy", () => {
           tx,
           fixture.actor,
           {
+            // @ts-expect-error — teamId is required; verifying the runtime guard still catches a missing value.
+            teamId: undefined,
             name: "Unscoped",
             enforcementType: "inject",
             content: "No scope.",
