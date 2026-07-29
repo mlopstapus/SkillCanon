@@ -31,8 +31,15 @@ const platform = makeTeam({
   parentTeamId: engineering.id,
   ownerId: "user-carol",
 });
+// Sorts alphabetically between "Engineering" and "Platform" but is an
+// unrelated root-level sibling — proves the sidebar orders by tree
+// structure, not a flat alphabetical sort across the whole org (a real bug
+// caught via manual browser verification, not by the original two-team
+// fixture below).
+const marketing = makeTeam({ id: "team-marketing", name: "Marketing", slug: "marketing" });
 
 const teams = [root, engineering, platform];
+const teamsWithSibling = [root, engineering, platform, marketing];
 
 function makeUser(
   overrides: Partial<UserAccountSummary> &
@@ -151,5 +158,30 @@ describe("TeamsExplorer", () => {
 
     expect(markup).toContain("No sub-teams under Acme Corp");
     expect(markup).not.toContain("New sub-team");
+  });
+
+  it("orders the sidebar by tree structure (parent, then its children, then the next sibling) — not a flat alphabetical sort", () => {
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={adminSession}
+        teams={teamsWithSibling}
+        users={users}
+        initialSelectedTeamId={root.id}
+      refresh={noop}
+      />,
+    );
+
+    const nameIndex = (name: string) => markup.indexOf(`>${name}<`);
+    const rootIdx = nameIndex("Acme Corp");
+    const engIdx = nameIndex("Engineering");
+    const platformIdx = nameIndex("Platform");
+    const marketingIdx = nameIndex("Marketing");
+
+    expect(rootIdx).toBeLessThan(engIdx);
+    // Engineering's own child (Platform) must appear before the next
+    // root-level sibling (Marketing), even though "Marketing" sorts
+    // alphabetically before "Platform".
+    expect(engIdx).toBeLessThan(platformIdx);
+    expect(platformIdx).toBeLessThan(marketingIdx);
   });
 });

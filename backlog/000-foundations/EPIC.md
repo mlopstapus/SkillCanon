@@ -22,6 +22,7 @@ None of epic 001 (TypeScript Refactor Foundation) should start until items 001, 
 - [x] [008 - Third-Party Service Selection](archive/008-third-party-services.md) → `context/third-party-services.md`
 - [x] [009 - Feature Gating & Flags](archive/009-feature-gating-and-flags.md) → `context/feature-gating.md`
 - [x] [010 - Design System](archive/010-design-system.md) → `docs/context/design-system.md`
+- [ ] [011 - Fix Missing Migration Snapshot Files](011-fix-missing-migration-snapshot-files.md) — repo-hygiene bug discovered 2026-07-27, not a convention decision like the others; tracked here since it's database-tooling and this epic already owns `002`'s migration-naming convention
 
 *Completed items are moved to `archive/` and checked off here.*
 

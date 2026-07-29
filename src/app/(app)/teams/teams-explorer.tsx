@@ -46,6 +46,38 @@ function chainRootFirst(teamId: string, byId: Map<string, Team>): Team[] {
   return chain;
 }
 
+/**
+ * Depth-first tree order (root-first, each team immediately followed by its
+ * own children before moving to the next sibling) — NOT a flat alphabetical
+ * sort across the whole org, which would scatter a parent from its children
+ * whenever an unrelated team's name happened to sort between them. Siblings
+ * are still ordered alphabetically among themselves. Caught via manual
+ * browser verification (quickstart.md), not by any structural test — those
+ * fixtures only ever had one branch, never enough siblings for the bug to
+ * surface.
+ */
+function treeOrder(teams: Team[]): Team[] {
+  const childrenOf = new Map<string | null, Team[]>();
+  for (const team of teams) {
+    const list = childrenOf.get(team.parentTeamId) ?? [];
+    list.push(team);
+    childrenOf.set(team.parentTeamId, list);
+  }
+  for (const list of childrenOf.values()) {
+    list.sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  const ordered: Team[] = [];
+  function visit(parentId: string | null) {
+    for (const team of childrenOf.get(parentId) ?? []) {
+      ordered.push(team);
+      visit(team.id);
+    }
+  }
+  visit(null);
+  return ordered;
+}
+
 function TeamsSidebar({
   teams,
   selectedTeamId,
@@ -73,14 +105,11 @@ function TeamsSidebar({
   onSelectUnassigned: () => void;
   onNewTeam: () => void;
 }) {
-  const visibleTeams = teams
-    .slice()
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .filter((t) =>
-      filterText.trim().length === 0
-        ? true
-        : t.name.toLowerCase().includes(filterText.trim().toLowerCase()),
-    );
+  const visibleTeams = treeOrder(teams).filter((t) =>
+    filterText.trim().length === 0
+      ? true
+      : t.name.toLowerCase().includes(filterText.trim().toLowerCase()),
+  );
 
   return (
     <aside className="flex flex-col border-r border-border bg-panel">
