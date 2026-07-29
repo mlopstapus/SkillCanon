@@ -11,7 +11,7 @@ The core of the epic: when a PR opens or gets new commits, figure out which requ
 
 ## Requirements
 
-- [ ] `handleGithubWebhook()` fully handles `pull_request` events (`opened`, `synchronize`, `reopened`) — for each, finds the matching `RepoLink` (by `githubRepoId`), resolves required skills via `resolveRequiredSkillPolicies(orgId, projectId)`, fetches the PR's full commit list from GitHub, and queries `queryUsageByRepoAndCommits` for matching usage rows.
+- [ ] `handleGithubWebhook()` fully handles `pull_request` events (`opened`, `synchronize`, `reopened`) — for each, finds the matching `RepoLink` (by `githubRepoId`), resolves required skills via Prompt Registry's `listRequiredSkillsForProject(orgId, projectId)` (not a Governance call — see [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)), fetches the PR's full commit list from GitHub, and queries `queryUsageByRepoAndCommits` for matching usage rows.
 - [ ] Required-skill matching is by **skill name only** and against **any commit reachable from the PR's branch history**, not exact-head-sha equality only — per `vcs-integration`'s `CONTRACT.md` Stability Guarantees, this specifically covers rebase/squash-merge cases from PDR-013.
 - [ ] A `PrCheck` row is written, keyed on `(repoLinkId, prNumber, headSha)` — upserted on webhook redelivery of the same `deliveryId`/head sha, a new row on a new head sha (new `synchronize`).
 - [ ] Webhook deliveries are deduped by GitHub's delivery id so a retried delivery doesn't double-process.

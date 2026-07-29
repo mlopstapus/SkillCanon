@@ -41,7 +41,7 @@ export { rollbackPrompt } from "./application/rollback-prompt";
 export type {
   CreatePromptParams,
   PromptActor,
-  PromptIdentityVerifier,
+  PromptOwnerType,
   PromptSummary,
   PromptVersionSummary,
   PublishVersionParams,
@@ -50,6 +50,5 @@ export {
   DuplicatePromptNameError,
   DuplicatePromptVersionError,
   PromptNotFoundError,
-  PromptOwnerNotInOrganizationError,
   PromptVersionNotFoundError,
 } from "./domain/prompt";

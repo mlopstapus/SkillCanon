@@ -12,13 +12,15 @@ import {
 import { id, organizationId } from "@/shared/db/columns";
 import { governanceSchema } from "@/shared/db/schemas";
 
+// Policy resolution is purely team + invoking-user scoped — never
+// project-scoped (PDR-016). `teamId` is always required; there is no
+// project-scope alternative anymore.
 export const policies = governanceSchema.table(
   "policies",
   {
     id: id(),
     organizationId: organizationId(),
-    teamId: uuid("team_id"),
-    projectId: uuid("project_id"),
+    teamId: uuid("team_id").notNull(),
     name: text("name").notNull(),
     description: text("description"),
     enforcementType: text("enforcement_type", {
@@ -31,11 +33,6 @@ export const policies = governanceSchema.table(
   },
   (table) => [
     index().on(table.organizationId, table.teamId, table.isActive, table.priority),
-    index().on(table.organizationId, table.projectId, table.isActive, table.priority),
-    check(
-      "policies_exactly_one_scope",
-      sql`(${table.teamId} is null) <> (${table.projectId} is null)`,
-    ),
   ],
 );
 

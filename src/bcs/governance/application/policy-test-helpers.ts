@@ -9,7 +9,6 @@ export interface PolicyFixtureOrg {
   organizationId: string;
   actor: PolicyActor;
   teamId: string;
-  projectId: string;
   userId: string;
 }
 
@@ -17,7 +16,6 @@ export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtur
   const organizationId = randomUUID();
   const teamId = randomUUID();
   const userId = randomUUID();
-  const projectId = randomUUID();
   const slug = `org-${randomUUID()}`;
   const teamSlug = `team-${randomUUID()}`;
 
@@ -38,7 +36,6 @@ export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtur
     organizationId,
     actor: { organizationId, userId },
     teamId,
-    projectId,
     userId,
   };
 }
@@ -47,8 +44,6 @@ export function makeScopeVerifier(scopes: Array<{ id: string; organizationId: st
   const byId = new Map(scopes.map((scope) => [scope.id, scope.organizationId]));
   return {
     teamBelongsToOrganization: async (organizationId, teamId) => byId.get(teamId) === organizationId,
-    projectBelongsToOrganization: async (organizationId, projectId) =>
-      byId.get(projectId) === organizationId,
   };
 }
 
@@ -59,7 +54,6 @@ export async function createTestPolicy(
 ) {
   const verifier = makeScopeVerifier([
     { id: fixture.teamId, organizationId: fixture.organizationId },
-    { id: fixture.projectId, organizationId: fixture.organizationId },
   ]);
   return withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
     createPolicy(
@@ -156,8 +150,7 @@ export async function insertPolicyRow(
   testDb: TestDb,
   params: {
     organizationId: string;
-    teamId?: string | null;
-    projectId?: string | null;
+    teamId: string;
     name: string;
     priority?: number;
     isActive?: boolean;
@@ -166,13 +159,12 @@ export async function insertPolicyRow(
   const id = randomUUID();
   await testDb.ownerDb.execute(sql`
     insert into governance.policies
-      (id, organization_id, team_id, project_id, name, enforcement_type, content, priority, is_active)
+      (id, organization_id, team_id, name, enforcement_type, content, priority, is_active)
     values
       (
         ${id},
         ${params.organizationId},
-        ${params.teamId ?? null},
-        ${params.projectId ?? null},
+        ${params.teamId},
         ${params.name},
         'prepend',
         ${`${params.name} content`},

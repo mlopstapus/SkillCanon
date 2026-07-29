@@ -5,7 +5,7 @@
 
 ## Purpose
 
-Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCanon project's governance (required-skill policies, resolved by Governance) and a real GitHub repository's pull requests. Answers one question: *for this PR, which required skills ran on its commits, and which didn't?* Surfaces that as visibility (a dashboard view and a GitHub Check Run) — MVP does not block merges. This is the sole anti-corruption layer in front of GitHub's REST/webhook API and the GitHub App private key, the same isolation pattern Billing & Entitlements already uses for Stripe (`architecture.md`) — no other context imports an Octokit client or parses a raw GitHub payload. It calls Governance and Distribution through their read contracts only, and never queries `governance.*` or `distribution.*` tables directly. See [PDR-012](../../../docs/pdr/012-vcs-integration-new-bounded-context.md), [PDR-013](../../../docs/pdr/013-cli-side-git-context-tagging.md), [PDR-014](../../../docs/pdr/014-github-app-not-pat.md).
+Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCanon project's required skills (a Prompt Registry catalog fact, not a Governance concern — see [PDR-016](../../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)) and a real GitHub repository's pull requests. Answers one question: *for this PR, which required skills ran on its commits, and which didn't?* Surfaces that as visibility (a dashboard view and a GitHub Check Run) — MVP does not block merges. This is the sole anti-corruption layer in front of GitHub's REST/webhook API and the GitHub App private key, the same isolation pattern Billing & Entitlements already uses for Stripe (`architecture.md`) — no other context imports an Octokit client or parses a raw GitHub payload. It calls Prompt Registry and Distribution through their read contracts only, and never queries `prompt_registry.*` or `distribution.*` tables directly. See [PDR-012](../../../docs/pdr/012-vcs-integration-new-bounded-context.md), [PDR-013](../../../docs/pdr/013-cli-side-git-context-tagging.md), [PDR-014](../../../docs/pdr/014-github-app-not-pat.md), [PDR-016](../../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md).
 
 ## Exposed APIs
 
@@ -30,7 +30,7 @@ Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCan
 
 None — this context is triggered externally by GitHub webhook deliveries, not by another BC's domain event. It reaches into Governance and Distribution via direct synchronous calls (per [PDR-007](../../../docs/pdr/007-synchronous-in-process-contexts.md)), not event subscription:
 
-- `resolveRequiredSkillPolicies(orgId, projectId)` — Governance (new API, see its `CONTRACT.md`)
+- `listRequiredSkillsForProject(orgId, projectId)` — Prompt Registry (see its `CONTRACT.md`)
 - `queryUsageByRepoAndCommits(orgId, gitRemoteUrl, commitShas[])` — Distribution (new API, see its `CONTRACT.md`)
 
 ## Data Contracts

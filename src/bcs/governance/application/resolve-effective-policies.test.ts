@@ -39,7 +39,7 @@ describe("resolveEffectivePolicies", () => {
     await testDb.teardown();
   });
 
-  it("matches legacy inherited/local policy resolution across team and project scopes", async () => {
+  it("matches legacy inherited/local policy resolution across the team chain", async () => {
     const fixture = await makePolicyHierarchy(testDb);
     const root = await insertPolicyRow(testDb, {
       organizationId: fixture.organizationId,
@@ -66,15 +66,9 @@ describe("resolveEffectivePolicies", () => {
       name: "Child local",
       priority: 20,
     });
-    const localProject = await insertPolicyRow(testDb, {
-      organizationId: fixture.organizationId,
-      projectId: fixture.projectId,
-      name: "Project local",
-      priority: 40,
-    });
 
     const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      resolveEffectivePolicies(tx, fixture.actor, fixture.userId, fixture.projectId),
+      resolveEffectivePolicies(tx, fixture.actor, fixture.userId),
     );
 
     expect(result.inherited.map((policy) => [policy.id, policy.isInherited])).toEqual([
@@ -82,7 +76,6 @@ describe("resolveEffectivePolicies", () => {
       [root, true],
     ]);
     expect(result.local.map((policy) => [policy.id, policy.isInherited])).toEqual([
-      [localProject, false],
       [localTeam, false],
     ]);
   });
@@ -162,7 +155,7 @@ describe("resolveAllPolicies", () => {
     });
     const localHigh = await insertPolicyRow(testDb, {
       organizationId: fixture.organizationId,
-      projectId: fixture.projectId,
+      teamId: fixture.childTeamId,
       name: "Local high",
       priority: 100,
     });
@@ -174,7 +167,7 @@ describe("resolveAllPolicies", () => {
     });
 
     const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      resolveAllPolicies(tx, fixture.actor, fixture.userId, fixture.projectId),
+      resolveAllPolicies(tx, fixture.actor, fixture.userId),
     );
 
     expect(result.map((policy) => [policy.id, policy.isInherited])).toEqual([
@@ -213,11 +206,6 @@ describe("countLocalPoliciesAndObjectives", () => {
       organizationId: fixture.organizationId,
       teamId: fixture.parentTeamId,
       name: "Inherited policy",
-    });
-    await insertPolicyRow(testDb, {
-      organizationId: fixture.organizationId,
-      projectId: fixture.projectId,
-      name: "Project policy",
     });
     await insertPolicyRow(testDb, {
       organizationId: fixture.organizationId,

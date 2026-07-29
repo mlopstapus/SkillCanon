@@ -5,16 +5,17 @@
 
 ## Purpose
 
-Owns `Policy` and `Objective` and the hierarchical resolution engine that walks a team chain and merges inherited (immutable) and local (mutable) layers by priority. This is one of SkillCanon's two core-domain contexts — the thing that makes prompt expansion governed rather than a plain template render. It exposes resolution as a synchronous read contract; it never reaches into Prompt Registry or Identity's internals, only consumes Identity's `getTeamChain` and (for the project-scoped entrypoint below) Prompt Registry's `getProject`.
+Owns `Policy` and `Objective` and the hierarchical resolution engine that walks a team chain and merges inherited (immutable) and local (mutable) layers by priority. This is one of SkillCanon's two core-domain contexts — the thing that makes prompt expansion governed rather than a plain template render. It exposes resolution as a synchronous read contract; it never reaches into Prompt Registry or Identity's internals, only consumes Identity's `getTeamChain`.
+
+Policy resolution is **purely team + invoking-user scoped — never project-scoped** ([PDR-016](../../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)). Whether a project needs a particular skill is a Prompt Registry catalog fact (`listRequiredSkillsForProject`), not something Governance resolves — a project isn't a governance concern at all. `Objective` keeps its own optional `projectId` scope unchanged; objectives are goal-tracking, not enforcement, and PDR-016 didn't touch them.
 
 ## Exposed APIs
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `resolveEffectivePolicies(orgId, userId, projectId?)` | Returns `{ inherited: Policy[], local: Policy[] }`, inherited from ancestor teams (immutable), local from the user's own team + optional project | Prompt Registry, Distribution (`sh-context` tool) |
+| `resolveEffectivePolicies(orgId, userId)` | Returns `{ inherited: Policy[], local: Policy[] }`, inherited from ancestor teams (immutable), local from the user's own team | Prompt Registry, Distribution (`sh-context` tool) |
 | `resolveEffectiveObjectives(orgId, userId, projectId?)` | Same shape, for objectives | Prompt Registry, Distribution |
-| `resolveAllPolicies(orgId, userId, projectId?)` | Single merged list, priority desc, inherited wins ties | Prompt Registry (expansion) |
-| `resolveRequiredSkillPolicies(orgId, projectId)` | **New (011-vcs-integration).** Same team-chain resolution as `resolveEffectivePolicies`, but starts from the project's *owning team* (via Prompt Registry's `getProject`) rather than a specific user's team — there is no acting user in a webhook-triggered PR evaluation. Returns only `enforcementType: "require-skill"` policies, inherited + local merged, as a flat list of required skill names. | VCS Integration |
+| `resolveAllPolicies(orgId, userId)` | Single merged list, priority desc, inherited wins ties | Prompt Registry (expansion) |
 | `createPolicy`, `updatePolicy`, `deletePolicy`, `createObjective`, `updateObjective`, `deleteObjective` | Standard write operations, org-scoped | Distribution (route handlers) |
 
 ## Events Published
@@ -33,12 +34,10 @@ Owns `Policy` and `Objective` and the hierarchical resolution engine that walks 
 ## Data Contracts
 
 ```ts
-type EnforcementType = "prepend" | "append" | "inject" | "validate" | "require-skill";
-// "require-skill": `content` holds the required skill/prompt name, one Policy row per required
-// skill (not a delimited list) — consistent with every other enforcementType being one rule per row.
+type EnforcementType = "prepend" | "append" | "inject" | "validate";
 
 interface Policy {
-  id: string; orgId: string; teamId: string | null; projectId: string | null;
+  id: string; orgId: string; teamId: string; // always team-scoped — no projectId (PDR-016)
   name: string; enforcementType: EnforcementType; content: string;
   priority: number; isActive: boolean; isInherited: boolean; // set by the resolver, not stored
 }
@@ -56,4 +55,4 @@ Resolution is **read-your-writes consistent** within the same request — it alw
 
 ## Breaking Change Policy
 
-Any change to resolution ordering/tiebreak semantics requires a PDR, since it changes what governance actually gets applied to every existing prompt expansion. This includes `resolveRequiredSkillPolicies` — it reuses the same inherited/local merge and priority rules, not a separate resolution algorithm.
+Any change to resolution ordering/tiebreak semantics requires a PDR, since it changes what governance actually gets applied to every existing prompt expansion.

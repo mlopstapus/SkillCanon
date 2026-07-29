@@ -26,19 +26,19 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 
 **Context map:**
 - Identity & Access is a shared-identifier source for everyone (`organizationId`/`userId`/`teamId` as opaque IDs) — no context reads its tables directly, only its contract functions.
-- Prompt Registry → Governance and Workflow Orchestration → Prompt Registry are **customer/supplier** relationships, synchronous, read-heavy.
+- Prompt Registry → Governance and Workflow Orchestration → Prompt Registry are **customer/supplier** relationships, synchronous, read-heavy. Governance resolution is purely team + invoking-user scoped — it has no notion of "project" at all; Prompt Registry owns project↔skill assignment itself as a plain catalog fact, not a governance concern ([PDR-016](../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)).
 - Every context → Billing & Entitlements is **customer/supplier**; Billing is the sole **anti-corruption layer** in front of Stripe — no other context imports the Stripe SDK.
 - Every context → Audit & Compliance is **customer/supplier**, write-only, transactional (not eventually consistent — see [PDR-005](../docs/pdr/005-audit-logging-core-infrastructure.md)).
 - Distribution is a **conformist consumer** of all other contexts — it has no domain rules of its own, only composition and protocol translation. The primary path is REST — both directly and via the Skill Sync CLI's live calls to the expand route ([PDR-010](../docs/pdr/010-skill-based-distribution-not-mcp.md)); MCP is a deprioritized secondary protocol.
-- VCS Integration → Governance and VCS Integration → Distribution are **customer/supplier**, synchronous, triggered by inbound GitHub webhooks rather than by another BC's call. VCS Integration is the sole **anti-corruption layer** in front of GitHub's REST/webhook API and App credentials, mirroring Billing's isolation of Stripe. See [PDR-012](../docs/pdr/012-vcs-integration-new-bounded-context.md).
+- VCS Integration → Prompt Registry and VCS Integration → Distribution are **customer/supplier**, synchronous, triggered by inbound GitHub webhooks rather than by another BC's call. VCS Integration is the sole **anti-corruption layer** in front of GitHub's REST/webhook API and App credentials, mirroring Billing's isolation of Stripe. See [PDR-012](../docs/pdr/012-vcs-integration-new-bounded-context.md) and [PDR-016](../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md) (required-skill source moved from Governance to Prompt Registry).
 
 ## Data Architecture
 
 | Store | Owner BC | Type | Why |
 |---|---|---|---|
 | `identity_access.*` | Identity & Access | Postgres schema | Organization, Team, User, Invitation, ApiKey |
-| `governance.*` | Governance | Postgres schema | Policy, Objective |
-| `prompt_registry.*` | Prompt Registry | Postgres schema | Project, Prompt, PromptVersion, PromptShare |
+| `governance.*` | Governance | Postgres schema | Policy (team-scoped only), Objective |
+| `prompt_registry.*` | Prompt Registry | Postgres schema | Project, ProjectTeam, Prompt (owned by a user or a team), PromptVersion, Subscription, ProjectSkillAssignment |
 | `workflow.*` | Workflow Orchestration | Postgres schema | Workflow, WorkflowRun (new — persists run history) |
 | `billing.*` | Billing & Entitlements | Postgres schema | Plan, Subscription, Entitlement |
 | `audit.*` | Audit & Compliance | Postgres schema | AuditEvent (append-only) |
@@ -75,6 +75,7 @@ SkillCanon is a prompt registry with hierarchical governance, distributed to AI 
 - [PDR-013: Client-side git-context tagging for skill-usage↔commit correlation](../docs/pdr/013-cli-side-git-context-tagging.md)
 - [PDR-014: GitHub App, not Personal Access Token, for GitHub integration](../docs/pdr/014-github-app-not-pat.md)
 - [PDR-015: `prompt_usage` needs a retention floor once PR checks depend on it](../docs/pdr/015-prompt-usage-retention-floor.md)
+- [PDR-016: Skill ownership, sharing, and project assignment](../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)
 
 ## Failure Model
 

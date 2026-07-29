@@ -39,9 +39,9 @@ describe("listTeamPolicies", () => {
     const orgB = await makePolicyFixtureOrg(testDb);
     await testDb.ownerDb.execute(sql`
       insert into governance.policies
-        (id, organization_id, team_id, project_id, name, enforcement_type, content, priority, is_active)
+        (id, organization_id, team_id, name, enforcement_type, content, priority, is_active)
       values
-        (${randomUUID()}, ${orgB.organizationId}, ${orgA.teamId}, null, 'Wrong org', 'prepend', 'Ignore me.', 50, true)
+        (${randomUUID()}, ${orgB.organizationId}, ${orgA.teamId}, 'Wrong org', 'prepend', 'Ignore me.', 50, true)
     `);
 
     const result = await withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>

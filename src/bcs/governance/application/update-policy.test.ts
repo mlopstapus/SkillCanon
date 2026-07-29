@@ -43,7 +43,6 @@ describe("updatePolicy", () => {
     expect(updated.content).toBe("Append this.");
     expect(updated.priority).toBe(20);
     expect(updated.teamId).toBe(created.teamId);
-    expect(updated.projectId).toBeNull();
 
     const events = await queryPolicyAuditEvents(
       testDb,

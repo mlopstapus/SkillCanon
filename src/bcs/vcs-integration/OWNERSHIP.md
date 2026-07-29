@@ -28,7 +28,7 @@ None. The GitHub API client (Octokit) and webhook signature verification live in
 
 | Resource | Owned by BC |
 |---|---|
-| `resolveRequiredSkillPolicies(orgId, projectId)` | Governance |
+| `listRequiredSkillsForProject(orgId, projectId)` | Prompt Registry |
 | `queryUsageByRepoAndCommits(orgId, gitRemoteUrl, commitShas[])` | Distribution |
 | Project/team existence checks | Identity & Access, Prompt Registry |
 | `record()` (audit writes) | Audit & Compliance |

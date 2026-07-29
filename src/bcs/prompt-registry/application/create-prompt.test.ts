@@ -3,17 +3,9 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
-import {
-  DuplicatePromptNameError,
-  PromptOwnerNotInOrganizationError,
-} from "../domain/prompt";
+import { DuplicatePromptNameError } from "../domain/prompt";
 import { createPrompt } from "./create-prompt";
-import {
-  makePromptFixtureOrg,
-  queryPromptAuditEvents,
-  queryPromptRows,
-  verifierFor,
-} from "./prompt-test-helpers";
+import { makePromptFixtureOrg, queryPromptAuditEvents, queryPromptRows } from "./prompt-test-helpers";
 
 describe("createPrompt", () => {
   let testDb: TestDb;
@@ -34,7 +26,6 @@ describe("createPrompt", () => {
         tx,
         fixture.actor,
         { organizationId: fixture.organizationId, name: "my-prompt" },
-        verifierFor(fixture),
         { transport: "api", sourceIp: "198.51.100.8" },
       ),
     );
@@ -61,20 +52,10 @@ describe("createPrompt", () => {
     const fixtureB = await makePromptFixtureOrg(testDb);
 
     const resultA = await withTenantContext(testDb.appDb, fixtureA.organizationId, (tx) =>
-      createPrompt(
-        tx,
-        fixtureA.actor,
-        { organizationId: fixtureA.organizationId, name: "commit" },
-        verifierFor(fixtureA),
-      ),
+      createPrompt(tx, fixtureA.actor, { organizationId: fixtureA.organizationId, name: "commit" }),
     );
     const resultB = await withTenantContext(testDb.appDb, fixtureB.organizationId, (tx) =>
-      createPrompt(
-        tx,
-        fixtureB.actor,
-        { organizationId: fixtureB.organizationId, name: "commit" },
-        verifierFor(fixtureB),
-      ),
+      createPrompt(tx, fixtureB.actor, { organizationId: fixtureB.organizationId, name: "commit" }),
     );
 
     expect(resultA.name).toBe("commit");
@@ -87,51 +68,28 @@ describe("createPrompt", () => {
     const name = `dupe-${randomUUID()}`;
 
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name }, verifierFor(fixture)),
+      createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name }),
     );
 
     await expect(
       withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name }, verifierFor(fixture)),
+        createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name }),
       ),
     ).rejects.toBeInstanceOf(DuplicatePromptNameError);
   });
 
-  it("rejects a prompt owner user from a different organization", async () => {
-    const fixture = await makePromptFixtureOrg(testDb);
-
-    await expect(
-      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        createPrompt(
-          tx,
-          fixture.actor,
-          {
-            organizationId: fixture.organizationId,
-            name: `prompt-${randomUUID()}`,
-            userId: fixture.otherOrgActorUserId, // user belongs to a different org
-          },
-          verifierFor(fixture),
-        ),
-      ),
-    ).rejects.toBeInstanceOf(PromptOwnerNotInOrganizationError);
-  });
-
-  it("creates a prompt with an owner user that belongs to the same organization", async () => {
+  it("always owns a newly created prompt by the creating user (PDR-016)", async () => {
     const fixture = await makePromptFixtureOrg(testDb);
 
     const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      createPrompt(
-        tx,
-        fixture.actor,
-        {
-          organizationId: fixture.organizationId,
-          name: `owner-prompt-${randomUUID()}`,
-          userId: fixture.actorUserId,
-        },
-        verifierFor(fixture),
-      ),
+      createPrompt(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        name: `owner-prompt-${randomUUID()}`,
+      }),
     );
 
-    expect(result.userId).toBe(fixture.actorUserId);
+    expect(result.ownerType).toBe("user");
+    expect(result.ownerId).toBe(fixture.actorUserId);
+    expect(result.forkedFromSkillId).toBeNull();
   });
 });

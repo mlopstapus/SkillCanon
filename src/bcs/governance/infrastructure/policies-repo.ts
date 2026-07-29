@@ -8,8 +8,7 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
 export interface InsertPolicyParams {
   id: string;
   organizationId: string;
-  teamId: string | null;
-  projectId: string | null;
+  teamId: string;
   name: string;
   description: string | null;
   enforcementType: PolicyEnforcementType;
@@ -72,21 +71,6 @@ export async function listActiveByTeam(tx: Tx, organizationId: string, teamId: s
     )
     .orderBy(desc(policies.priority));
 }
-
-export async function listActiveByProject(tx: Tx, organizationId: string, projectId: string) {
-  return tx
-    .select()
-    .from(policies)
-    .where(
-      and(
-        eq(policies.organizationId, organizationId),
-        eq(policies.projectId, projectId),
-        eq(policies.isActive, true),
-      ),
-    )
-    .orderBy(desc(policies.priority));
-}
-
 
 export async function countActiveByTeam(tx: Tx, organizationId: string, teamId: string): Promise<number> {
   const [row] = await tx

@@ -11,9 +11,9 @@ Port `resolve_effective` and `resolve_all_policies` (and the equivalent objectiv
 
 ## Requirements
 
-- [ ] `resolveEffectivePolicies(orgId, userId, projectId?)`: walks `getTeamChain`, splits into `inherited` (ancestor teams, immutable) and `local` (user's own team + optional project layer, mutable), matching current Python semantics exactly
-- [ ] `resolveEffectiveObjectives(orgId, userId, projectId?)`: same shape for objectives
-- [ ] `resolveAllPolicies(orgId, userId, projectId?)`: single merged list, priority descending, **inherited wins ties** — matching current Python tiebreak behavior exactly
+- [ ] `resolveEffectivePolicies(orgId, userId)`: walks `getTeamChain`, splits into `inherited` (ancestor teams, immutable) and `local` (user's own team, mutable). **No `projectId` parameter** — per [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md), Policy is purely team + invoking-user scoped, unlike the original Python model this was ported from (which did have a project layer)
+- [ ] `resolveEffectiveObjectives(orgId, userId, projectId?)`: same shape for objectives — **`Objective` keeps its `projectId` scope**, unchanged by PDR-016; only `Policy` lost it
+- [ ] `resolveAllPolicies(orgId, userId)`: single merged list, priority descending, **inherited wins ties** — matching current Python tiebreak behavior exactly (minus the removed project layer)
 - [ ] Read-fresh, never cached — no memoization that could serve a stale policy set within or across requests
 - [ ] **New (2026-07-23, driven by the `SkillCanon Governance.dc.html` mockup — see `005-governance-views-ui.md`):** a per-node aggregate count — `countLocalPoliciesAndObjectives(orgId, teamOrUserId)` or equivalent — for the scope-tree sidebar's local-count badges. Doesn't need to be a new resolution primitive; a simple `count(*) ... where team_id = $1` per table is sufficient, but it doesn't exist as a named, tested query today
 

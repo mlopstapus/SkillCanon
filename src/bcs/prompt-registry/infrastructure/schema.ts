@@ -1,4 +1,13 @@
-import { boolean, index, jsonb, text, timestamp, unique, uuid } from "drizzle-orm/pg-core";
+import {
+  type AnyPgColumn,
+  boolean,
+  index,
+  jsonb,
+  text,
+  timestamp,
+  unique,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { id, organizationId, timestamps } from "@/shared/db/columns";
 import { promptRegistrySchema } from "@/shared/db/schemas";
 
@@ -45,9 +54,15 @@ export const projectMembers = promptRegistrySchema.table(
 );
 
 /**
- * Organization-scoped prompt definitions.
+ * Organization-scoped prompt definitions ("skills").
  * Name uniqueness is per-organization (NOT global — correcting the legacy schema).
  * `active_version_id` is nullable; it points to the currently active PromptVersion.
+ *
+ * Ownership (PDR-016): every skill is owned by exactly one user or exactly
+ * one team, never derived from a project — `ownerType`/`ownerId` are always
+ * set from creation. `forkedFromSkillId` is a self-referencing lineage
+ * pointer, set only when this skill was created via `forkSkill` (fork
+ * itself is future work — this column just exists for it).
  */
 export const prompts = promptRegistrySchema.table(
   "prompts",
@@ -59,8 +74,12 @@ export const prompts = promptRegistrySchema.table(
     isDeprecated: boolean("is_deprecated").notNull().default(false),
     /** Nullable until first version is published. Updated by publishVersion and rollback. */
     activeVersionId: uuid("active_version_id"),
-    /** Optional owner user — must belong to the same organization. */
-    userId: uuid("user_id"),
+    ownerType: text("owner_type", { enum: ["user", "team"] }).notNull(),
+    ownerId: uuid("owner_id").notNull(),
+    forkedFromSkillId: uuid("forked_from_skill_id").references(
+      (): AnyPgColumn => prompts.id,
+      { onDelete: "set null" },
+    ),
     ...timestamps(),
   },
   (table) => [

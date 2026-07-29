@@ -17,36 +17,21 @@ import { insert } from "../infrastructure/policies-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
-async function assertScopeBelongsToOrganization(
+async function assertTeamBelongsToOrganization(
   actor: PolicyActor,
   params: CreatePolicyParams,
   scopeVerifier: PolicyScopeVerifier,
 ): Promise<void> {
-  const hasTeam = params.teamId != null;
-  const hasProject = params.projectId != null;
-  if (hasTeam === hasProject) {
+  if (!params.teamId) {
     throw new InvalidPolicyScopeError();
   }
 
-  if (params.teamId) {
-    const belongs = await scopeVerifier.teamBelongsToOrganization?.(
-      actor.organizationId,
-      params.teamId,
-    );
-    if (!belongs) {
-      throw new PolicyScopeNotFoundError();
-    }
-    return;
-  }
-
-  if (params.projectId) {
-    const belongs = await scopeVerifier.projectBelongsToOrganization?.(
-      actor.organizationId,
-      params.projectId,
-    );
-    if (!belongs) {
-      throw new PolicyScopeNotFoundError();
-    }
+  const belongs = await scopeVerifier.teamBelongsToOrganization?.(
+    actor.organizationId,
+    params.teamId,
+  );
+  if (!belongs) {
+    throw new PolicyScopeNotFoundError();
   }
 }
 
@@ -57,13 +42,12 @@ export async function createPolicy(
   scopeVerifier: PolicyScopeVerifier,
   auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ) {
-  await assertScopeBelongsToOrganization(actor, params, scopeVerifier);
+  await assertTeamBelongsToOrganization(actor, params, scopeVerifier);
   const id = randomUUID();
   const after = {
     id,
     organizationId: actor.organizationId,
-    teamId: params.teamId ?? null,
-    projectId: params.projectId ?? null,
+    teamId: params.teamId,
     name: params.name,
     description: params.description ?? null,
     enforcementType: params.enforcementType,
