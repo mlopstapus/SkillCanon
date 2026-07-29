@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-29
 
-**Status**: Draft
+**Status**: Clarified
 
 **Input**: User description: "Prompt Sharing (epic 006-prompt-registry, backlog item backlog/006-prompt-registry/003-prompt-sharing.md, depends on 018-prompt-version-model). Port PromptShare from the current Python models.py/prompt_service.py into the prompt-registry bounded context. Add a prompt_registry.prompt_shares table (id, prompt_id, user_id, created_at, unique on (prompt_id, user_id)) granting a specific user access to a prompt they don't own. Invariant: the shared-with user_id must belong to the same organization_id as the prompt being shared — cross-organization sharing must be rejected. Support creating a share, revoking a share, and listing a user's accessible prompts (prompts they own plus prompts shared with them). Acceptance criteria: sharing with a user from a different organization is rejected; a user's accessible-prompts list correctly includes both owned and shared-with prompts; revoking a share removes the prompt from that user's accessible list. This is the access-control input to the \"not found or not shared with you\" check used by epic 008's REST expand route (and its skill-sync CLI feature), and potentially the MCP feature's sh-run — the accessible-prompts query here must be the single source of truth that Distribution calls into rather than each caller re-deriving access logic itself."
 
@@ -107,7 +107,7 @@ A caller revokes an existing share so the previously shared-with user no longer 
 
 - "Caller" means an authenticated actor already resolved to an organization and user identity by the Identity/Access bounded context; authentication, membership resolution, and organization lookup are out of scope for this feature.
 - Shared-with user validation (organization membership) relies on the Identity/Access read contract and must not import Identity/Access internals, consistent with `018-prompt-version-model`.
-- Only a prompt's owner, or another caller otherwise authorized within the organization, may create or revoke a share; the specific authorization rule for *who* is allowed to call these operations (e.g. owner-only vs. any org member) is enforced by the calling context (Distribution's route handlers) and is out of scope for this feature, which focuses on the data invariants and the accessible-prompts query.
+- Any caller resolved within the prompt's organization may create or revoke a share; this feature does not restrict share creation/revocation to the prompt's owner specifically, consistent with `018-prompt-version-model`'s existing prompt lifecycle operations (deprecate, publish, rollback), none of which enforce a per-user ownership check beyond organization scope. A stricter owner-only or role-based rule can be layered on later (e.g. in Distribution's route handlers, or a future authorization feature) without changing this feature's data invariants.
 - Audit events are written through the shared Audit & Compliance write path; defining that event schema and storage is out of scope for this feature.
 - There is no share "role" or permission level (e.g. read vs. edit) — a share is a binary access grant, matching the ported Python `PromptShare` model.
 - Prompt expansion's own "not found or not shared with you" behavior (epic 008) is out of scope for this feature; this feature only guarantees the accessible-prompts query that expansion will call into.
