@@ -10,9 +10,9 @@ Built deliberately early — right after Identity & Access, before Governance, P
 
 ## Features
 
-- [ ] [001 - Audit Event Schema & Write Path](001-audit-event-schema-and-write-path.md)
+- [x] [001 - Audit Event Schema & Write Path](archive/001-audit-event-schema-and-write-path.md)
 - [x] [002 - Audit Query & Retention](archive/002-audit-query-and-retention.md)
-- [ ] [003 - Audit Log UI](003-audit-log-ui.md)
+- [x] [003 - Audit Log UI](archive/003-audit-log-ui.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
