@@ -20,7 +20,7 @@ This is the first bounded-context port and the epic every other epic depends on 
 - [X] [008 - `authDb` Consumer Handoff](008-authdb-consumer-handoff.md)
 - [X] [009 - Auth & Onboarding UI](archive/009-auth-and-onboarding-ui.md)
 - [x] [010 - Account & Team Settings UI](archive/010-account-and-team-settings-ui.md)
-- [ ] [011 - Logout UI Wiring](011-logout-ui-wiring.md)
+- [x] [011 - Logout UI Wiring](archive/011-logout-ui-wiring.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 

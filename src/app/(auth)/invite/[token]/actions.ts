@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { acceptInvitation, login } from "@/bcs/identity-access";
 import { authDb } from "@/shared/db";
-import { setSessionCookie } from "../../_lib/session-cookie";
+import { setSessionCookie } from "@/app/_lib/session-cookie";
 
 export type InviteTerminalKind = "invalid" | "expired" | "accepted" | "revoked";
 

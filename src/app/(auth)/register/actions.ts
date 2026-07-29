@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { login, registerFirstRunAdmin } from "@/bcs/identity-access";
 import { authDb } from "@/shared/db";
-import { setSessionCookie } from "../_lib/session-cookie";
+import { setSessionCookie } from "@/app/_lib/session-cookie";
 import { slugify } from "./slugify";
 
 export type RegisterFormState = {

@@ -13,15 +13,15 @@ Discovered during `/speckit-specify` for `009-auth-and-onboarding-ui` (2026-07-2
 
 ## Requirements
 
-- [ ] Wire an actual "Log out" action into the existing `AccountFooter` (e.g., the existing chevron opens a small menu with a "Log out" item, or an equivalent minimal affordance) that calls `identity-access`'s `logout(authDb, userId)` and clears the session cookie
-- [ ] After logout, the user is redirected to `/login`
-- [ ] No new page/route is required — this is wiring an action into the already-shipped app shell, not new UI surface
+- [X] Wire an actual "Log out" action into the existing `AccountFooter` (e.g., the existing chevron opens a small menu with a "Log out" item, or an equivalent minimal affordance) that calls `identity-access`'s `logout(authDb, userId)` and clears the session cookie — `AccountFooter` is now a client component; its chevron toggles a small always-in-DOM menu (visibility via a `hidden` class, not conditional unmount, for `renderToStaticMarkup` testability) containing a "Log out" button that submits to a new `"use server"` `logoutAction` (`src/app/(app)/logout-action.ts`)
+- [X] After logout, the user is redirected to `/login`
+- [X] No new page/route is required — pure wiring into the existing app shell
 
 ## Acceptance Criteria
 
-- [ ] A logged-in user can log out from anywhere in the authenticated app shell, ending up back at the login page with no active session
-- [ ] The logout action is audit-logged (already guaranteed by `logout()` itself — verify the UI's call path doesn't bypass it)
-- [ ] Attempting to reuse the app (e.g., back button) after logging out does not show authenticated content
+- [X] A logged-in user can log out from anywhere in the authenticated app shell, ending up back at the login page with no active session — verified live in a real browser session
+- [X] The logout action is audit-logged (already guaranteed by `logout()` itself — verified the UI's call path doesn't bypass it) — confirmed a `user.logout` row was written with the correct `actor_user_id`
+- [X] Attempting to reuse the app (e.g., back button) after logging out does not show authenticated content — verified live: navigating back to `/teams` after logout redirects straight to `/login`
 
 ## Open Questions
 

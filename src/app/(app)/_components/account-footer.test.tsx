@@ -38,4 +38,14 @@ describe("AccountFooter", () => {
 
     expect(markup).toContain("Admin · Unassigned");
   });
+
+  it("renders a Log out control in the account menu (011-logout-ui-wiring)", () => {
+    const markup = renderToStaticMarkup(<AccountFooter user={user} />);
+
+    expect(markup).toContain("Log out");
+    // The menu toggle button must be a real, labeled control — not just the
+    // decorative chevron icon.
+    expect(markup).toContain('aria-label="Account menu"');
+    expect(markup).toContain('aria-expanded="false"');
+  });
 });
