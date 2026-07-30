@@ -52,3 +52,27 @@ export {
   PromptNotFoundError,
   PromptVersionNotFoundError,
 } from "./domain/prompt";
+
+// ---------------------------------------------------------------------------
+// Skill Sharing — Subscribe & Fork (feature 020-prompt-sharing, PDR-016)
+// ---------------------------------------------------------------------------
+export { forkSkill } from "./application/fork-skill";
+export { listSkillsByOrganization } from "./application/list-skills-by-organization";
+export { subscribeSkill } from "./application/subscribe-skill";
+export { unsubscribeSkill } from "./application/unsubscribe-skill";
+export type {
+  ForkSkillParams,
+  OwnerType,
+  SubscribeSkillParams,
+  Subscription,
+  SubscriberType,
+} from "./domain/subscription";
+export {
+  CannotForkOwnSkillError,
+  CannotSubscribeToOwnSkillError,
+  CrossOrgSubscriberError,
+  DuplicateSubscriptionError,
+  SourceSkillNotFoundError,
+  SubscriberNotAuthorizedError,
+  SubscriptionNotFoundError,
+} from "./domain/subscription";

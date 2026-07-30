@@ -111,3 +111,40 @@ export const promptVersions = promptRegistrySchema.table(
     index("prompt_versions_prompt_id_created_at_index").on(table.promptId, table.createdAt),
   ],
 );
+
+/**
+ * A live-reference sharing grant from one skill to one subscriber (a user or
+ * a team), scoped within a single organization (020-prompt-sharing, PDR-016).
+ * `subscriber_id` carries no FK — polymorphic, points at either
+ * `identity_access.users.id` or `identity_access.teams.id` depending on
+ * `subscriber_type`, the same "opaque id, no cross-schema FK" convention
+ * already used for `organization_id` everywhere in this repo. A subscription
+ * has exactly two states, present or absent — there is no "inactive" row;
+ * removal is a hard delete (`unsubscribeSkill`).
+ */
+export const subscriptions = promptRegistrySchema.table(
+  "subscriptions",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    sourceSkillId: uuid("source_skill_id")
+      .notNull()
+      .references(() => prompts.id, { onDelete: "cascade" }),
+    subscriberType: text("subscriber_type", { enum: ["user", "team"] }).notNull(),
+    subscriberId: uuid("subscriber_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("subscriptions_source_skill_id_subscriber_unique").on(
+      table.sourceSkillId,
+      table.subscriberType,
+      table.subscriberId,
+    ),
+    index("subscriptions_organization_id_subscriber_index").on(
+      table.organizationId,
+      table.subscriberType,
+      table.subscriberId,
+    ),
+    index("subscriptions_source_skill_id_index").on(table.sourceSkillId),
+  ],
+);

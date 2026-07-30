@@ -30,6 +30,9 @@ export const AUDIT_ACTION_VERBS = [
   "synced",
   "pruned",
   "published",
+  "subscribed",
+  "unsubscribed",
+  "forked",
 ] as const;
 
 export type AuditActionVerb = (typeof AUDIT_ACTION_VERBS)[number];
@@ -48,6 +51,9 @@ export const AUDIT_ACTION_VERB_COLORS: Record<AuditActionVerb, string> = {
   synced: "violet",
   pruned: "neutral",
   published: "green",
+  subscribed: "violet",
+  unsubscribed: "red",
+  forked: "green",
 };
 
 export function getAuditActionVerb(action: string): string {
