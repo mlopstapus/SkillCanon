@@ -120,6 +120,13 @@
       "when": 1785348803306,
       "tag": "0016_prompt_registry_prompts_owner_type",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1785357876780,
+      "tag": "0017_prompt_registry_subscriptions",
+      "breakpoints": true
     }
   ]
 }

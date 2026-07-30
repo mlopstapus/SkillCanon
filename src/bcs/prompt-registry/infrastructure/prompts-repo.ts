@@ -1,7 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { PromptOwnerType } from "../domain/prompt";
-import { prompts } from "./schema";
+import { prompts, subscriptions } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -46,6 +46,54 @@ export async function findPromptByOrgAndId(tx: Tx, organizationId: string, promp
 
 export async function listPromptsByOrg(tx: Tx, organizationId: string) {
   return tx.select().from(prompts).where(eq(prompts.organizationId, organizationId)).orderBy(asc(prompts.name));
+}
+
+/**
+ * The caller's *accessible* set (data-model.md's Query Shapes): skills the
+ * caller owns, skills their own team owns, and skills they (or their team)
+ * subscribe to — one joined query rather than three round-trips unioned in
+ * application code, so org-scoping and de-duplication (a skill the caller
+ * both owns *and* is somehow subscribed to should appear once) live in one
+ * place. `userTeamId` is nullable (an unassigned user, per
+ * 019-account-team-settings-ui) — contributes nothing to either the
+ * team-ownership or team-subscription branch when null.
+ */
+export async function listAccessibleByOwnerAndSubscriptions(
+  tx: Tx,
+  organizationId: string,
+  userId: string,
+  userTeamId: string | null,
+) {
+  const ownerConditions = [and(eq(prompts.ownerType, "user"), eq(prompts.ownerId, userId))];
+  const subscriberConditions = [
+    and(eq(subscriptions.subscriberType, "user"), eq(subscriptions.subscriberId, userId)),
+  ];
+  if (userTeamId) {
+    ownerConditions.push(and(eq(prompts.ownerType, "team"), eq(prompts.ownerId, userTeamId)));
+    subscriberConditions.push(
+      and(eq(subscriptions.subscriberType, "team"), eq(subscriptions.subscriberId, userTeamId)),
+    );
+  }
+
+  const rows = await tx
+    .select({ prompt: prompts })
+    .from(prompts)
+    .leftJoin(subscriptions, eq(subscriptions.sourceSkillId, prompts.id))
+    .where(
+      and(
+        eq(prompts.organizationId, organizationId),
+        or(
+          or(...ownerConditions),
+          and(eq(subscriptions.organizationId, organizationId), or(...subscriberConditions)),
+        ),
+      ),
+    );
+
+  const seen = new Map<string, (typeof rows)[number]["prompt"]>();
+  for (const row of rows) {
+    seen.set(row.prompt.id, row.prompt);
+  }
+  return Array.from(seen.values()).sort((a, b) => a.name.localeCompare(b.name));
 }
 
 export async function updatePrompt(
