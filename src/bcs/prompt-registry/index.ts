@@ -54,6 +54,13 @@ export {
 } from "./domain/prompt";
 
 // ---------------------------------------------------------------------------
+// Skill Expansion Engine (feature 021-expansion-engine)
+// ---------------------------------------------------------------------------
+export { expand } from "./application/expand";
+export type { ExpandParams, ExpansionResult } from "./domain/expansion";
+export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expansion";
+
+// ---------------------------------------------------------------------------
 // Skill Sharing — Subscribe & Fork (feature 020-prompt-sharing, PDR-016)
 // ---------------------------------------------------------------------------
 export { forkSkill } from "./application/fork-skill";

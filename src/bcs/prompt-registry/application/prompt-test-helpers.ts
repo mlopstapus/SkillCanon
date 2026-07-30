@@ -12,6 +12,8 @@ export interface PromptFixtureOrg {
   otherUserId: string;
   otherOrgId: string;
   otherOrgActorUserId: string;
+  /** The actor's own (root) team — surfaced for tests that need to grant team-scoped Governance fixtures (021-expansion-engine). */
+  teamId: string;
 }
 
 export async function makePromptFixtureOrg(testDb: TestDb): Promise<PromptFixtureOrg> {
@@ -52,6 +54,7 @@ export async function makePromptFixtureOrg(testDb: TestDb): Promise<PromptFixtur
     otherUserId,
     otherOrgId,
     otherOrgActorUserId,
+    teamId,
   };
 }
 

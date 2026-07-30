@@ -15,7 +15,7 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 - [ ] [001 - Project Model & Membership](001-project-model-and-membership.md)
 - [ ] [002 - Prompt & Version Model](002-prompt-and-version-model.md)
 - [ ] [003 - Skill Sharing — Subscribe & Fork](003-prompt-sharing.md)
-- [ ] [004 - Expansion Engine](004-expansion-engine.md)
+- [x] [004 - Expansion Engine](archive/004-expansion-engine.md)
 - [ ] [005 - Prompt Registry Tenant Isolation Tests](005-prompt-registry-tenant-isolation-tests.md)
 - [ ] [006 - Prompt Registry Views UI](006-prompt-registry-views-ui.md)
 - [ ] [007 - Project Skill Assignment](007-project-skill-assignment.md)
