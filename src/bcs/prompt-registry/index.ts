@@ -35,6 +35,7 @@ export { getPrompt } from "./application/get-prompt";
 export { getPromptById } from "./application/get-prompt-by-id";
 export { getPromptVersion } from "./application/get-prompt-version";
 export { listPrompts } from "./application/list-prompts";
+export type { ListPromptsOptions } from "./application/list-prompts";
 export { listVersions } from "./application/list-versions";
 export { publishVersion } from "./application/publish-version";
 export { rollbackPrompt } from "./application/rollback-prompt";
@@ -83,3 +84,31 @@ export {
   SubscriberNotAuthorizedError,
   SubscriptionNotFoundError,
 } from "./domain/subscription";
+
+// ---------------------------------------------------------------------------
+// Project Skill Assignment (feature 022-project-skill-assignment, PDR-016)
+// ---------------------------------------------------------------------------
+export { addCollaboratorTeam } from "./application/add-collaborator-team";
+export { removeCollaboratorTeam } from "./application/remove-collaborator-team";
+export { listProjectTeams } from "./application/list-project-teams";
+export { assignSkillToProject } from "./application/assign-skill-to-project";
+export { unassignSkillFromProject } from "./application/unassign-skill-from-project";
+export { listRequiredSkillsForProject } from "./application/list-required-skills-for-project";
+export type { AddCollaboratorTeamParams, ProjectTeam } from "./domain/project-team";
+export {
+  CollaboratorTeamNotFoundError,
+  DuplicateCollaboratorTeamError,
+  OwnerTeamCannotBeCollaboratorError,
+  ProjectTeamOrgMismatchError,
+} from "./domain/project-team";
+export type {
+  AssignSkillToProjectParams,
+  ProjectSkillAssignment,
+  ProjectSkillRequirement,
+} from "./domain/project-skill-assignment";
+export {
+  DuplicateProjectSkillAssignmentError,
+  PersonalSkillNotAssignableError,
+  ProjectSkillAssignmentNotFoundError,
+  SkillNotEligibleForProjectError,
+} from "./domain/project-skill-assignment";
