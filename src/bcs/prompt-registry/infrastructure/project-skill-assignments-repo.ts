@@ -51,12 +51,17 @@ export async function deleteByProjectAndSkill(tx: Tx, projectId: string, skillId
  * Every skill assigned to a project (both requirement levels), joined to
  * `prompts` for the `listPrompts` `projectId` union (research.md §4).
  */
-export async function listByProject(tx: Tx, projectId: string) {
+export async function listByProject(tx: Tx, organizationId: string, projectId: string) {
   const rows = await tx
     .select({ prompt: prompts })
     .from(projectSkillAssignments)
     .innerJoin(prompts, eq(prompts.id, projectSkillAssignments.skillId))
-    .where(eq(projectSkillAssignments.projectId, projectId));
+    .where(
+      and(
+        eq(projectSkillAssignments.organizationId, organizationId),
+        eq(projectSkillAssignments.projectId, projectId),
+      ),
+    );
   return rows.map((row) => row.prompt);
 }
 

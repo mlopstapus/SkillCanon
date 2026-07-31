@@ -3,7 +3,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { insertPrompt } from "../infrastructure/prompts-repo";
+import { addCollaboratorTeam } from "./add-collaborator-team";
+import { addProjectMember } from "./add-project-member";
+import { assignSkillToProject } from "./assign-skill-to-project";
 import { listPrompts } from "./list-prompts";
+import { makeProjectTeamFixtureOrg } from "./project-team-test-helpers";
 import { subscribeSkill } from "./subscribe-skill";
 import { createTestSkillOwnedByTeam, createTestSkillOwnedByUser, makeSubscriptionFixtureOrg } from "./subscription-test-helpers";
 
@@ -116,5 +120,124 @@ describe("listPrompts (the accessible set)", () => {
     );
 
     expect(result.map((p) => p.id)).not.toContain(coincidentalId.id);
+  });
+
+  describe("with a projectId filter (022-project-skill-assignment)", () => {
+    it("includes a collaborator-team-contributed assigned skill for a member who only belongs to the owner team", async () => {
+      const fixture = await makeProjectTeamFixtureOrg(testDb);
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        addCollaboratorTeam(tx, fixture.ownerTeamAdmin, fixture.projectId, {
+          teamId: fixture.collaboratorTeamId,
+        }),
+      );
+      const assignedSkill = await createTestSkillOwnedByTeam(
+        testDb,
+        fixture.organizationId,
+        fixture.collaboratorTeamId,
+        "assigned-via-collaborator",
+      );
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        assignSkillToProject(tx, fixture.ownerTeamAdmin, fixture.projectId, assignedSkill.id, {
+          requirement: "required",
+        }),
+      );
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        addProjectMember(
+          tx,
+          { organizationId: fixture.organizationId, userId: fixture.ownerTeamAdmin.id },
+          { projectId: fixture.projectId, userId: fixture.nonAdminMember.id },
+          {
+            organizationExists: async () => true,
+            teamBelongsToOrganization: async () => true,
+            userBelongsToOrganization: async () => true,
+          },
+        ),
+      );
+
+      const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        listPrompts(
+          tx,
+          { organizationId: fixture.organizationId, userId: fixture.nonAdminMember.id },
+          { projectId: fixture.projectId },
+        ),
+      );
+
+      expect(result.map((p) => p.id)).toContain(assignedSkill.id);
+    });
+
+    it("excludes a collaborator-team skill that was never assigned to the project, even with the projectId filter", async () => {
+      const fixture = await makeProjectTeamFixtureOrg(testDb);
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        addCollaboratorTeam(tx, fixture.ownerTeamAdmin, fixture.projectId, {
+          teamId: fixture.collaboratorTeamId,
+        }),
+      );
+      const unassignedSkill = await createTestSkillOwnedByTeam(
+        testDb,
+        fixture.organizationId,
+        fixture.collaboratorTeamId,
+        "never-assigned",
+      );
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        addProjectMember(
+          tx,
+          { organizationId: fixture.organizationId, userId: fixture.ownerTeamAdmin.id },
+          { projectId: fixture.projectId, userId: fixture.nonAdminMember.id },
+          {
+            organizationExists: async () => true,
+            teamBelongsToOrganization: async () => true,
+            userBelongsToOrganization: async () => true,
+          },
+        ),
+      );
+
+      const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        listPrompts(
+          tx,
+          { organizationId: fixture.organizationId, userId: fixture.nonAdminMember.id },
+          { projectId: fixture.projectId },
+        ),
+      );
+
+      expect(result.map((p) => p.id)).not.toContain(unassignedSkill.id);
+    });
+
+    it("silently ignores projectId for a caller who is not a project member", async () => {
+      const fixture = await makeProjectTeamFixtureOrg(testDb);
+      // Owned by the *collaborator* team, not the owner team `nonAdminMember`
+      // belongs to — isolates the projectId filter from ordinary
+      // team-based accessibility (a skill owned by the owner team would
+      // already be accessible to nonAdminMember regardless of projectId).
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        addCollaboratorTeam(tx, fixture.ownerTeamAdmin, fixture.projectId, {
+          teamId: fixture.collaboratorTeamId,
+        }),
+      );
+      const assignedSkill = await createTestSkillOwnedByTeam(
+        testDb,
+        fixture.organizationId,
+        fixture.collaboratorTeamId,
+        "assigned-not-a-member",
+      );
+      await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        assignSkillToProject(tx, fixture.ownerTeamAdmin, fixture.projectId, assignedSkill.id, {
+          requirement: "required",
+        }),
+      );
+
+      const withoutProjectId = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        listPrompts(tx, { organizationId: fixture.organizationId, userId: fixture.nonAdminMember.id }),
+      );
+      const withProjectId = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        listPrompts(
+          tx,
+          { organizationId: fixture.organizationId, userId: fixture.nonAdminMember.id },
+          { projectId: fixture.projectId },
+        ),
+      );
+
+      expect(withProjectId.map((p) => p.id)).not.toContain(assignedSkill.id);
+      expect(withProjectId.map((p) => p.id).sort()).toEqual(withoutProjectId.map((p) => p.id).sort());
+    });
   });
 });
