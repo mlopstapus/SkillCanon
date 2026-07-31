@@ -1,8 +1,8 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, or } from "drizzle-orm";
 import { sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { UpdateProjectFields } from "../domain/project";
-import { projects } from "./schema";
+import { projects, projectTeams } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -78,10 +78,26 @@ export async function listByOrganization(tx: Tx, organizationId: string) {
     .orderBy(asc(projects.name));
 }
 
+/**
+ * Matches a project where `teamId` is either the project's owner team
+ * (`projects.team_id`) or one of its collaborator teams (`project_teams`)
+ * — "a team's projects" per `001`'s original requirement and FR-024
+ * (022-project-skill-assignment).
+ */
 export async function listByTeam(tx: Tx, organizationId: string, teamId: string) {
-  return tx
-    .select()
+  const rows = await tx
+    .selectDistinct({ project: projects })
     .from(projects)
-    .where(and(eq(projects.organizationId, organizationId), eq(projects.teamId, teamId)))
+    .leftJoin(
+      projectTeams,
+      and(eq(projectTeams.projectId, projects.id), eq(projectTeams.teamId, teamId)),
+    )
+    .where(
+      and(
+        eq(projects.organizationId, organizationId),
+        or(eq(projects.teamId, teamId), eq(projectTeams.teamId, teamId)),
+      ),
+    )
     .orderBy(asc(projects.name));
+  return rows.map((row) => row.project);
 }

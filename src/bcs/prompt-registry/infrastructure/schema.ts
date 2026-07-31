@@ -35,6 +35,30 @@ export const projects = promptRegistrySchema.table(
   ],
 );
 
+/**
+ * Collaborator teams on a project (022-project-skill-assignment, pulled
+ * forward from `backlog/006-prompt-registry/001-project-model-and-membership.md`
+ * per PDR-016). The project's *owner* team is `projects.team_id` — it is
+ * never a row in this table. A team's participation in a project is the
+ * union of `projects.team_id` and whatever rows exist here for that project.
+ */
+export const projectTeams = promptRegistrySchema.table(
+  "project_teams",
+  {
+    id: id(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    teamId: uuid("team_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("project_teams_project_id_team_id_unique").on(table.projectId, table.teamId),
+    index("project_teams_project_id_index").on(table.projectId),
+    index("project_teams_team_id_index").on(table.teamId),
+  ],
+);
+
 export const projectMembers = promptRegistrySchema.table(
   "project_members",
   {
@@ -146,5 +170,41 @@ export const subscriptions = promptRegistrySchema.table(
       table.subscriberId,
     ),
     index("subscriptions_source_skill_id_index").on(table.sourceSkillId),
+  ],
+);
+
+/**
+ * A project's declared catalog fact (022-project-skill-assignment, PDR-016):
+ * which skills apply to it, and whether each is `required` or `optional`.
+ * Not a Governance policy and not resolved through any team-inheritance
+ * chain — a direct, project-scoped fact `listRequiredSkillsForProject`
+ * reads flatly. `organization_id` is denormalized here (not re-derived via
+ * a join to `projects` on every read) for the same reason
+ * `subscriptions.organization_id` is: uniform query/RLS scoping.
+ */
+export const projectSkillAssignments = promptRegistrySchema.table(
+  "project_skill_assignments",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    skillId: uuid("skill_id")
+      .notNull()
+      .references(() => prompts.id, { onDelete: "cascade" }),
+    requirement: text("requirement", { enum: ["required", "optional"] }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("project_skill_assignments_project_id_skill_id_unique").on(
+      table.projectId,
+      table.skillId,
+    ),
+    index("project_skill_assignments_project_id_requirement_index").on(
+      table.projectId,
+      table.requirement,
+    ),
+    index("project_skill_assignments_skill_id_index").on(table.skillId),
   ],
 );

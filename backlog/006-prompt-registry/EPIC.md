@@ -1,7 +1,7 @@
 # Epic 006: Prompt Registry
 
 **Priority:** 6
-**Status:** not-started
+**Status:** in-progress
 **Goal:** Port Project, Prompt (skill ownership, subscribe/fork sharing), PromptVersion, and the expansion engine — the second core-domain context — consuming Governance strictly through its read contract, not its internals. Also owns project-skill assignment (required/optional), a capability with no Python precedent, added by [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md).
 
 ## Overview
@@ -12,13 +12,13 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 
 ## Features
 
-- [ ] [001 - Project Model & Membership](001-project-model-and-membership.md)
-- [ ] [002 - Prompt & Version Model](002-prompt-and-version-model.md)
-- [ ] [003 - Skill Sharing — Subscribe & Fork](003-prompt-sharing.md)
+- [x] [001 - Project Model & Membership](archive/001-project-model-and-membership.md)
+- [x] [002 - Prompt & Version Model](archive/002-prompt-and-version-model.md)
+- [x] [003 - Skill Sharing — Subscribe & Fork](archive/003-prompt-sharing.md)
 - [x] [004 - Expansion Engine](archive/004-expansion-engine.md)
 - [ ] [005 - Prompt Registry Tenant Isolation Tests](005-prompt-registry-tenant-isolation-tests.md)
 - [ ] [006 - Prompt Registry Views UI](006-prompt-registry-views-ui.md)
-- [ ] [007 - Project Skill Assignment](007-project-skill-assignment.md)
+- [x] [007 - Project Skill Assignment](archive/007-project-skill-assignment.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -36,3 +36,5 @@ Feature 004 must call Governance only through `resolveEffectivePolicies`/`resolv
 **Added 2026-07-23**: feature 006 builds this epic's real UI directly, same pattern as `003-audit-compliance/003-audit-log-ui.md` and `005-governance/005-governance-views-ui.md` — but no design mockup exists yet for these pages, so it's currently a stub pending one (see that feature's Open Questions).
 
 **Added 2026-07-29 (PDR-016)**: feature 007 is new — project-skill assignment (required/optional) was originally speced as a Governance policy (`backlog/011-vcs-integration/003-required-skill-governance-policy.md`) before ownership/sharing design work showed governance should never be project-scoped. `backlog/011-vcs-integration/003` and `005` now depend on this epic's feature 007 instead of Governance.
+
+**Added 2026-07-30**: feature 007 (`022-project-skill-assignment`) also delivered feature 001's remaining, still-unbuilt collaborator-team capability (`project_teams`) as part of its own scope — `007`'s acceptance criteria were untestable without it, and `001` had sat with that piece unbuilt since PDR-016 added it. Both features are now fully closed and archived; `001`'s own file records exactly which requirements came from which delivery.

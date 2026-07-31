@@ -33,6 +33,10 @@ export const AUDIT_ACTION_VERBS = [
   "subscribed",
   "unsubscribed",
   "forked",
+  "assigned",
+  "unassigned",
+  "added",
+  "removed",
 ] as const;
 
 export type AuditActionVerb = (typeof AUDIT_ACTION_VERBS)[number];
@@ -54,6 +58,10 @@ export const AUDIT_ACTION_VERB_COLORS: Record<AuditActionVerb, string> = {
   subscribed: "violet",
   unsubscribed: "red",
   forked: "green",
+  assigned: "violet",
+  unassigned: "red",
+  added: "green",
+  removed: "red",
 };
 
 export function getAuditActionVerb(action: string): string {
