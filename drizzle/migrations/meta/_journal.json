@@ -127,6 +127,13 @@
       "when": 1785357876780,
       "tag": "0017_prompt_registry_subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1785464050047,
+      "tag": "0018_prompt_registry_project_teams_and_skill_assignments",
+      "breakpoints": true
     }
   ]
 }
