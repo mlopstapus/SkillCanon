@@ -1,7 +1,7 @@
 # Epic 006: Prompt Registry
 
 **Priority:** 6
-**Status:** not-started
+**Status:** in-progress
 **Goal:** Port Project, Prompt (skill ownership, subscribe/fork sharing), PromptVersion, and the expansion engine — the second core-domain context — consuming Governance strictly through its read contract, not its internals. Also owns project-skill assignment (required/optional), a capability with no Python precedent, added by [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md).
 
 ## Overview
@@ -13,8 +13,8 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 ## Features
 
 - [ ] [001 - Project Model & Membership](001-project-model-and-membership.md)
-- [ ] [002 - Prompt & Version Model](002-prompt-and-version-model.md)
-- [ ] [003 - Skill Sharing — Subscribe & Fork](003-prompt-sharing.md)
+- [x] [002 - Prompt & Version Model](archive/002-prompt-and-version-model.md)
+- [x] [003 - Skill Sharing — Subscribe & Fork](archive/003-prompt-sharing.md)
 - [x] [004 - Expansion Engine](archive/004-expansion-engine.md)
 - [ ] [005 - Prompt Registry Tenant Isolation Tests](005-prompt-registry-tenant-isolation-tests.md)
 - [ ] [006 - Prompt Registry Views UI](006-prompt-registry-views-ui.md)
