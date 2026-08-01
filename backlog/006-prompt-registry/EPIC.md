@@ -16,9 +16,10 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 - [x] [002 - Prompt & Version Model](archive/002-prompt-and-version-model.md)
 - [x] [003 - Skill Sharing — Subscribe & Fork](archive/003-prompt-sharing.md)
 - [x] [004 - Expansion Engine](archive/004-expansion-engine.md)
-- [ ] [005 - Prompt Registry Tenant Isolation Tests](005-prompt-registry-tenant-isolation-tests.md)
-- [ ] [006 - Prompt Registry Views UI](006-prompt-registry-views-ui.md)
+- [x] [005 - Prompt Registry Tenant Isolation Tests](archive/005-prompt-registry-tenant-isolation-tests.md)
+- [x] [006 - Prompt Registry Views UI](archive/006-prompt-registry-views-ui.md)
 - [x] [007 - Project Skill Assignment](archive/007-project-skill-assignment.md)
+- [ ] [008 - Project Usage Metrics Dashboard](008-project-usage-metrics-dashboard.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -38,3 +39,7 @@ Feature 004 must call Governance only through `resolveEffectivePolicies`/`resolv
 **Added 2026-07-29 (PDR-016)**: feature 007 is new — project-skill assignment (required/optional) was originally speced as a Governance policy (`backlog/011-vcs-integration/003-required-skill-governance-policy.md`) before ownership/sharing design work showed governance should never be project-scoped. `backlog/011-vcs-integration/003` and `005` now depend on this epic's feature 007 instead of Governance.
 
 **Added 2026-07-30**: feature 007 (`022-project-skill-assignment`) also delivered feature 001's remaining, still-unbuilt collaborator-team capability (`project_teams`) as part of its own scope — `007`'s acceptance criteria were untestable without it, and `001` had sat with that piece unbuilt since PDR-016 added it. Both features are now fully closed and archived; `001`'s own file records exactly which requirements came from which delivery.
+
+**Added 2026-07-31**: feature 006's `/speckit-specify` pass (`specs/023-prompt-registry-views-ui/`) found the `SkillCanon Prompts.dc.html` mockup's Project Detail page includes a full usage/invocation-metrics dashboard with no backing usage-log capability anywhere in the codebase yet. Split it out as new feature 008 rather than building it half-finished (no real data) or silently inventing usage-tracking as a side effect of a views-UI feature — see `008`'s Technical Notes for the exact mockup section it came from.
+
+**Completed 2026-07-31**: feature 006 shipped via the full speckit loop (`specs/023-prompt-registry-views-ui/`), which also caught and fixed feature 005 sitting fully-shipped-but-unarchived since `022-prompt-registry-tenant-isolation` landed — another instance of this epic's recurring backlog-lags-code pattern (see feature 001/007's note above). Both are now archived. Only feature 008 (metrics dashboard) remains open in this epic.

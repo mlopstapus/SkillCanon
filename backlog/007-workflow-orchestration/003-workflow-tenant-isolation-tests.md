@@ -7,13 +7,13 @@ dependencies: ["001-workflow-model-and-crud.md", "002-workflow-runner.md", "004-
 
 # Workflow Tenant Isolation Tests
 
-Apply RLS and the shared cross-tenant-denial test helper to `workflow.workflows` and `workflow.workflow_runs`, per tenets M1/M2/M3.
+Apply RLS and the shared cross-tenant-denial test helper to `workflow.workflows`, `workflow.workflow_runs`, and `workflow.workflow_run_steps`, per tenets M1/M2/M3.
 
 ## Requirements
 
-- [ ] RLS policies enabled on `workflows`, `workflow_runs`, and `workflow_shares`
+- [ ] RLS policies enabled on `workflows`, `workflow_runs`, `workflow_run_steps`, and `workflow_shares`
 - [ ] Every query in this epic's other features filters by `organization_id`, audited against this feature
-- [ ] M3 negative test: a user in org A cannot read or run org B's workflow by ID, cannot read org B's `workflow_runs` by ID, and cannot share/unshare a workflow they don't own or have admin rights to
+- [ ] M3 negative test: a user in org A cannot read or start/advance a run against org B's workflow by ID, cannot read org B's `workflow_runs`/`workflow_run_steps` by ID (including the resolved prompt content stored there), and cannot share/unshare a workflow they don't own or have admin rights to
 
 ## Acceptance Criteria
 

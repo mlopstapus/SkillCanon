@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, inArray, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { PromptOwnerType } from "../domain/prompt";
 import { prompts, subscriptions } from "./schema";
@@ -63,6 +63,7 @@ export async function listAccessibleByOwnerAndSubscriptions(
   organizationId: string,
   userId: string,
   userTeamId: string | null,
+  userProjectIds: string[] = [],
 ) {
   const ownerConditions = [and(eq(prompts.ownerType, "user"), eq(prompts.ownerId, userId))];
   const subscriberConditions = [
@@ -72,6 +73,14 @@ export async function listAccessibleByOwnerAndSubscriptions(
     ownerConditions.push(and(eq(prompts.ownerType, "team"), eq(prompts.ownerId, userTeamId)));
     subscriberConditions.push(
       and(eq(subscriptions.subscriberType, "team"), eq(subscriptions.subscriberId, userTeamId)),
+    );
+  }
+  if (userProjectIds.length > 0) {
+    // A project-level subscription (023-prompt-registry-views-ui) extends
+    // access to every member of that project — a third subscriber kind
+    // alongside user/team, resolved the same way.
+    subscriberConditions.push(
+      and(eq(subscriptions.subscriberType, "project"), inArray(subscriptions.subscriberId, userProjectIds)),
     );
   }
 

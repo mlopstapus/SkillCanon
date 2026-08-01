@@ -38,6 +38,7 @@ export { listPrompts } from "./application/list-prompts";
 export type { ListPromptsOptions } from "./application/list-prompts";
 export { listVersions } from "./application/list-versions";
 export { publishVersion } from "./application/publish-version";
+export { reactivatePrompt } from "./application/reactivate-prompt";
 export { rollbackPrompt } from "./application/rollback-prompt";
 export type {
   CreatePromptParams,
@@ -66,6 +67,7 @@ export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expans
 // ---------------------------------------------------------------------------
 export { forkSkill } from "./application/fork-skill";
 export { listSkillsByOrganization } from "./application/list-skills-by-organization";
+export { listSubscriptionsForSkill } from "./application/list-subscriptions-for-skill";
 export { subscribeSkill } from "./application/subscribe-skill";
 export { unsubscribeSkill } from "./application/unsubscribe-skill";
 export type {
@@ -91,9 +93,15 @@ export {
 export { addCollaboratorTeam } from "./application/add-collaborator-team";
 export { removeCollaboratorTeam } from "./application/remove-collaborator-team";
 export { listProjectTeams } from "./application/list-project-teams";
+export { addProjectRepo } from "./application/add-project-repo";
+export { removeProjectRepo } from "./application/remove-project-repo";
+export { listProjectRepos } from "./application/list-project-repos";
+export type { AddProjectRepoParams, ProjectRepo } from "./domain/project-repo";
+export { DuplicateProjectRepoError, ProjectRepoNotFoundError } from "./domain/project-repo";
 export { assignSkillToProject } from "./application/assign-skill-to-project";
 export { unassignSkillFromProject } from "./application/unassign-skill-from-project";
 export { listRequiredSkillsForProject } from "./application/list-required-skills-for-project";
+export { listProjectSkillAssignmentsForOrganization } from "./application/list-project-skill-assignments-for-organization";
 export type { AddCollaboratorTeamParams, ProjectTeam } from "./domain/project-team";
 export {
   CollaboratorTeamNotFoundError,

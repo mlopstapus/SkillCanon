@@ -35,6 +35,20 @@ export async function listByProject(tx: Tx, projectId: string) {
     .orderBy(asc(projectMembers.createdAt));
 }
 
+/**
+ * Every project id a user belongs to, across the whole organization —
+ * powers the accessible-prompts query's project-subscription branch
+ * (023-prompt-registry-views-ui) — no existing query returns this
+ * direction (the rest are all scoped to one specific project already).
+ */
+export async function listProjectIdsForUser(tx: Tx, userId: string): Promise<string[]> {
+  const rows = await tx
+    .select({ projectId: projectMembers.projectId })
+    .from(projectMembers)
+    .where(eq(projectMembers.userId, userId));
+  return rows.map((row) => row.projectId);
+}
+
 export async function deleteByProjectAndUser(tx: Tx, projectId: string, userId: string) {
   const [row] = await tx
     .delete(projectMembers)

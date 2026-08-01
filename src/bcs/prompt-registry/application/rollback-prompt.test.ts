@@ -11,6 +11,7 @@ import { rollbackPrompt } from "./rollback-prompt";
 import {
   createPromptInOrg,
   makePromptFixtureOrg,
+  queryPromptAuditEvents,
   queryPromptVersionRows,
 } from "./prompt-test-helpers";
 
@@ -63,6 +64,27 @@ describe("rollbackPrompt", () => {
       const rows = await queryPromptVersionRows(testDb, sql`id = ${v.id}`);
       expect(rows).toHaveLength(1);
     }
+  });
+
+  it("records a prompt.version_activated audit event (previously missing)", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+    const prompt = await createPromptInOrg(testDb, fixture, "audited-rollback");
+    await publishN(testDb, fixture, "audited-rollback", ["v1", "v2"]);
+
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      rollbackPrompt(tx, fixture.actor, "audited-rollback", "v1", {
+        transport: "api",
+        sourceIp: "198.51.100.11",
+      }),
+    );
+
+    const events = await queryPromptAuditEvents(
+      testDb,
+      sql`action = 'prompt.version_activated' and resource_id = ${prompt.id}`,
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]?.transport).toBe("api");
+    expect(events[0]?.source_ip).toBe("198.51.100.11");
   });
 
   it("rejects rollback to a version that was never published", async () => {

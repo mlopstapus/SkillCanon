@@ -53,6 +53,20 @@ export async function deleteById(tx: Tx, id: string) {
   return row ?? null;
 }
 
+/**
+ * Every subscription grant on a given source skill, regardless of
+ * subscriber kind — powers the Share drawer's "who already has access"
+ * state (023-prompt-registry-views-ui FR-017/FR-018). No existing query
+ * looks up subscriptions from this direction (the others are all keyed by
+ * a specific, already-known subscriber).
+ */
+export async function listBySourceSkill(tx: Tx, organizationId: string, sourceSkillId: string) {
+  return tx
+    .select()
+    .from(subscriptions)
+    .where(and(eq(subscriptions.organizationId, organizationId), eq(subscriptions.sourceSkillId, sourceSkillId)));
+}
+
 export async function listBySubscriber(
   tx: Tx,
   organizationId: string,

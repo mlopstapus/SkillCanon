@@ -19,7 +19,7 @@ Port `WorkflowShare` from the current Python `models.py`/`workflow_service.py` (
 ## Acceptance Criteria
 
 - [ ] Attempting to share a workflow with a user from a different organization is rejected
-- [ ] A shared-with user can run the workflow via `runWorkflow`; a user with no ownership or share cannot
+- [ ] A shared-with user can start/advance a run against the workflow via `startWorkflowRun`/`advanceWorkflowRun`; a user with no ownership or share cannot
 - [ ] Revoking a share removes the workflow from that user's accessible list
 
 ## Open Questions

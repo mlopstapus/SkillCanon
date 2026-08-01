@@ -154,7 +154,7 @@ export const subscriptions = promptRegistrySchema.table(
     sourceSkillId: uuid("source_skill_id")
       .notNull()
       .references(() => prompts.id, { onDelete: "cascade" }),
-    subscriberType: text("subscriber_type", { enum: ["user", "team"] }).notNull(),
+    subscriberType: text("subscriber_type", { enum: ["user", "team", "project"] }).notNull(),
     subscriberId: uuid("subscriber_id").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -206,5 +206,29 @@ export const projectSkillAssignments = promptRegistrySchema.table(
       table.requirement,
     ),
     index("project_skill_assignments_skill_id_index").on(table.skillId),
+  ],
+);
+
+/**
+ * Git repositories linked to a project (023-prompt-registry-views-ui, new
+ * capability — no prior feature modeled this). No `organization_id` column
+ * of its own; tenancy is resolved indirectly through the parent project,
+ * the same shape as `project_teams`/`project_members`.
+ */
+export const projectRepos = promptRegistrySchema.table(
+  "project_repos",
+  {
+    id: id(),
+    projectId: uuid("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    url: text("url").notNull(),
+    branch: text("branch").notNull().default("main"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("project_repos_project_id_url_unique").on(table.projectId, table.url),
+    index("project_repos_project_id_index").on(table.projectId),
   ],
 );

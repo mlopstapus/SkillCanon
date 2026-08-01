@@ -3,8 +3,9 @@ import { getTeam, type UserSummary } from "@/bcs/identity-access";
 import {
   CrossOrgSubscriberError,
   SubscriberNotAuthorizedError,
-  type OwnerType,
+  type SubscriberType,
 } from "../domain/subscription";
+import { getProject } from "./get-project";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -26,11 +27,18 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
  * `getTeam` is itself organization-scoped, so a team id that resolves in a
  * different organization (or doesn't exist at all) is indistinguishable
  * from an unauthorized team — both surface as `CrossOrgSubscriberError`.
+ *
+ * For `ownerType: "project"` (023-prompt-registry-views-ui, new): resolves
+ * the project via this BC's own `getProject`, then delegates to the `"team"`
+ * branch above on `project.teamId` — authorizing a project-level grant the
+ * same way administering that project's collaborator teams already is
+ * (`addCollaboratorTeam`/`assignSkillToProject`), rather than inventing a
+ * second authorized-party concept (e.g. the project's `leadUserId`).
  */
 export async function assertAuthorizedForOwner(
   tx: Tx,
   actingUser: UserSummary,
-  ownerType: OwnerType,
+  ownerType: SubscriberType,
   ownerId: string,
 ): Promise<void> {
   if (ownerType === "user") {
@@ -38,6 +46,14 @@ export async function assertAuthorizedForOwner(
       throw new SubscriberNotAuthorizedError();
     }
     return;
+  }
+
+  if (ownerType === "project") {
+    const project = await getProject(tx, actingUser.orgId, ownerId);
+    if (!project) {
+      throw new CrossOrgSubscriberError();
+    }
+    return assertAuthorizedForOwner(tx, actingUser, "team", project.teamId);
   }
 
   let team;

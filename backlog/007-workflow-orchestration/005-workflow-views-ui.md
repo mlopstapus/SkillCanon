@@ -14,12 +14,13 @@ The real, finished workflow list/creation/detail UI — owned by this BC per `bc
 ## Requirements
 
 - [ ] Pull the workflows mockup(s) from claude.ai/design before finalizing the rest of this list
-- [ ] `workflows` (list), `workflows/new`, `workflows/[id]` (detail, including run history/status) — page inventory carried over from the now-dissolved `010-ui-polish-and-accessibility` epic's original redesign scope; confirm against the actual mockup once it exists
+- [ ] `workflows` (list), `workflows/new`, `workflows/[id]` (detail, including run history) — page inventory carried over from the now-dissolved `010-ui-polish-and-accessibility` epic's original redesign scope; confirm against the actual mockup once it exists
+- [ ] `workflows/[id]`'s run history is **read-only**, sourced entirely from `listWorkflowRuns`/`getWorkflowRun` (`002-workflow-runner.md`) — resolved step content (`system_message`/`user_message`) and each step's caller-self-reported status. There is no "run" action anywhere in this UI; the web UI never calls `startWorkflowRun`/`advanceWorkflowRun` and has no way to show a model's actual response, since SkillCanon itself never receives one — real runs happen entirely client-side in whatever agent (Claude Code, another IDE) is executing the workflow
 
 ## Acceptance Criteria
 
-- [ ] Create/view/run a workflow works end-to-end through this UI
-- [ ] Step sequencing and run status are clearly legible
+- [ ] Create and view a workflow, and view its run history step by step, works end-to-end through this UI
+- [ ] Step sequencing and each step's self-reported status are clearly legible; the UI never implies it is showing a model's real response, and exposes no control that starts or advances a run
 - [ ] The page(s) visually match whatever mockup is pulled in
 
 ## Open Questions
@@ -35,4 +36,4 @@ The real, finished workflow list/creation/detail UI — owned by this BC per `bc
 
 ## Technical Notes
 
-Workflow execution/runner logic (`002-workflow-runner.md`) is out of scope here — pure presentation of run history/status.
+Confirmed 2026-07-31: this page is read-only history, not a run trigger. Per `002-workflow-runner.md`, SkillCanon never executes a step or observes a model's output — this page can only present what was resolved/sent per step and what the calling agent self-reported, never a real model response. Uses `listWorkflowRuns`/`getWorkflowRun` only; never `startWorkflowRun`/`advanceWorkflowRun`.

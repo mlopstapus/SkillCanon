@@ -148,6 +148,13 @@
       "when": 1785545911453,
       "tag": "0020_workflow_workflows",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1785547897280,
+      "tag": "0021_prompt_registry_project_repos",
+      "breakpoints": true
     }
   ]
 }
