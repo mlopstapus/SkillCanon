@@ -1,4 +1,6 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { getPromptUsageSummaryForProject } from "@/bcs/distribution";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { ExpansionSourceNotFoundError } from "../domain/expansion";
@@ -161,5 +163,29 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     });
 
     expect(result.userMessage).toBe("v1: x");
+  });
+
+  it("never records a distribution.prompt_usage row — a live-preview/test call must never count as usage (spec FR-002a, 024-project-usage-metrics-dashboard)", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await publishSkill(testDb, fixture, { name: "no-usage-recorded", userTemplate: "hi {{ input }}" });
+    const projectId = randomUUID();
+
+    const before = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      getPromptUsageSummaryForProject(tx, fixture.organizationId, projectId, { activeWindowDays: 30, trendDays: 14 }),
+    );
+
+    await runExpand(fixture, {
+      promptName: "no-usage-recorded",
+      input: { input: "x" },
+      userId: fixture.actor.userId,
+      projectId,
+    });
+
+    const after = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      getPromptUsageSummaryForProject(tx, fixture.organizationId, projectId, { activeWindowDays: 30, trendDays: 14 }),
+    );
+
+    expect(after.totalInvocations).toBe(before.totalInvocations);
+    expect(after.totalInvocations).toBe(0);
   });
 });
