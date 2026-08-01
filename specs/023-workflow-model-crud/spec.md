@@ -4,7 +4,7 @@
 
 **Created**: 2026-07-31
 
-**Status**: Draft
+**Status**: Clarified
 
 **Input**: User description: "Port the Workflow model & CRUD from the legacy Python implementation, scoped under Organization, per backlog/007-workflow-orchestration/001-workflow-model-and-crud.md and backlog/007-workflow-orchestration/EPIC.md. New `workflow.workflows` table: id, organization_id, user_id, project_id (nullable), name, description, steps (jsonb), timestamps. Invariant: project_id, if set, must belong to the same organization_id as the workflow. CRUD operations: create, update, list workflows (filterable by user/project/org). `steps` structure references prompt names (not IDs), matching current Python behavior — validated for shape only, not resolved against Prompt Registry until run time. Acceptance criteria: creating a workflow scoped to a project from a different organization is rejected; every mutation (create/update) produces a corresponding audit event. Reference implementation: legacy/backend/src/spechub_server/services/workflow_service.py (create_workflow, list_workflows, get_workflow, update_workflow only — delete_workflow, run_workflow, and share_workflow/unshare_workflow belong to other backlog items)."
 
@@ -39,11 +39,12 @@ A user retrieves the set of workflows relevant to them — their own, or those s
 
 **Acceptance Scenarios**:
 
-1. **Given** an organization with workflows owned by several different users, **When** workflows are listed filtered to one specific user, **Then** only that user's own workflows are returned.
-2. **Given** an organization with workflows scoped to different projects (and some scoped to no project at all), **When** workflows are listed filtered to one specific project, **Then** only workflows scoped to that project are returned.
-3. **Given** an organization with multiple workflows across different owners and projects, **When** workflows are listed for the organization with no further filter, **Then** every workflow belonging to that organization is returned, and none belonging to any other organization.
-4. **Given** an organization with no workflows yet, **When** workflows are listed for it, **Then** an empty list is returned rather than an error.
+1. **Given** an organization with workflows owned by several different users, **When** a user lists workflows filtered to themselves, **Then** only their own workflows are returned.
+2. **Given** an organization with workflows scoped to different projects (and some scoped to no project at all), **When** an organization administrator lists workflows filtered to one specific project, **Then** only workflows scoped to that project are returned, regardless of which user owns each one.
+3. **Given** an organization with multiple workflows across different owners and projects, **When** an organization administrator lists workflows for the organization with no further filter, **Then** every workflow belonging to that organization is returned, and none belonging to any other organization.
+4. **Given** an organization with no workflows yet, **When** an organization administrator lists workflows for it, **Then** an empty list is returned rather than an error.
 5. **Given** workflows created at different times, **When** a listing is retrieved, **Then** results are ordered with the most recently updated workflow first.
+6. **Given** a non-administrator user, **When** they attempt to list workflows filtered to a different user, or list workflows for the organization with no user filter, **Then** the attempt is rejected — a non-administrator may only list their own workflows (optionally further narrowed by project).
 
 ---
 
@@ -60,8 +61,9 @@ The owner of an existing workflow revises its name, description, or ordered step
 1. **Given** an existing workflow, **When** its owner updates its name and description, **Then** the stored workflow reflects the new values, its last-updated time advances, and a corresponding audit event is recorded.
 2. **Given** an existing workflow, **When** its owner replaces its ordered step list with a new one, **Then** the stored workflow reflects the new steps and a corresponding audit event is recorded.
 3. **Given** an existing workflow, **When** its owner submits an update containing a malformed step (missing required fields or wrong field types), **Then** the update is rejected, the stored workflow is left unchanged, and no audit event is recorded.
-4. **Given** an existing workflow, **When** a user who is not its owner attempts to update it, **Then** the attempt is rejected, the stored workflow is left unchanged, and no audit event is recorded.
-5. **Given** an existing workflow, **When** an update is submitted that omits a field (name, description, or steps), **Then** that field's previously stored value is left unchanged — only the fields explicitly provided are updated.
+4. **Given** an existing workflow, **When** a user who is neither its owner nor an organization administrator attempts to update it, **Then** the attempt is rejected, the stored workflow is left unchanged, and no audit event is recorded.
+5. **Given** an existing workflow owned by one user, **When** an organization administrator (not the owner) updates it, **Then** the update succeeds and a corresponding audit event is recorded.
+6. **Given** an existing workflow, **When** an update is submitted that omits a field (name, description, or steps), **Then** that field's previously stored value is left unchanged — only the fields explicitly provided are updated.
 
 ---
 
@@ -91,9 +93,11 @@ The owner of an existing workflow revises its name, description, or ordered step
 - **FR-011**: System MUST order listed workflows by most-recently-updated first.
 - **FR-012**: System MUST allow a workflow's owner to update its name, description, and/or step list, leaving any field not included in the update unchanged.
 - **FR-013**: System MUST NOT allow a workflow's organization, owning user, or project scope to be changed by an update.
-- **FR-014**: System MUST reject an update attempted by any user other than the workflow's owner, with no record change and no audit event.
+- **FR-014**: System MUST allow a workflow to be updated by its owner or by an organization administrator, and MUST reject an update attempted by any other user, with no record change and no audit event.
 - **FR-015**: System MUST record a corresponding audit event for every successful workflow creation and every successful workflow update, and MUST NOT record an audit event for any rejected create or update attempt.
 - **FR-016**: System MUST NOT expose a delete operation as part of this feature's scope.
+- **FR-017**: System MUST allow a non-administrator user to list only their own workflows (optionally further narrowed by project), and MUST reject an attempt by a non-administrator to list another user's workflows or to list an organization's workflows with no user filter.
+- **FR-018**: System MUST allow an organization administrator to list workflows filtered by any user, by project, or by the organization with no further filter.
 
 ### Key Entities
 
@@ -109,13 +113,14 @@ The owner of an existing workflow revises its name, description, or ordered step
 - **SC-002**: 100% of attempts to create or update a workflow with a malformed step (missing required fields, wrong field types, or a duplicate step identifier within the same list) are rejected, with the workflow's stored state left unchanged.
 - **SC-003**: 100% of successful workflow creations and updates produce exactly one corresponding audit event, and 100% of rejected attempts produce zero.
 - **SC-004**: A filtered workflow listing (by user, by project, or by organization) returns 100% of matching workflows and 0% of non-matching ones, verified across the acceptance suite.
-- **SC-005**: 100% of attempts by a non-owner to update a workflow are rejected, with the workflow's stored state left unchanged.
+- **SC-005**: 100% of attempts to update a workflow by a user who is neither its owner nor an organization administrator are rejected, with the workflow's stored state left unchanged.
 - **SC-006**: A workflow referencing a not-yet-existing prompt name can always be created successfully — 0% of such creations are rejected on that basis.
+- **SC-007**: 100% of attempts by a non-administrator to list another user's workflows, or to list an organization's workflows with no user filter, are rejected.
 
 ## Assumptions
 
 - "Authenticated user" / "caller" means an already-authenticated actor already resolved to an organization, user, and role by Identity & Access; authentication and role resolution themselves are out of scope for this feature.
-- Authorization for updating a workflow defaults to "the workflow's own owning user" only — no organization-administrator override is included in this feature, matching the source Python implementation, which performs no ownership or role check at all in `update_workflow`. A broader authorization model (e.g. admin override, or the sharing behavior in `backlog/007-workflow-orchestration/004-workflow-sharing.md`) can be layered on by a later feature without changing this one's data model.
+- Authorization for updating and listing workflows follows this codebase's established "self-or-admin" default, the same pattern already used for equivalent owner-scoped resources (Identity & Access's `revokeApiKey`/`listApiKeys`: a user manages their own; an organization administrator may act on any user's within the same organization; `listInvitations` is org-admin-only). The source Python implementation performs no ownership or role check at all in `update_workflow`/`list_workflows`, but that reflects an absence of multi-tenant scoping in the legacy model (it predates `organization_id` entirely) rather than an intentional "fully open" access design worth porting as-is — especially since the legacy schema's own `WorkflowShare` join table shows workflows were already understood as private-by-default, visible only to their owner unless explicitly shared (a capability deferred to `backlog/007-workflow-orchestration/004-workflow-sharing.md`, not yet built). Applying the self-or-admin default here avoids exposing every user's unshared workflow definitions to any org member the moment organization scoping is introduced, without pulling the sharing feature forward.
 - `delete_workflow` and `run_workflow` exist in the legacy Python service but are explicitly out of scope for this feature — deletion is not part of this feature's requirements (per the source backlog item `backlog/007-workflow-orchestration/001-workflow-model-and-crud.md`, which lists only create/update/list), and running belongs to `backlog/007-workflow-orchestration/002-workflow-runner.md`. `share_workflow`/`unshare_workflow` belong to `backlog/007-workflow-orchestration/004-workflow-sharing.md`.
 - A workflow step's "referenced prompt name" is matched by name only, never by a Prompt Registry identifier, matching the source Python implementation's lazy-lookup behavior described in `src/bcs/workflow-orchestration/CONTRACT.md`.
 - The organization boundary check for a project-scoped workflow (FR-003) depends on being able to resolve which organization a given project belongs to; this feature assumes that lookup is available from the existing project data already owned elsewhere in the system.
