@@ -66,6 +66,19 @@ export async function listByProject(tx: Tx, organizationId: string, projectId: s
 }
 
 /**
+ * Every assignment in the organization, flat — powers the Prompts list
+ * page's "which project(s) is this in" column (023-prompt-registry-views-ui
+ * FR-001), which needs the reverse direction of `listByProject` (per-skill,
+ * not per-project).
+ */
+export async function listByOrganization(tx: Tx, organizationId: string) {
+  return tx
+    .select()
+    .from(projectSkillAssignments)
+    .where(eq(projectSkillAssignments.organizationId, organizationId));
+}
+
+/**
  * Flat skill-name list for `requirement = 'required'` assignments only — a
  * direct catalog read, no team-chain resolution (FR-009/FR-010/FR-011).
  */

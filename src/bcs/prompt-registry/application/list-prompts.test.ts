@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
@@ -58,6 +59,32 @@ describe("listPrompts (the accessible set)", () => {
 
     const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       listPrompts(tx, { organizationId: fixture.organizationId, userId: fixture.userB.id }),
+    );
+
+    expect(result.map((p) => p.id)).toContain(source.id);
+  });
+
+  it("includes skills subscribed to by a project the caller is a member of, even with no direct user/team grant (023-prompt-registry-views-ui)", async () => {
+    const fixture = await makeProjectTeamFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.collaboratorTeamId);
+
+    // nonAdminMember belongs to ownerTeamId (not collaboratorTeamId, so no
+    // team-ownership/subscription path could explain access) and has no
+    // personal subscription either — only project membership should grant it.
+    await testDb.ownerDb.execute(sql`
+      insert into prompt_registry.project_members (id, project_id, user_id, role)
+      values (${randomUUID()}, ${fixture.projectId}, ${fixture.nonAdminMember.id}, 'member')
+    `);
+
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      subscribeSkill(tx, fixture.ownerTeamAdmin, source.id, {
+        subscriberType: "project",
+        subscriberId: fixture.projectId,
+      }),
+    );
+
+    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      listPrompts(tx, { organizationId: fixture.organizationId, userId: fixture.nonAdminMember.id }),
     );
 
     expect(result.map((p) => p.id)).toContain(source.id);

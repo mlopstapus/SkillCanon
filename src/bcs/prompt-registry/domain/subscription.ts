@@ -6,9 +6,15 @@
 
 import type { PromptOwnerType } from "./prompt";
 
-/** Reuses Prompt's owner-type discriminator — the same "user" | "team" split. */
+/** Reuses Prompt's owner-type discriminator — the same "user" | "team" split. Never "project" — a prompt is never project-owned (PDR-016). */
 export type OwnerType = PromptOwnerType;
-export type SubscriberType = PromptOwnerType;
+/**
+ * Widened beyond `OwnerType` (023-prompt-registry-views-ui): a subscriber
+ * can also be a project, whose grant extends access to every member of that
+ * project. A prompt's *owner* can still never be a project — only who can
+ * *subscribe* to one is broader than who can *own* one.
+ */
+export type SubscriberType = PromptOwnerType | "project";
 
 export interface Subscription {
   id: string;

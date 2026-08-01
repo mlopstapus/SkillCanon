@@ -1,5 +1,11 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
+  DEFAULT_WEB_AUDIT_CONTEXT,
+  record,
+  type AuditContext,
+} from "@/bcs/audit-compliance";
+import { withAudit } from "@/shared/db";
+import {
   PromptNotFoundError,
   PromptVersionNotFoundError,
   type PromptActor,
@@ -18,6 +24,7 @@ export async function rollbackPrompt(
   actor: PromptActor,
   promptName: string,
   targetVersion: string,
+  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ) {
   const prompt = await findPromptByOrgAndName(db, actor.organizationId, promptName);
   if (!prompt) {
@@ -29,10 +36,27 @@ export async function rollbackPrompt(
     throw new PromptVersionNotFoundError(targetVersion);
   }
 
-  const updated = await updatePrompt(db, prompt.id, { activeVersionId: version.id });
-  if (!updated) {
-    throw new PromptNotFoundError(promptName);
-  }
-
-  return updated;
+  return withAudit(
+    db,
+    async (tx) => {
+      const updated = await updatePrompt(tx, prompt.id, { activeVersionId: version.id });
+      if (!updated) {
+        throw new PromptNotFoundError(promptName);
+      }
+      return updated;
+    },
+    (tx) =>
+      record(tx, {
+        organizationId: actor.organizationId,
+        actorUserId: actor.userId,
+        actorApiKeyId: null,
+        action: "prompt.version_activated",
+        resourceType: "prompt",
+        resourceId: prompt.id,
+        before: { activeVersionId: prompt.activeVersionId },
+        after: { activeVersionId: version.id },
+        transport: auditContext.transport,
+        sourceIp: auditContext.sourceIp ?? null,
+      }),
+  );
 }
