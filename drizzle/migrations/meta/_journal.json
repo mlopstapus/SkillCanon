@@ -134,6 +134,13 @@
       "when": 1785464050047,
       "tag": "0018_prompt_registry_project_teams_and_skill_assignments",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1785467193126,
+      "tag": "0019_prompt_registry_rls",
+      "breakpoints": true
     }
   ]
 }
