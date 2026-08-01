@@ -17,6 +17,7 @@ Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCan
 | `listInstallations(orgId)` | GitHub App installations visible to this org. | Distribution (admin UI) |
 | `listRepoLinks(orgId, projectId?)` | Repo links, optionally filtered to one project. | Distribution (UI) |
 | `getPrCheck(orgId, repoLinkId, prNumber)` | Latest evaluation plus history for one PR. | Distribution (dashboard UI) |
+| `getComplianceSummaryForProject(orgId, projectId, { since }?)` | Aggregates `PrCheck` rows across every repo linked to the project into `{ totalEvaluated, passed, failed, neutral, rate }`. `rate = passed / (passed + failed)` — `neutral` (evaluation-errored) rows count toward `totalEvaluated` but are excluded from `rate`'s numerator/denominator, since an infra error isn't the same claim as a missing skill. `since` omitted means all-time. Visibility/reporting only — never a merge gate (`006-vcs-integration-dashboard-ui.md`). | Distribution (dashboard UI) |
 
 ## Events Published
 
