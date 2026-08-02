@@ -4,7 +4,6 @@ export const SCHEMAS = {
   identityAccess: "identity_access",
   governance: "governance",
   promptRegistry: "prompt_registry",
-  workflow: "workflow",
   billing: "billing",
   audit: "audit",
   distribution: "distribution",
@@ -17,7 +16,6 @@ export type SchemaName = (typeof SCHEMAS)[keyof typeof SCHEMAS];
 export const identityAccessSchema = pgSchema(SCHEMAS.identityAccess);
 export const governanceSchema = pgSchema(SCHEMAS.governance);
 export const promptRegistrySchema = pgSchema(SCHEMAS.promptRegistry);
-export const workflowSchema = pgSchema(SCHEMAS.workflow);
 export const billingSchema = pgSchema(SCHEMAS.billing);
 export const auditSchema = pgSchema(SCHEMAS.audit);
 export const distributionSchema = pgSchema(SCHEMAS.distribution);

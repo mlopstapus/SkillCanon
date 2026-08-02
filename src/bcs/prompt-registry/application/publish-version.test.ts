@@ -4,6 +4,7 @@ import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import {
   DuplicatePromptVersionError,
+  InvalidVersionShapeError,
   PromptNotFoundError,
 } from "../domain/prompt";
 import { publishVersion } from "./publish-version";
@@ -47,6 +48,7 @@ describe("publishVersion", () => {
     );
 
     expect(v.version).toBe("v1");
+    expect(v.kind).toBe("template");
     expect(v.systemTemplate).toBe("Be helpful.");
     expect(v.tags).toEqual(["production"]);
 
@@ -67,6 +69,7 @@ describe("publishVersion", () => {
         organizationId: fixture.organizationId,
         promptName: "advance-test",
         version: "v1",
+        userTemplate: "{{input}}",
       }),
     );
     const v2 = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -74,6 +77,7 @@ describe("publishVersion", () => {
         organizationId: fixture.organizationId,
         promptName: "advance-test",
         version: "v2",
+        userTemplate: "{{input}}",
       }),
     );
 
@@ -95,6 +99,7 @@ describe("publishVersion", () => {
         organizationId: fixture.organizationId,
         promptName: "dupe-version-prompt",
         version: "v1",
+        userTemplate: "{{input}}",
       }),
     );
 
@@ -104,6 +109,7 @@ describe("publishVersion", () => {
           organizationId: fixture.organizationId,
           promptName: "dupe-version-prompt",
           version: "v1",
+          userTemplate: "{{input}}",
         }),
       ),
     ).rejects.toBeInstanceOf(DuplicatePromptVersionError);
@@ -126,5 +132,61 @@ describe("publishVersion", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(PromptNotFoundError);
+  });
+
+  it("publishes a chain version storing its steps verbatim, with no existence/cycle validation at publish time", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+    await createPromptInOrg(testDb, fixture, "chain-prompt");
+
+    const steps = [
+      { id: "step1", promptName: "nonexistent-skill", dependsOn: [] },
+      { id: "step2", promptName: "also-nonexistent", dependsOn: ["step1", "step3-does-not-exist"] },
+    ];
+
+    const v = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        promptName: "chain-prompt",
+        version: "v1",
+        steps,
+      }),
+    );
+
+    expect(v.kind).toBe("chain");
+    expect(v.steps).toEqual(steps);
+    expect(v.systemTemplate).toBeNull();
+    expect(v.userTemplate).toBeNull();
+  });
+
+  it("rejects a version specifying both chain steps and template content", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+    await createPromptInOrg(testDb, fixture, "mixed-shape-prompt");
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        publishVersion(tx, fixture.actor, {
+          organizationId: fixture.organizationId,
+          promptName: "mixed-shape-prompt",
+          version: "v1",
+          userTemplate: "{{input}}",
+          steps: [{ id: "step1", promptName: "x", dependsOn: [] }],
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidVersionShapeError);
+  });
+
+  it("rejects a version specifying neither chain steps nor template content", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+    await createPromptInOrg(testDb, fixture, "empty-shape-prompt");
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        publishVersion(tx, fixture.actor, {
+          organizationId: fixture.organizationId,
+          promptName: "empty-shape-prompt",
+          version: "v1",
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidVersionShapeError);
   });
 });

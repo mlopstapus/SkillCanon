@@ -8,6 +8,7 @@ import {
 import { withAudit } from "@/shared/db";
 import { isUniqueViolation } from "@/shared/db/postgres-errors";
 import {
+  determinePromptVersionKind,
   DuplicatePromptVersionError,
   PromptNotFoundError,
   type PromptActor,
@@ -38,13 +39,19 @@ export async function publishVersion(
     throw new DuplicatePromptVersionError(params.promptName, params.version);
   }
 
+  // Exactly one of template content or chain steps — never both, never
+  // neither (FR-001, PDR-017). `kind` is derived, never caller-supplied.
+  const kind = determinePromptVersionKind(params);
+
   const versionId = randomUUID();
   const versionValues = {
     id: versionId,
     promptId: prompt.id,
     version: params.version,
+    kind,
     systemTemplate: params.systemTemplate ?? null,
     userTemplate: params.userTemplate ?? null,
+    steps: params.steps ?? null,
     inputSchema: params.inputSchema ?? {},
     tags: params.tags ?? [],
   };

@@ -4,7 +4,9 @@ import { getPromptUsageSummaryForProject } from "@/bcs/distribution";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { ExpansionSourceNotFoundError } from "../domain/expansion";
+import { createPrompt } from "./create-prompt";
 import { expand } from "./expand";
+import { publishVersion } from "./publish-version";
 import {
   createUnpublishedSkill,
   makeExpansionFixtureOrg,
@@ -69,6 +71,25 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     await createUnpublishedSkill(testDb, fixture, "never-published");
 
     await expect(runExpand(fixture, { promptName: "never-published", input: {} })).rejects.toThrow(
+      ExpansionSourceNotFoundError,
+    );
+  });
+
+  it("rejects a chain version the same way it rejects any other unresolvable version (026-skill-chains, PDR-017)", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name: "a-chain-skill" }),
+    );
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        promptName: "a-chain-skill",
+        version: "1.0.0",
+        steps: [{ id: "step1", promptName: "whatever", dependsOn: [] }],
+      }),
+    );
+
+    await expect(runExpand(fixture, { promptName: "a-chain-skill", input: {} })).rejects.toThrow(
       ExpansionSourceNotFoundError,
     );
   });

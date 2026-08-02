@@ -126,3 +126,37 @@ export {
 // ---------------------------------------------------------------------------
 export { getProjectMetrics } from "./application/get-project-metrics";
 export type { ProjectMetrics } from "./domain/project-metrics";
+
+// ---------------------------------------------------------------------------
+// Skill Chains (feature 026-skill-chains, PDR-017)
+// ---------------------------------------------------------------------------
+export { determinePromptVersionKind } from "./domain/prompt";
+export type { PromptVersionKind } from "./domain/prompt";
+export { InvalidVersionShapeError } from "./domain/prompt";
+export { startSkillChainRun } from "./application/start-skill-chain-run";
+export { advanceSkillChainRun } from "./application/advance-skill-chain-run";
+export { abandonSkillChainRun } from "./application/abandon-skill-chain-run";
+export { listSkillChainRuns } from "./application/list-skill-chain-runs";
+export { getSkillChainRun } from "./application/get-skill-chain-run";
+export type {
+  AdvanceRunResult,
+  ChainRunStepRecord,
+  ChainRunSummary,
+  ChainStep,
+  ChainStepDependencyValue,
+  ChainStepReport,
+  ChainStepResolution,
+  RunStatus,
+  StartRunResult,
+} from "./domain/skill-chain";
+export {
+  ChainStepResolutionFailedError,
+  InvalidChainDependencyError,
+  MAX_REPORT_OUTPUT_BYTES,
+  NotAChainVersionError,
+  ReportOutputTooLargeError,
+  RunAlreadyFinishedError,
+  RunNotFoundError,
+  RunStepConflictError,
+  validateChainSteps,
+} from "./domain/skill-chain";

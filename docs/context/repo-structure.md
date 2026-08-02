@@ -25,7 +25,6 @@ src/
       schema.ts                  # this BC's Drizzle schema (identity_access.*)
     governance/
     prompt-registry/
-    workflow-orchestration/
     billing-entitlements/
     audit-compliance/
     distribution/

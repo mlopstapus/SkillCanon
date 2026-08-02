@@ -17,7 +17,7 @@ As a result, this epic's original per-page features were distributed into the ep
 | `003-workspace-redesign.md` (dashboard/teams/projects) | Dashboard/landing → already done, `backlog/004-app-shell-and-landing/archive/003-marketing-landing-page.md`, and the shell's own composition (already done, `backlog/004-app-shell-and-landing/archive/002-app-shell-and-navigation.md`); teams → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; projects → `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
 | `004-governance-views-redesign.md` | `backlog/005-governance/005-governance-views-ui.md` |
 | `005-prompt-registry-views-redesign.md` | `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
-| `006-workflow-views-redesign.md` | `backlog/007-workflow-orchestration/005-workflow-views-ui.md` |
+| `006-workflow-views-redesign.md` | `backlog/006-prompt-registry/010-skill-chain-views-ui.md` (formerly `007-workflow-orchestration/005-workflow-views-ui.md`, retired per [PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md)) |
 | `007-settings-and-admin-views-redesign.md` (api-keys/org-team/audit-log/billing) | api-keys/org-team → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; audit-log → already done, `backlog/003-audit-compliance/003-audit-log-ui.md`; billing → `backlog/009-billing-entitlements/003-billing-portal-and-ui.md` |
 | `008-cross-page-polish-and-accessibility.md` | Stays here, renumbered `001-cross-page-polish-and-accessibility.md` — this is the one thing that genuinely can't be distributed, since it needs every other page done first |
 
@@ -35,7 +35,7 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 - `backlog/004-app-shell-and-landing/EPIC.md`
 - `backlog/005-governance/005-governance-views-ui.md`
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
-- `backlog/007-workflow-orchestration/005-workflow-views-ui.md`
+- `backlog/006-prompt-registry/010-skill-chain-views-ui.md`
 - `backlog/009-billing-entitlements/003-billing-portal-and-ui.md`
 - `backlog/011-vcs-integration/006-vcs-integration-dashboard-ui.md`
 

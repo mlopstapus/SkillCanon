@@ -35,7 +35,7 @@ None domain-relevant — this context terminates event chains rather than starti
 | Event | From BC | What this BC does with it |
 |---|---|---|
 | `PromptExpanded` | Prompt Registry | **Correction (024-project-usage-metrics-dashboard):** no event-bus infrastructure exists anywhere in this codebase — this row previously implied a real pub/sub subscription that was never built. In practice, a `PromptExpanded`-worthy invocation is recorded via a direct call to `recordPromptUsage` from whatever call site represents genuine usage, not a subscribed event handler. No such call site exists yet (see above) — this row documents intended future wiring once `008-distribution` provides a genuine invocation transport (CLI/REST/MCP), not current behavior. |
-| `WorkflowRunCompleted` / `WorkflowRunFailed` | Workflow Orchestration | Writes `PromptUsage` rows per step — same caveat: no event bus exists, this is intended future direct-call wiring, not current behavior |
+| `SkillChainRunCompleted` / `SkillChainRunFailed` (replaces `workflow-orchestration`'s planned `WorkflowRunCompleted`/`WorkflowRunFailed` — [PDR-017](../../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md)) | Prompt Registry | Writes `PromptUsage` rows per step — same caveat: no event bus exists, this is intended future direct-call wiring, not current behavior |
 
 ## Data Contracts
 

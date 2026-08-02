@@ -194,6 +194,7 @@ describe("subscribeSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "live-ref-prompt",
         version: "v1",
+        userTemplate: "{{input}}",
       }),
     );
 
@@ -207,6 +208,7 @@ describe("subscribeSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "live-ref-prompt",
         version: "v2",
+        userTemplate: "{{input}}",
       }),
     );
 

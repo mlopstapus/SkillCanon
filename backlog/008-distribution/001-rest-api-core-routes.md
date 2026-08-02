@@ -2,7 +2,7 @@
 epic: 008-distribution
 feature: 001-rest-api-core-routes
 status: open
-dependencies: ["backlog/002-identity-access/EPIC.md", "backlog/005-governance/EPIC.md", "backlog/006-prompt-registry/EPIC.md", "backlog/007-workflow-orchestration/EPIC.md", "backlog/000-foundations/004-api-and-error-conventions.md"]
+dependencies: ["backlog/002-identity-access/EPIC.md", "backlog/005-governance/EPIC.md", "backlog/006-prompt-registry/EPIC.md", "backlog/000-foundations/004-api-and-error-conventions.md"]
 ---
 
 # REST API Core Routes

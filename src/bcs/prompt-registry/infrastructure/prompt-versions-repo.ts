@@ -1,5 +1,6 @@
 import { and, asc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
+import type { ChainStep } from "../domain/skill-chain";
 import { promptVersions } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -8,8 +9,10 @@ export interface InsertPromptVersionParams {
   id: string;
   promptId: string;
   version: string;
+  kind: "template" | "chain";
   systemTemplate: string | null;
   userTemplate: string | null;
+  steps: ChainStep[] | null;
   inputSchema: Record<string, unknown>;
   tags: string[];
 }

@@ -24,8 +24,7 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 - `backlog/002-identity-access/EPIC.md`
 - `backlog/003-audit-compliance/EPIC.md`
 - `backlog/005-governance/EPIC.md`
-- `backlog/006-prompt-registry/EPIC.md`
-- `backlog/007-workflow-orchestration/EPIC.md`
+- `backlog/006-prompt-registry/EPIC.md` (includes skill chains — see [PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md))
 - `backlog/000-foundations/004-api-and-error-conventions.md`
 
 ## Notes
