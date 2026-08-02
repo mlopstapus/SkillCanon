@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,5 +31,4 @@
 
 ## Notes
 
-- One `[NEEDS CLARIFICATION]` marker remains in the Edge Cases section, on whether the chain-run capability needs a single server-side "drive to completion" convenience endpoint in addition to the step-by-step protocol. This is a genuine scope question (the legacy `workflows/{id}/run` synchronous-execution shape has no direct equivalent in the ported domain layer — see `src/bcs/prompt-registry/CONTRACT.md`'s `startSkillChainRun`/`advanceSkillChainRun`), not something with an obvious reasonable default, so it is intentionally left for `/speckit-clarify` to formally surface rather than guessed at here.
-- All other items pass; items marked incomplete require spec updates before `/speckit-plan`.
+- Both open questions from the initial `/speckit-clarify` pass (chain-run convenience endpoint; API-key auth breadth) were escalated to the human decision-maker on the tracking issue and answered 2026-08-02 ("Options A and A"). Both answers are now integrated into the `## Clarifications` section and the relevant Functional Requirements/Edge Cases in `spec.md`. All checklist items now pass.

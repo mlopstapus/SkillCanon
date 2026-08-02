@@ -8,6 +8,13 @@
 
 **Input**: User description: "backlog/008-distribution/001-rest-api-core-routes.md" — Port the REST surface from the current Python routers (`teams`, `projects`, `prompts`, `policies`, `objectives`, `workflows`, `apikeys`, `users`) to route handlers that call only their owning bounded context's exposed contract (Identity & Access, Governance, Prompt Registry — workflows are now skill chains owned by Prompt Registry per PDR-017, not a separate workflow-orchestration context), authenticated consistently, with a shared error-mapping layer producing one consistent REST error shape across every route regardless of which resource or bounded context triggered the underlying failure.
 
+## Clarifications
+
+### Session 2026-08-02
+
+- Q: Does the chain-run capability need a synchronous "run to completion" convenience endpoint alongside the step-by-step protocol? → A: No — the step-by-step protocol (start/advance/abandon/list/get) is the complete replacement; there is no synchronous-equivalent endpoint.
+- Q: Which routes should accept API-key bearer auth, not just a session cookie? → A: Every route (including admin/CRUD writes to teams, policies, users, etc.) accepts either a valid session or a valid API key, mirroring the legacy system's own uniform dual-mode caller resolution.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Manage core resources through the API (Priority: P1)
@@ -67,7 +74,7 @@ A caller who triggers the same kind of failure — a resource that does not exis
 - A chain-run "report this step's outcome" call names a step the run has already moved past (a stale retry or a race between two callers): the call is rejected as a conflict, never silently applied to whatever step is now current.
 - A "report this step's outcome" or "abandon this run" call targets a run that has already reached a finished state: it is rejected with an explicit "already finished" response, never treated as a silent no-op success.
 - A caller submits a request body that is well-formed JSON but semantically invalid (e.g. an unknown enum value, a reference to a nonexistent related resource): this is a validation failure, not an unexpected server error.
-- The legacy system's "run this workflow" request has no single equivalent call in the resource's current form, since a multi-step chain run is now an interactive, caller-driven sequence of calls rather than one server-side synchronous execution — see [NEEDS CLARIFICATION: should the API additionally offer a single convenience call that drives a chain run to completion server-side and returns only the final result, for callers that don't need step-by-step control, or is the step-by-step protocol (start/advance/abandon/list/get) the complete replacement with no synchronous-equivalent endpoint at all? These have different scope and calling-convention implications for every future consumer of chain runs, not just this feature.]
+- The legacy system's "run this workflow" request has no single equivalent call in the resource's current form, since a multi-step chain run is now an interactive, caller-driven sequence of calls rather than one server-side synchronous execution. Per the 2026-08-02 clarification, the API does not offer a synchronous "run to completion" convenience call — the step-by-step protocol (start/advance/abandon/list/get) is the complete replacement, and a caller wanting an end-to-end result must drive the sequence itself.
 
 ## Requirements *(mandatory)*
 
@@ -81,8 +88,8 @@ A caller who triggers the same kind of failure — a resource that does not exis
 - **FR-006**: The API MUST let an authenticated caller create, list, and revoke their own API keys, and let an organization admin manage API keys belonging to users in their own organization.
 - **FR-007**: The API MUST let an authenticated, sufficiently-privileged caller create, read, list, update, and deactivate users within their own organization.
 - **FR-008**: The API MUST let an authenticated caller resolve (expand) a skill's governed content for a given input, applying the caller's own governance context (policies/objectives), and must reject expansion of a skill the caller cannot access identically to that skill not existing.
-- **FR-009**: The API MUST let an authenticated caller start a run of a multi-step (chain) skill, report each step's outcome in turn, receive the next step or a finished result, and explicitly abandon an in-progress run; and MUST let an authenticated caller read a run's current state and history without side effects.
-- **FR-010**: Every endpoint that mutates or reads organization-scoped data MUST reject a request with no valid, current session or API-key credential, before any resource is accessed.
+- **FR-009**: The API MUST let an authenticated caller start a run of a multi-step (chain) skill, report each step's outcome in turn, receive the next step or a finished result, and explicitly abandon an in-progress run; and MUST let an authenticated caller read a run's current state and history without side effects. The API MUST NOT provide a separate synchronous "run to completion" endpoint — the step-by-step protocol is the sole way to execute a chain (2026-08-02 clarification).
+- **FR-010**: Every endpoint that mutates or reads organization-scoped data MUST reject a request with no valid, current session or API-key credential, before any resource is accessed. Every such endpoint, including admin/CRUD writes, MUST accept either credential type equally — there is no narrower, session-only subset of routes (2026-08-02 clarification).
 - **FR-011**: Every endpoint MUST reject an attempt to read or affect a resource belonging to a different organization than the caller's, in a way that is indistinguishable from that resource not existing.
 - **FR-012**: A given underlying failure (not found, unauthorized, forbidden, validation failure, conflict, unexpected error) MUST produce the same response shape and HTTP status code regardless of which resource's endpoint triggered it.
 - **FR-013**: A validation failure response MUST identify which submitted field(s) caused the failure, in a consistently structured way across every endpoint.
@@ -116,7 +123,6 @@ A caller who triggers the same kind of failure — a resource that does not exis
 
 - No API version prefix is introduced (routes live under a single, unversioned base path) — matching the already-decided API conventions, since the only consumer at launch is the bundled frontend and no third-party API consumer yet exists to require a compatibility-guaranteed version.
 - "Equivalent to the current system" means functional/behavioral equivalence for a given request, not literal URL-path or HTTP-method identity with the legacy routes — the originating requirement explicitly allows improving on current conventions, and the only present consumer (the bundled frontend) is being rebuilt alongside this feature rather than depending on the old paths.
-- Every endpoint accepts either a valid session (for the web UI) or a valid API key (for programmatic/CLI callers), mirroring the current system's own dual-mode caller resolution — the Skill Sync CLI (a sibling feature in this epic) is a stated near-term consumer that authenticates with an API key against this same surface, not a session cookie.
 - List/pagination follows the existing page-and-page-size convention already decided for this system, rather than introducing a new pagination style.
 - Rate limiting is out of scope for this feature — it has already been explicitly deferred at the platform level and is not part of this port.
 - User creation, update, and deactivation are direct administrative operations available through this API (distinct from and in addition to the existing invitation-based self-service flow), matching a capability the underlying user-management operations already provide.
