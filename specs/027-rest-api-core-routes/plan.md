@@ -18,7 +18,7 @@ Builds the REST surface for the self-hosted Free tier: Next.js App Router route 
 
 **Target Platform**: Linux server (self-hosted Docker Compose / Kubernetes-via-Helm), single unified Next.js app — no new services.
 
-**Project Type**: Single unified Next.js app. This feature is Distribution-layer only: new route handlers plus two new small shared modules (`src/shared/api/auth.ts`, `src/shared/api/errors.ts`). Zero changes to any BC's `domain`/`application`/`infrastructure` files — every route calls only what's already exported from each BC's barrel (constitution D1/D2 — no BC file needs editing for this feature to satisfy FR-001 through FR-017).
+**Project Type**: Single unified Next.js app. This feature is Distribution-layer only: new route handlers plus small new shared modules (`src/shared/api/*`) and a two-line addition to `src/shared/logging`. Zero changes to any BC's `domain`/`application`/`infrastructure` files. One barrel-only exception: `src/bcs/identity-access/index.ts` gains 14 error-class re-exports (`export { XError } from "./domain/y"` — no new code, no logic touched) — `governance`'s and `prompt-registry`'s barrels already re-export their own domain error classes this same way, but `identity-access`'s never did, confirmed by grep before this feature started. The error mapper needs `instanceof` access to these classes and can only import a BC's barrel (constitution D1, boundaries lint), so bringing `identity-access` up to its sibling BCs' own existing convention is the correct fix, not a new one. See research.md.
 
 **Performance Goals**: No new performance envelope; matches every other feature in this repo (no stated req/s target).
 

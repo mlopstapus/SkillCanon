@@ -11,6 +11,15 @@ export type {
   UserAccountSummary,
   UserRole,
 } from "./domain/user";
+export {
+  CrossOrgUserAccessError,
+  DuplicateUserError,
+  EntitlementRequiredError,
+  InvalidTeamAssignmentError,
+  LastActiveAdminError,
+  NotAuthorizedError,
+  WeakPasswordError,
+} from "./domain/user";
 export { bootstrapOrganization } from "./application/bootstrap-organization";
 export type { ProvisionTeamAndAdmin } from "./application/bootstrap-organization";
 export type { OrgSummary } from "./domain/organization";
@@ -27,6 +36,11 @@ export { getTeam } from "./application/get-team";
 export { removeTeamMember } from "./application/remove-team-member";
 export { listUnassignedUsers } from "./application/list-unassigned-users";
 export type { Team, TeamChainEntry } from "./domain/team";
+export {
+  CrossOrgReparentError,
+  CycleError,
+  DuplicateTeamSlugError,
+} from "./domain/team";
 export { login } from "./application/login";
 export { authenticateSession } from "./application/authenticate-session";
 export { logout } from "./application/logout";
@@ -50,3 +64,9 @@ export { revokeApiKey } from "./application/revoke-api-key";
 export { listApiKeys } from "./application/list-api-keys";
 export { getApiKeySummary } from "./application/get-api-key-summary";
 export type { ApiKey, ApiKeySummary } from "./domain/api-key";
+export {
+  ApiKeyNotFoundError,
+  InvalidScopeError,
+  NoScopesSelectedError,
+  ScopeExceedsPermissionsError,
+} from "./domain/api-key";

@@ -26,6 +26,7 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 ## Phase 1: Setup
 
 - [ ] T001 Add `zod` as a dependency (`pnpm add zod`) — used for request body/query validation per research.md
+- [ ] T001b Add error-class re-exports to `src/bcs/identity-access/index.ts` (`CrossOrgReparentError`/`CycleError`/`DuplicateTeamSlugError` from `./domain/team`; `CrossOrgUserAccessError`/`DuplicateUserError`/`EntitlementRequiredError`/`InvalidTeamAssignmentError`/`LastActiveAdminError`/`NotAuthorizedError`/`WeakPasswordError` from `./domain/user`; `ApiKeyNotFoundError`/`InvalidScopeError`/`NoScopesSelectedError`/`ScopeExceedsPermissionsError` from `./domain/api-key`) — matches `governance`'s already-existing barrel convention (research.md); required before T002 can build the error registry
 
 ---
 
@@ -38,7 +39,7 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 - [ ] T004 [P] Create `src/shared/api/pagination.ts` — `parsePageParams(url, defaults)` per research.md's pagination decision (page/pageSize, pageSize capped at 100, invalid input throws a `ZodError`-shaped failure)
 - [ ] T005 Create `src/shared/api/auth.ts` — `resolveCaller(request)` dual-mode resolution (`Authorization: Bearer` via `authenticateApiKey(authDb, ...)`, else session cookie via `authenticateSession(authDb, ...)`, both from `@/bcs/identity-access`), returning `ResolvedCaller | null`; `apiAuditContext(request)` returning `{ transport: "api", sourceIp }` per research.md
 - [ ] T006 Create `src/shared/api/handler.ts` — `withApiRoute(fn)` wrapper: awaits Next 16 `params`, calls `resolveCaller`, 401s on `null` (`UNAUTHENTICATED`), invokes `fn`, catches thrown errors through `mapError`, logs via `getLogger("distribution")` (request completion + error `code`/`err` fields per `docs/context/api-conventions.md`'s logging schema)
-- [ ] T007 Create `src/shared/api/test-helpers.ts` — `buildSessionCookieRequest(url, opts, { userId })` (signs a real JWT via identity-access's `infrastructure/jwt.ts` helpers) and `buildApiKeyRequest(url, opts, { rawKey })`, for use by every `route.test.ts`
+- [ ] T007 Create `src/shared/api/test-helpers.ts` — `loginAndBuildCookie(authDb, email, password)` (calls the barrel-exported `login()` for a real session cookie header — never `identity-access`'s internal `infrastructure/jwt.ts`, which `src/shared/api` cannot import per the boundaries lint rule) and `createApiKeyAndBuildAuthHeader(tx, actingUser, name)` (calls the barrel-exported `createApiKey()` for a real `Authorization: Bearer <rawKey>` header), for use by every `route.test.ts`
 
 **Checkpoint**: Foundation ready — every user story's route handlers can now be built in parallel.
 
