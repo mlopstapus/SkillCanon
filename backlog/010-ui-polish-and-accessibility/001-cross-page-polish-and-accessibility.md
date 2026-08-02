@@ -2,7 +2,7 @@
 epic: 010-ui-polish-and-accessibility
 feature: 001-cross-page-polish-and-accessibility
 status: open
-dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "backlog/002-identity-access/010-account-and-team-settings-ui.md", "backlog/004-app-shell-and-landing/EPIC.md", "backlog/005-governance/005-governance-views-ui.md", "backlog/006-prompt-registry/006-prompt-registry-views-ui.md", "backlog/006-prompt-registry/010-skill-chain-views-ui.md", "backlog/009-billing-entitlements/003-billing-portal-and-ui.md"]
+dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "backlog/002-identity-access/010-account-and-team-settings-ui.md", "backlog/004-app-shell-and-landing/EPIC.md", "backlog/005-governance/005-governance-views-ui.md", "backlog/006-prompt-registry/006-prompt-registry-views-ui.md", "backlog/006-prompt-registry/010-skill-chain-views-ui.md"]
 ---
 
 # Cross-Page Polish & Accessibility
@@ -34,9 +34,10 @@ dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "bac
 - `backlog/004-app-shell-and-landing/EPIC.md`
 - `backlog/005-governance/005-governance-views-ui.md`
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
-- `backlog/007-workflow-orchestration/005-workflow-views-ui.md`
-- `backlog/009-billing-entitlements/003-billing-portal-and-ui.md`
+- `backlog/006-prompt-registry/010-skill-chain-views-ui.md` (formerly `007-workflow-orchestration/005-workflow-views-ui.md`, retired per [PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md))
 
 ## Technical Notes
 
-This is still the last feature before go-live — treat its acceptance criteria as the definition of done for the UI as a whole, not just this one feature's. Unlike before, it depends on features scattered across seven different epics rather than a handful of siblings in this same epic — track all of them, not just the ones that happen to live in this folder.
+This is still the last feature before go-live — treat its acceptance criteria as the definition of done for the UI as a whole, not just this one feature's. Unlike before, it depends on features scattered across several different epics rather than a handful of siblings in this same epic — track all of them, not just the ones that happen to live in this folder.
+
+Billing (epic 009) is dropped from this dependency list — it's deferred indefinitely (no billing before a future go-live decision, see `backlog/009-billing-entitlements/EPIC.md`), so this pass covers every page across the product's open-source/self-hosted surface without waiting on a billing UI that may never ship in this form.

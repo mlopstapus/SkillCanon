@@ -36,12 +36,13 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 - `backlog/005-governance/005-governance-views-ui.md`
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
 - `backlog/006-prompt-registry/010-skill-chain-views-ui.md`
-- `backlog/009-billing-entitlements/003-billing-portal-and-ui.md`
 - `backlog/011-vcs-integration/006-vcs-integration-dashboard-ui.md`
 
 ## Notes
 
-**Priority renumbered 10→11 (2026-07-25):** `011-vcs-integration` was slotted in at priority 9, ahead of Billing (now priority 10) and this epic — see `backlog/009-billing-entitlements/EPIC.md`'s own note. This epic still comes last since it depends on every other page (including VCS Integration's new dashboard) being built first.
+**Billing dependency dropped (2026-08-02):** this epic no longer depends on `backlog/009-billing-entitlements/003-billing-portal-and-ui.md` — that epic is now deferred indefinitely (no billing/paid tier before a future go-live decision, see its own `EPIC.md`), so this epic's cross-page pass must not gate on a billing UI page that may not exist. If billing is ever built later, its UI page should get its own consistency pass at that time rather than reopening this epic.
+
+**Priority renumbered 10→11 (2026-07-25):** `011-vcs-integration` was slotted in at priority 9, ahead of Billing (formerly priority 10, now deferred) and this epic. This epic still comes last since it depends on every other page (including VCS Integration's new dashboard) being built first.
 
 This epic no longer gates on `backlog/000-foundations/010-design-system.md` directly — that foundations item's deliverable (`context/design-system.md`) is now produced by `backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md`, much earlier in the backlog than this epic's original slot.
 
