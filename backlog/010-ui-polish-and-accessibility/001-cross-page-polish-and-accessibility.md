@@ -2,7 +2,7 @@
 epic: 010-ui-polish-and-accessibility
 feature: 001-cross-page-polish-and-accessibility
 status: open
-dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "backlog/002-identity-access/010-account-and-team-settings-ui.md", "backlog/004-app-shell-and-landing/EPIC.md", "backlog/005-governance/005-governance-views-ui.md", "backlog/006-prompt-registry/006-prompt-registry-views-ui.md", "backlog/007-workflow-orchestration/005-workflow-views-ui.md", "backlog/009-billing-entitlements/003-billing-portal-and-ui.md"]
+dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "backlog/002-identity-access/010-account-and-team-settings-ui.md", "backlog/004-app-shell-and-landing/EPIC.md", "backlog/005-governance/005-governance-views-ui.md", "backlog/006-prompt-registry/006-prompt-registry-views-ui.md", "backlog/006-prompt-registry/010-skill-chain-views-ui.md", "backlog/009-billing-entitlements/003-billing-portal-and-ui.md"]
 ---
 
 # Cross-Page Polish & Accessibility

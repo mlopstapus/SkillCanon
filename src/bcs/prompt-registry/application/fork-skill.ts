@@ -70,8 +70,10 @@ export async function forkSkill(
         id: newVersionId,
         promptId: newPromptId,
         version: "v1",
+        kind: sourceVersion.kind,
         systemTemplate: sourceVersion.systemTemplate,
         userTemplate: sourceVersion.userTemplate,
+        steps: sourceVersion.steps,
         inputSchema: sourceVersion.inputSchema as Record<string, unknown>,
         tags: sourceVersion.tags as string[],
       });

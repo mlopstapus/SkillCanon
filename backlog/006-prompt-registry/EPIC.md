@@ -20,6 +20,8 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 - [x] [006 - Prompt Registry Views UI](archive/006-prompt-registry-views-ui.md)
 - [x] [007 - Project Skill Assignment](archive/007-project-skill-assignment.md)
 - [x] [008 - Project Usage Metrics Dashboard](archive/008-project-usage-metrics-dashboard.md)
+- [ ] [009 - Skill Chains](009-skill-chains.md)
+- [ ] [010 - Skill Chain Views UI](010-skill-chain-views-ui.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -43,3 +45,5 @@ Feature 004 must call Governance only through `resolveEffectivePolicies`/`resolv
 **Added 2026-07-31**: feature 006's `/speckit-specify` pass (`specs/023-prompt-registry-views-ui/`) found the `SkillCanon Prompts.dc.html` mockup's Project Detail page includes a full usage/invocation-metrics dashboard with no backing usage-log capability anywhere in the codebase yet. Split it out as new feature 008 rather than building it half-finished (no real data) or silently inventing usage-tracking as a side effect of a views-UI feature — see `008`'s Technical Notes for the exact mockup section it came from.
 
 **Completed 2026-07-31**: feature 006 shipped via the full speckit loop (`specs/023-prompt-registry-views-ui/`), which also caught and fixed feature 005 sitting fully-shipped-but-unarchived since `022-prompt-registry-tenant-isolation` landed — another instance of this epic's recurring backlog-lags-code pattern (see feature 001/007's note above). Both are now archived. Only feature 008 (metrics dashboard) remains open in this epic.
+
+**Added 2026-08-01 ([PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md))**: `backlog/007-workflow-orchestration/` is retired and folded into this epic as features 009-010. A "workflow" was never a distinct domain concept — it's a `PromptVersion` whose content is an ordered step list instead of a template. Feature 009 carries forward `007-workflow-orchestration/001-workflow-model-and-crud.md` (already shipped, now being reworked in place rather than left running as a separate BC) and `002-workflow-runner.md` (never implemented, only speced at `specs/025-workflow-runner`, now superseded). `007-workflow-orchestration/004-workflow-sharing.md`'s entire scope turned out to already be satisfied by this epic's existing `subscribeSkill`/`forkSkill` — no replacement item needed for it, since a chain is a skill and sharing already works generically over any `Prompt`. `007-workflow-orchestration/003-workflow-tenant-isolation-tests.md`'s scope is folded into feature 009's own requirements (new tables get RLS from the start, no separate follow-up).

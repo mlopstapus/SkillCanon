@@ -43,7 +43,9 @@ Each row maps to the bounded context epic that owns the port, and flags anything
 | Expand (latest or pinned version) | `POST /expand/{name}`, `POST /expand/{name}/versions/{version}` | 004-expansion-engine |
 | Share/list/revoke share | `POST/GET/DELETE /prompts/{name}/shares` | 003-prompt-sharing |
 
-## Workflow Orchestration (→ `backlog/007-workflow-orchestration/`)
+## Workflow Orchestration (→ `backlog/007-workflow-orchestration/`, since retired — see note below)
+
+> **Update 2026-08-01**: Epic 007 was retired per [PDR-017](../pdr/017-fold-workflow-orchestration-into-prompt-registry.md) — a "workflow" is a `PromptVersion` whose content is a step list, not a separate bounded context. The capabilities below now live in `006-prompt-registry/009-skill-chains.md` (built) and `006-prompt-registry/010-skill-chain-views-ui.md` (UI, not yet built); workflow sharing (row 3 below) is satisfied with zero new code by the existing `subscribeSkill`/`forkSkill`. This table is left as-is below as the historical snapshot it was when written, not updated route-by-route.
 
 | Capability | Current route(s) | Backlog coverage |
 |---|---|---|

@@ -17,7 +17,7 @@ type Db = PostgresJsDatabase<Record<string, never>>;
  * FR-002's "deprecation blocks expansion unconditionally, including when a
  * specific still-existing version is explicitly requested").
  */
-async function fetchExpandableVersion(db: Db, organizationId: string, name: string, version?: string) {
+export async function fetchExpandableVersion(db: Db, organizationId: string, name: string, version?: string) {
   const prompt = await findPromptByOrgAndName(db, organizationId, name);
   if (!prompt || prompt.isDeprecated) {
     return null;
@@ -106,7 +106,11 @@ export async function expand(db: Db, params: ExpandParams): Promise<ExpansionRes
   const { organizationId, promptName, input, userId, projectId, version } = params;
 
   const topVersion = await fetchExpandableVersion(db, organizationId, promptName, version);
-  if (!topVersion) {
+  // A chain version is rejected the same way any other unresolvable
+  // version is — a caller cannot distinguish "this is a chain, use
+  // startSkillChainRun instead" from "this doesn't exist" from expand()'s
+  // error alone (PDR-017, CONTRACT.md).
+  if (!topVersion || topVersion.kind === "chain") {
     throw new ExpansionSourceNotFoundError(promptName);
   }
 

@@ -248,6 +248,7 @@ describe("prompt registry tenant isolation (022-prompt-registry-tenant-isolation
           organizationId: orgB.organizationId,
           promptName: prompt.name,
           version: "v1",
+          userTemplate: "{{input}}",
         }),
       );
 

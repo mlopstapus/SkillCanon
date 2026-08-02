@@ -2,6 +2,7 @@ import {
   type AnyPgColumn,
   boolean,
   index,
+  integer,
   jsonb,
   text,
   timestamp,
@@ -10,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { id, organizationId, timestamps } from "@/shared/db/columns";
 import { promptRegistrySchema } from "@/shared/db/schemas";
+import type { ChainStep } from "../domain/skill-chain";
 
 export const projects = promptRegistrySchema.table(
   "projects",
@@ -115,6 +117,16 @@ export const prompts = promptRegistrySchema.table(
 /**
  * Immutable prompt version records. Once created, no application service
  * may update any field on an existing row — only new rows are ever inserted.
+ *
+ * A version is one of two kinds (PDR-017), discriminated explicitly by
+ * `kind` — never inferred from which of `system_template`/`user_template`/
+ * `steps` happen to be null: a **template** version (`kind: "template"`,
+ * `system_template`/`user_template`) resolved in a single `expand()` call,
+ * or a **chain** version (`kind: "chain"`, `steps`) resolved across
+ * multiple caller-driven `startSkillChainRun`/`advanceSkillChainRun` calls.
+ * `steps` is null for every template version; every row published before
+ * this discriminant existed defaults to `kind: "template"`, which is
+ * simply true for all of them.
  */
 export const promptVersions = promptRegistrySchema.table(
   "prompt_versions",
@@ -124,8 +136,10 @@ export const promptVersions = promptRegistrySchema.table(
       .notNull()
       .references(() => prompts.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
+    kind: text("kind", { enum: ["template", "chain"] }).notNull().default("template"),
     systemTemplate: text("system_template"),
     userTemplate: text("user_template"),
+    steps: jsonb("steps").$type<ChainStep[]>(),
     inputSchema: jsonb("input_schema").notNull().default({}),
     tags: jsonb("tags").notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -230,5 +244,82 @@ export const projectRepos = promptRegistrySchema.table(
   (table) => [
     unique("project_repos_project_id_url_unique").on(table.projectId, table.url),
     index("project_repos_project_id_index").on(table.projectId),
+  ],
+);
+
+/**
+ * One client-driven walk-through of a chain version's steps
+ * (026-skill-chains, PDR-017 — absorbed from workflow-orchestration's
+ * planned `workflow_runs`). `current_step_index` names the step the caller
+ * must report on next. `user_id` is informational (who started the run) —
+ * it is not an authorization gate on later advance/abandon calls, which
+ * any org member with access to the underlying skill may make.
+ *
+ * `prompt_version_id` pins the run to the *exact* chain version resolved at
+ * start time — a run always walks that version's immutable `steps` list to
+ * the end, even if a newer chain version gets published on the same skill
+ * mid-run (chain versions are immutable per-version, but which version a
+ * given run is walking must be remembered explicitly; it is never
+ * re-resolved from the skill's current active version on each advance
+ * call).
+ */
+export const skillChainRuns = promptRegistrySchema.table(
+  "skill_chain_runs",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    promptId: uuid("prompt_id")
+      .notNull()
+      .references(() => prompts.id, { onDelete: "cascade" }),
+    promptVersionId: uuid("prompt_version_id")
+      .notNull()
+      .references(() => promptVersions.id, { onDelete: "cascade" }),
+    userId: uuid("user_id").notNull(),
+    status: text("status", { enum: ["in_progress", "completed", "failed", "abandoned"] })
+      .notNull()
+      .default("in_progress"),
+    currentStepIndex: integer("current_step_index").notNull().default(0),
+    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("skill_chain_runs_organization_id_prompt_id_started_at_index").on(
+      table.organizationId,
+      table.promptId,
+      table.startedAt,
+    ),
+    index("skill_chain_runs_organization_id_status_index").on(table.organizationId, table.status),
+  ],
+);
+
+/**
+ * What was actually resolved/sent for one step within one run, and the
+ * caller's self-reported outcome for it — never a model's real response,
+ * since this context never receives one (026-skill-chains, PDR-017,
+ * absorbed from workflow-orchestration's planned `workflow_run_steps`).
+ * `reported_status` stays null until the caller advances past this step
+ * (or forever, if the run is abandoned while this step is still pending).
+ */
+export const skillChainRunSteps = promptRegistrySchema.table(
+  "skill_chain_run_steps",
+  {
+    id: id(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => skillChainRuns.id, { onDelete: "cascade" }),
+    stepIndex: integer("step_index").notNull(),
+    promptName: text("prompt_name").notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull().defaultNow(),
+    systemMessage: text("system_message"),
+    userMessage: text("user_message").notNull(),
+    appliedPolicies: jsonb("applied_policies").notNull().default([]),
+    objectives: jsonb("objectives").notNull().default([]),
+    reportedStatus: text("reported_status", { enum: ["success", "error"] }),
+    reportedOutput: text("reported_output"),
+    reportedError: text("reported_error"),
+  },
+  (table) => [
+    unique("skill_chain_run_steps_run_id_step_index_unique").on(table.runId, table.stepIndex),
   ],
 );

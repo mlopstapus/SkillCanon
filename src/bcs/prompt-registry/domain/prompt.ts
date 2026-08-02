@@ -1,5 +1,7 @@
 /** Domain types, errors, and interfaces for the Prompt & Version model. */
 
+import type { ChainStep } from "./skill-chain";
+
 export interface PromptActor {
   organizationId: string;
   userId: string;
@@ -28,12 +30,18 @@ export interface PromptSummary {
   updatedAt: Date;
 }
 
+export type PromptVersionKind = "template" | "chain";
+
 export interface PromptVersionSummary {
   id: string;
   promptId: string;
   version: string;
+  /** Explicit discriminant (PDR-017) — never inferred from which fields are null. */
+  kind: PromptVersionKind;
   systemTemplate: string | null;
   userTemplate: string | null;
+  /** Non-null only when `kind === "chain"`. */
+  steps: ChainStep[] | null;
   inputSchema: unknown;
   tags: unknown;
   createdAt: Date;
@@ -55,8 +63,35 @@ export interface PublishVersionParams {
   version: string;
   systemTemplate?: string | null;
   userTemplate?: string | null;
+  /** A chain version's ordered step list — mutually exclusive with systemTemplate/userTemplate (PDR-017). */
+  steps?: ChainStep[];
   inputSchema?: Record<string, unknown>;
   tags?: string[];
+}
+
+/**
+ * Determines a version's `kind` from which shape the caller provided.
+ * Exactly one of `steps` or non-null `systemTemplate`/`userTemplate` must
+ * be given — both, or neither, is rejected (FR-001). `kind` itself is
+ * never a caller-supplied field.
+ */
+export function determinePromptVersionKind(
+  params: Pick<PublishVersionParams, "steps" | "systemTemplate" | "userTemplate">,
+): PromptVersionKind {
+  const hasSteps = params.steps !== undefined;
+  const hasTemplateContent = params.systemTemplate != null || params.userTemplate != null;
+
+  if (hasSteps && hasTemplateContent) {
+    throw new InvalidVersionShapeError(
+      "A version may specify either template content or chain steps, never both.",
+    );
+  }
+  if (!hasSteps && !hasTemplateContent) {
+    throw new InvalidVersionShapeError(
+      "A version must specify either template content (systemTemplate/userTemplate) or chain steps.",
+    );
+  }
+  return hasSteps ? "chain" : "template";
 }
 
 // ---------------------------------------------------------------------------
@@ -88,5 +123,12 @@ export class PromptVersionNotFoundError extends Error {
   constructor(version: string) {
     super(`Version "${version}" was not found on this prompt.`);
     this.name = "PromptVersionNotFoundError";
+  }
+}
+
+export class InvalidVersionShapeError extends Error {
+  constructor(detail: string) {
+    super(detail);
+    this.name = "InvalidVersionShapeError";
   }
 }
