@@ -25,8 +25,8 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 
 ## Phase 1: Setup
 
-- [ ] T001 Add `zod` as a dependency (`pnpm add zod`) — used for request body/query validation per research.md
-- [ ] T001b Add error-class re-exports to `src/bcs/identity-access/index.ts` (`CrossOrgReparentError`/`CycleError`/`DuplicateTeamSlugError` from `./domain/team`; `CrossOrgUserAccessError`/`DuplicateUserError`/`EntitlementRequiredError`/`InvalidTeamAssignmentError`/`LastActiveAdminError`/`NotAuthorizedError`/`WeakPasswordError` from `./domain/user`; `ApiKeyNotFoundError`/`InvalidScopeError`/`NoScopesSelectedError`/`ScopeExceedsPermissionsError` from `./domain/api-key`) — matches `governance`'s already-existing barrel convention (research.md); required before T002 can build the error registry
+- [x] T001 Add `zod` as a dependency (`pnpm add zod`) — used for request body/query validation per research.md
+- [x] T001b Add error-class re-exports to `src/bcs/identity-access/index.ts` (`CrossOrgReparentError`/`CycleError`/`DuplicateTeamSlugError` from `./domain/team`; `CrossOrgUserAccessError`/`DuplicateUserError`/`EntitlementRequiredError`/`InvalidTeamAssignmentError`/`LastActiveAdminError`/`NotAuthorizedError`/`WeakPasswordError` from `./domain/user`; `ApiKeyNotFoundError`/`InvalidScopeError`/`NoScopesSelectedError`/`ScopeExceedsPermissionsError` from `./domain/api-key`) — matches `governance`'s already-existing barrel convention (research.md); required before T002 can build the error registry
 
 ---
 
@@ -34,12 +34,12 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 
 **Purpose**: The auth resolver and error mapper every route depends on. No route handler can be written until this phase is complete.
 
-- [ ] T002 [P] Create `src/shared/api/errors.ts` — `mapError(err: unknown)` with the full class→code→status registry from `data-model.md` (Identity & Access, Governance, Prompt Registry sections), plus `ZodError` → 422 `VALIDATION_FAILED` (with `details.fieldErrors`) and unhandled → 500 `INTERNAL_ERROR` fallback (never leaks `err.stack`/`err.message` to the response body); also export `notFoundResponse(code, message?)` for the `null`-return and bare-`Error` "not found" cases documented in `data-model.md`
-- [ ] T003 [P] Create `src/shared/api/errors.test.ts` — unit test exercising every registry entry (instantiate each error class, assert exact `{status, code}`) plus the `ZodError`, `notFoundResponse`, and unhandled-error fallback paths; no DB needed
-- [ ] T004 [P] Create `src/shared/api/pagination.ts` — `parsePageParams(url, defaults)` per research.md's pagination decision (page/pageSize, pageSize capped at 100, invalid input throws a `ZodError`-shaped failure)
-- [ ] T005 Create `src/shared/api/auth.ts` — `resolveCaller(request)` dual-mode resolution (`Authorization: Bearer` via `authenticateApiKey(authDb, ...)`, else session cookie via `authenticateSession(authDb, ...)`, both from `@/bcs/identity-access`), returning `ResolvedCaller | null`; `apiAuditContext(request)` returning `{ transport: "api", sourceIp }` per research.md
-- [ ] T006 Create `src/shared/api/handler.ts` — `withApiRoute(fn)` wrapper: awaits Next 16 `params`, calls `resolveCaller`, 401s on `null` (`UNAUTHENTICATED`), invokes `fn`, catches thrown errors through `mapError`, logs via `getLogger("distribution")` (request completion + error `code`/`err` fields per `docs/context/api-conventions.md`'s logging schema)
-- [ ] T007 Create `src/shared/api/test-helpers.ts` — `loginAndBuildCookie(authDb, email, password)` (calls the barrel-exported `login()` for a real session cookie header — never `identity-access`'s internal `infrastructure/jwt.ts`, which `src/shared/api` cannot import per the boundaries lint rule) and `createApiKeyAndBuildAuthHeader(tx, actingUser, name)` (calls the barrel-exported `createApiKey()` for a real `Authorization: Bearer <rawKey>` header), for use by every `route.test.ts`
+- [x] T002 [P] Create `src/shared/api/errors.ts` — `mapError(err: unknown)` with the full class→code→status registry from `data-model.md` (Identity & Access, Governance, Prompt Registry sections), plus `ZodError` → 422 `VALIDATION_FAILED` (with `details.fieldErrors`) and unhandled → 500 `INTERNAL_ERROR` fallback (never leaks `err.stack`/`err.message` to the response body); also export `notFoundResponse(code, message?)` for the `null`-return and bare-`Error` "not found" cases documented in `data-model.md`
+- [x] T003 [P] Create `src/shared/api/errors.test.ts` — unit test exercising every registry entry (instantiate each error class, assert exact `{status, code}`) plus the `ZodError`, `notFoundResponse`, and unhandled-error fallback paths; no DB needed
+- [x] T004 [P] Create `src/shared/api/pagination.ts` — `parsePageParams(url, defaults)` per research.md's pagination decision (page/pageSize, pageSize capped at 100, invalid input throws a `ZodError`-shaped failure)
+- [x] T005 Create `src/shared/api/auth.ts` — `resolveCaller(request)` dual-mode resolution (`Authorization: Bearer` via `authenticateApiKey(authDb, ...)`, else session cookie via `authenticateSession(authDb, ...)`, both from `@/bcs/identity-access`), returning `ResolvedCaller | null`; `apiAuditContext(request)` returning `{ transport: "api", sourceIp }` per research.md
+- [x] T006 Create `src/shared/api/handler.ts` — `withApiRoute(fn)` wrapper: awaits Next 16 `params`, calls `resolveCaller`, 401s on `null` (`UNAUTHENTICATED`), invokes `fn`, catches thrown errors through `mapError`, logs via `getLogger("distribution")` (request completion + error `code`/`err` fields per `docs/context/api-conventions.md`'s logging schema)
+- [x] T007 Create `src/shared/api/test-helpers.ts` — `loginAndBuildCookie(authDb, email, password)` (calls the barrel-exported `login()` for a real session cookie header — never `identity-access`'s internal `infrastructure/jwt.ts`, which `src/shared/api` cannot import per the boundaries lint rule) and `createApiKeyAndBuildAuthHeader(tx, actingUser, name)` (calls the barrel-exported `createApiKey()` for a real `Authorization: Bearer <rawKey>` header), for use by every `route.test.ts`
 
 **Checkpoint**: Foundation ready — every user story's route handlers can now be built in parallel.
 
@@ -53,48 +53,48 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 
 ### Teams, Users, API Keys (identity-access) — see `contracts/teams-users-apikeys.contract.md`
 
-- [ ] T008 [P] [US1] `src/app/api/teams/route.ts` + `route.test.ts` — POST (`createTeam`, admin-only) / GET (`listTeams`, query `parentTeamId?`, paginated via `parsePageParams`, FR-015)
-- [ ] T009 [P] [US1] `src/app/api/teams/[teamId]/route.ts` + `route.test.ts` — GET (`getTeam`) / PUT (`updateTeam`); no DELETE (no BC function exists — assert `DELETE` is either absent or `405`, do not invent a delete). Both `getTeam` and `updateTeam` throw a bare untyped `Error` for "not found" (no registered domain class) — catch and convert to `notFoundResponse("TEAM_NOT_FOUND")` per research.md's three-shapes decision; check for `NotAuthorizedError`/`DuplicateTeamSlugError` first before treating an error as the bare not-found case
-- [ ] T010 [P] [US1] `src/app/api/teams/[teamId]/insert-parent/route.ts` + `route.test.ts` — POST (`insertTeamBetween`, admin-only); same bare-`Error`-catch handling as T009 for the `childTeamId` not-found case
-- [ ] T011 [P] [US1] `src/app/api/teams/[teamId]/reparent/route.ts` + `route.test.ts` — POST (`reparentTeam`, admin-only, body `{newParentTeamId}`) — `updateTeam` explicitly excludes hierarchy changes (its own doc comment), so this is a separate route, not folded into T009's PUT; same bare-`Error`-catch handling for both `teamId` and `newParentTeamId` not-found cases (check `CrossOrgReparentError`/`CycleError`/`NotAuthorizedError` first)
-- [ ] T012 [P] [US1] `src/app/api/users/route.ts` + `route.test.ts` — POST (`createUser`, admin-only) / GET (`listUsers`, query `teamId?`, paginated via `parsePageParams`, FR-015)
-- [ ] T013 [P] [US1] `src/app/api/users/[userId]/route.ts` + `route.test.ts` — GET (`getUser`) / PUT (`updateUser`) / DELETE (`deactivateUser`, admin-only). `getUser` throws a bare untyped `Error` for "not found" (catch → `notFoundResponse("USER_NOT_FOUND")`, per research.md); `updateUser`/`deactivateUser` correctly throw the registered `CrossOrgUserAccessError` for the same situation — flows through `mapError` normally, no special-casing needed for PUT/DELETE
-- [ ] T014 [P] [US1] `src/app/api/users/[userId]/api-keys/route.ts` + `route.test.ts` — POST (`createApiKey`, self-or-admin, one-time `rawKey` in response) / GET (`listApiKeys`, self-or-admin)
-- [ ] T015 [P] [US1] `src/app/api/api-keys/[keyId]/route.ts` + `route.test.ts` — DELETE (`revokeApiKey`, self-or-admin)
+- [x] T008 [P] [US1] `src/app/api/teams/route.ts` + `route.test.ts` — POST (`createTeam`, admin-only) / GET (`listTeams`, query `parentTeamId?`, paginated via `parsePageParams`, FR-015)
+- [x] T009 [P] [US1] `src/app/api/teams/[teamId]/route.ts` + `route.test.ts` — GET (`getTeam`) / PUT (`updateTeam`); no DELETE (no BC function exists — assert `DELETE` is either absent or `405`, do not invent a delete). Both `getTeam` and `updateTeam` throw a bare untyped `Error` for "not found" (no registered domain class) — catch and convert to `notFoundResponse("TEAM_NOT_FOUND")` per research.md's three-shapes decision; check for `NotAuthorizedError`/`DuplicateTeamSlugError` first before treating an error as the bare not-found case
+- [x] T010 [P] [US1] `src/app/api/teams/[teamId]/insert-parent/route.ts` + `route.test.ts` — POST (`insertTeamBetween`, admin-only); same bare-`Error`-catch handling as T009 for the `childTeamId` not-found case
+- [x] T011 [P] [US1] `src/app/api/teams/[teamId]/reparent/route.ts` + `route.test.ts` — POST (`reparentTeam`, admin-only, body `{newParentTeamId}`) — `updateTeam` explicitly excludes hierarchy changes (its own doc comment), so this is a separate route, not folded into T009's PUT; same bare-`Error`-catch handling for both `teamId` and `newParentTeamId` not-found cases (check `CrossOrgReparentError`/`CycleError`/`NotAuthorizedError` first)
+- [x] T012 [P] [US1] `src/app/api/users/route.ts` + `route.test.ts` — POST (`createUser`, admin-only) / GET (`listUsers`, query `teamId?`, paginated via `parsePageParams`, FR-015)
+- [x] T013 [P] [US1] `src/app/api/users/[userId]/route.ts` + `route.test.ts` — GET (`getUser`) / PUT (`updateUser`) / DELETE (`deactivateUser`, admin-only). `getUser` throws a bare untyped `Error` for "not found" (catch → `notFoundResponse("USER_NOT_FOUND")`, per research.md); `updateUser`/`deactivateUser` correctly throw the registered `CrossOrgUserAccessError` for the same situation — flows through `mapError` normally, no special-casing needed for PUT/DELETE
+- [x] T014 [P] [US1] `src/app/api/users/[userId]/api-keys/route.ts` + `route.test.ts` — POST (`createApiKey`, self-or-admin, one-time `rawKey` in response) / GET (`listApiKeys`, self-or-admin)
+- [x] T015 [P] [US1] `src/app/api/api-keys/[keyId]/route.ts` + `route.test.ts` — DELETE (`revokeApiKey`, self-or-admin)
 
 ### Projects (prompt-registry) — see `contracts/projects.contract.md`
 
-- [ ] T016 [P] [US1] `src/app/api/projects/route.ts` + `route.test.ts` — POST (`createProject`) / GET (`listProjectsByOrganization` or `listProjectsByTeam` if `?teamId=`, paginated via `parsePageParams`, FR-015)
-- [ ] T017 [P] [US1] `src/app/api/projects/[projectId]/route.ts` + `route.test.ts` — GET (`getProject`) / PUT (`updateProject`) / DELETE (`deleteProject`)
-- [ ] T018 [P] [US1] `src/app/api/projects/[projectId]/members/route.ts` + `route.test.ts` — POST (`addProjectMember`) / GET (`listProjectMembers`)
-- [ ] T019 [P] [US1] `src/app/api/projects/[projectId]/members/[userId]/route.ts` + `route.test.ts` — DELETE (`removeProjectMember`)
-- [ ] T020 [P] [US1] `src/app/api/projects/[projectId]/teams/route.ts` + `route.test.ts` — POST (`addCollaboratorTeam`) / GET (`listProjectTeams`)
-- [ ] T021 [P] [US1] `src/app/api/projects/[projectId]/teams/[teamId]/route.ts` + `route.test.ts` — DELETE (`removeCollaboratorTeam`)
-- [ ] T022 [P] [US1] `src/app/api/projects/[projectId]/repos/route.ts` + `route.test.ts` — POST (`addProjectRepo`) / GET (`listProjectRepos`)
-- [ ] T023 [P] [US1] `src/app/api/projects/[projectId]/repos/[repoId]/route.ts` + `route.test.ts` — DELETE (`removeProjectRepo`)
-- [ ] T024 [P] [US1] `src/app/api/projects/[projectId]/skills/route.ts` + `route.test.ts` — POST (`assignSkillToProject`, body `{skillId, requirement}`) / GET (`listProjectSkillAssignmentsForOrganization`, filtered to `projectId`)
-- [ ] T025 [P] [US1] `src/app/api/projects/[projectId]/skills/[skillId]/route.ts` + `route.test.ts` — DELETE (`unassignSkillFromProject`)
-- [ ] T026 [P] [US1] `src/app/api/projects/[projectId]/objectives/route.ts` + `route.test.ts` — POST (`createObjective` from `@/bcs/governance`, `projectId` set) / GET (`listProjectObjectives`)
-- [ ] T027 [P] [US1] `src/app/api/projects/[projectId]/metrics/route.ts` + `route.test.ts` — GET (`getProjectMetrics`)
+- [x] T016 [P] [US1] `src/app/api/projects/route.ts` + `route.test.ts` — POST (`createProject`) / GET (`listProjectsByOrganization` or `listProjectsByTeam` if `?teamId=`, paginated via `parsePageParams`, FR-015)
+- [x] T017 [P] [US1] `src/app/api/projects/[projectId]/route.ts` + `route.test.ts` — GET (`getProject`) / PUT (`updateProject`) / DELETE (`deleteProject`)
+- [x] T018 [P] [US1] `src/app/api/projects/[projectId]/members/route.ts` + `route.test.ts` — POST (`addProjectMember`) / GET (`listProjectMembers`)
+- [x] T019 [P] [US1] `src/app/api/projects/[projectId]/members/[userId]/route.ts` + `route.test.ts` — DELETE (`removeProjectMember`)
+- [x] T020 [P] [US1] `src/app/api/projects/[projectId]/teams/route.ts` + `route.test.ts` — POST (`addCollaboratorTeam`) / GET (`listProjectTeams`)
+- [x] T021 [P] [US1] `src/app/api/projects/[projectId]/teams/[teamId]/route.ts` + `route.test.ts` — DELETE (`removeCollaboratorTeam`)
+- [x] T022 [P] [US1] `src/app/api/projects/[projectId]/repos/route.ts` + `route.test.ts` — POST (`addProjectRepo`) / GET (`listProjectRepos`)
+- [x] T023 [P] [US1] `src/app/api/projects/[projectId]/repos/[repoId]/route.ts` + `route.test.ts` — DELETE (`removeProjectRepo`)
+- [x] T024 [P] [US1] `src/app/api/projects/[projectId]/skills/route.ts` + `route.test.ts` — POST (`assignSkillToProject`, body `{skillId, requirement}`) / GET (`listProjectSkillAssignmentsForOrganization`, filtered to `projectId`)
+- [x] T025 [P] [US1] `src/app/api/projects/[projectId]/skills/[skillId]/route.ts` + `route.test.ts` — DELETE (`unassignSkillFromProject`)
+- [x] T026 [P] [US1] `src/app/api/projects/[projectId]/objectives/route.ts` + `route.test.ts` — POST (`createObjective` from `@/bcs/governance`, `projectId` set) / GET (`listProjectObjectives`)
+- [x] T027 [P] [US1] `src/app/api/projects/[projectId]/metrics/route.ts` + `route.test.ts` — GET (`getProjectMetrics`)
 
 ### Skills / Versions / Sharing (prompt-registry, CRUD subset only — expand/chain-runs are US2) — see `contracts/skills.contract.md`
 
-- [ ] T028 [P] [US1] `src/app/api/skills/route.ts` + `route.test.ts` — POST (`createPrompt`) / GET (`listPrompts`, query `projectId?`, paginated via `parsePageParams`, FR-015)
-- [ ] T029 [P] [US1] `src/app/api/skills/[name]/route.ts` + `route.test.ts` — GET (`getPrompt`) / DELETE (`deprecatePrompt`)
-- [ ] T030 [P] [US1] `src/app/api/skills/[name]/versions/route.ts` + `route.test.ts` — POST (`publishVersion`, resolve `promptId` from `name` first) / GET (`listVersions`)
-- [ ] T031 [P] [US1] `src/app/api/skills/[name]/rollback/route.ts` + `route.test.ts` — POST (`rollbackPrompt`, body `{version}`)
-- [ ] T032 [P] [US1] `src/app/api/skills/[name]/subscriptions/route.ts` + `route.test.ts` — POST (`subscribeSkill`) / GET (`listSubscriptionsForSkill`)
-- [ ] T033 [P] [US1] `src/app/api/skills/[name]/subscriptions/[subscriptionId]/route.ts` + `route.test.ts` — DELETE (`unsubscribeSkill`)
-- [ ] T034 [P] [US1] `src/app/api/skills/[name]/fork/route.ts` + `route.test.ts` — POST (`forkSkill`, body `{ownerType, ownerId}`)
+- [x] T028 [P] [US1] `src/app/api/skills/route.ts` + `route.test.ts` — POST (`createPrompt`) / GET (`listPrompts`, query `projectId?`, paginated via `parsePageParams`, FR-015)
+- [x] T029 [P] [US1] `src/app/api/skills/[name]/route.ts` + `route.test.ts` — GET (`getPrompt`) / DELETE (`deprecatePrompt`)
+- [x] T030 [P] [US1] `src/app/api/skills/[name]/versions/route.ts` + `route.test.ts` — POST (`publishVersion`, resolve `promptId` from `name` first) / GET (`listVersions`)
+- [x] T031 [P] [US1] `src/app/api/skills/[name]/rollback/route.ts` + `route.test.ts` — POST (`rollbackPrompt`, body `{version}`)
+- [x] T032 [P] [US1] `src/app/api/skills/[name]/subscriptions/route.ts` + `route.test.ts` — POST (`subscribeSkill`) / GET (`listSubscriptionsForSkill`)
+- [x] T033 [P] [US1] `src/app/api/skills/[name]/subscriptions/[subscriptionId]/route.ts` + `route.test.ts` — DELETE (`unsubscribeSkill`)
+- [x] T034 [P] [US1] `src/app/api/skills/[name]/fork/route.ts` + `route.test.ts` — POST (`forkSkill`, body `{ownerType, ownerId}`)
 
 ### Policies / Objectives (governance) — see `contracts/policies-objectives.contract.md`
 
-- [ ] T035 [P] [US1] `src/app/api/policies/route.ts` + `route.test.ts` — POST (`createPolicy`) / GET (`listTeamPolicies`, `?teamId=` required, 422 if missing)
-- [ ] T036 [P] [US1] `src/app/api/policies/effective/route.ts` + `route.test.ts` — GET (`resolveEffectivePolicies`, `?userId=` defaults to caller)
-- [ ] T037 [P] [US1] `src/app/api/policies/[policyId]/route.ts` + `route.test.ts` — GET (`getPolicy`) / PUT (`updatePolicy`) / DELETE (`deletePolicy`)
-- [ ] T038 [P] [US1] `src/app/api/objectives/route.ts` + `route.test.ts` — POST (`createObjective`) / GET (dispatch to `listTeamObjectives`/`listUserObjectives`/`listProjectObjectives` by exactly one of `teamId`/`userId`/`projectId`, else 422)
-- [ ] T039 [P] [US1] `src/app/api/objectives/effective/route.ts` + `route.test.ts` — GET (`resolveEffectiveObjectives`, `?userId=` defaults to caller, `?projectId=` optional)
-- [ ] T040 [P] [US1] `src/app/api/objectives/[objectiveId]/route.ts` + `route.test.ts` — GET (`getObjective`) / PUT (`updateObjective`) / DELETE (`deleteObjective`)
+- [x] T035 [P] [US1] `src/app/api/policies/route.ts` + `route.test.ts` — POST (`createPolicy`) / GET (`listTeamPolicies`, `?teamId=` required, 422 if missing)
+- [x] T036 [P] [US1] `src/app/api/policies/effective/route.ts` + `route.test.ts` — GET (`resolveEffectivePolicies`, `?userId=` defaults to caller)
+- [x] T037 [P] [US1] `src/app/api/policies/[policyId]/route.ts` + `route.test.ts` — GET (`getPolicy`) / PUT (`updatePolicy`) / DELETE (`deletePolicy`)
+- [x] T038 [P] [US1] `src/app/api/objectives/route.ts` + `route.test.ts` — POST (`createObjective`) / GET (dispatch to `listTeamObjectives`/`listUserObjectives`/`listProjectObjectives` by exactly one of `teamId`/`userId`/`projectId`, else 422)
+- [x] T039 [P] [US1] `src/app/api/objectives/effective/route.ts` + `route.test.ts` — GET (`resolveEffectiveObjectives`, `?userId=` defaults to caller, `?projectId=` optional)
+- [x] T040 [P] [US1] `src/app/api/objectives/[objectiveId]/route.ts` + `route.test.ts` — GET (`getObjective`) / PUT (`updateObjective`) / DELETE (`deleteObjective`)
 
 **Checkpoint**: User Story 1 fully functional and independently testable — every core resource has a working CRUD (or equivalent) REST surface.
 
@@ -106,11 +106,11 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 
 **Independent Test**: Publish a skill (template or chain) via US1's routes, then expand it or start/advance a chain run through the API alone; content reflects the caller's governance context; a chain run reaches a finished state after every step is reported. Per `contracts/skills.contract.md`.
 
-- [ ] T041 [US2] `src/app/api/skills/[name]/expand/route.ts` + `route.test.ts` — POST (`expand`, body `{input, version?, projectId?}`) — depends on T029 existing (uses same `[name]` segment convention, no shared code dependency)
-- [ ] T042 [US2] `src/app/api/skills/[name]/chain-runs/route.ts` + `route.test.ts` — POST (`startSkillChainRun`) / GET (`listSkillChainRuns`)
-- [ ] T043 [P] [US2] `src/app/api/chain-runs/[runId]/route.ts` + `route.test.ts` — GET (`getSkillChainRun`)
-- [ ] T044 [P] [US2] `src/app/api/chain-runs/[runId]/advance/route.ts` + `route.test.ts` — POST (`advanceSkillChainRun`, body `{stepIndex, status, output?, error?}`)
-- [ ] T045 [P] [US2] `src/app/api/chain-runs/[runId]/abandon/route.ts` + `route.test.ts` — POST (`abandonSkillChainRun`)
+- [x] T041 [US2] `src/app/api/skills/[name]/expand/route.ts` + `route.test.ts` — POST (`expand`, body `{input, version?, projectId?}`) — depends on T029 existing (uses same `[name]` segment convention, no shared code dependency)
+- [x] T042 [US2] `src/app/api/skills/[name]/chain-runs/route.ts` + `route.test.ts` — POST (`startSkillChainRun`) / GET (`listSkillChainRuns`)
+- [x] T043 [P] [US2] `src/app/api/chain-runs/[runId]/route.ts` + `route.test.ts` — GET (`getSkillChainRun`)
+- [x] T044 [P] [US2] `src/app/api/chain-runs/[runId]/advance/route.ts` + `route.test.ts` — POST (`advanceSkillChainRun`, body `{stepIndex, status, output?, error?}`)
+- [x] T045 [P] [US2] `src/app/api/chain-runs/[runId]/abandon/route.ts` + `route.test.ts` — POST (`abandonSkillChainRun`)
 
 **Checkpoint**: User Story 2 fully functional — a caller can expand a skill and drive a chain run end-to-end via the API alone (SC-004).
 
@@ -122,7 +122,7 @@ Single Next.js project. Shared cross-cutting modules: `src/shared/api/`. Route h
 
 **Independent Test**: Trigger "not found," "unauthorized," and "validation" against two different, unrelated resource endpoints; response body shape, code convention, and status are identical.
 
-- [ ] T046 [US3] `src/shared/api/cross-resource-error-shape.test.ts` — integration test: trigger a not-found against `/api/teams/{bogus-id}` and `/api/policies/{bogus-id}`, assert identical envelope shape/status convention (different `code` values, same structure); trigger a validation failure against two different resources' POST bodies, assert both carry `details.fieldErrors`; trigger an authorization denial (non-admin calling an admin-only route) and a cross-org id (a real id from a second, differently-seeded org) against two different resources, assert both cross-org cases return the same status/shape as their resource's own not-found case (SC-003)
+- [x] T046 [US3] `src/shared/api/cross-resource-error-shape.test.ts` — integration test: trigger a not-found against `/api/teams/{bogus-id}` and `/api/policies/{bogus-id}`, assert identical envelope shape/status convention (different `code` values, same structure); trigger a validation failure against two different resources' POST bodies, assert both carry `details.fieldErrors`; trigger an authorization denial (non-admin calling an admin-only route) and a cross-org id (a real id from a second, differently-seeded org) against two different resources, assert both cross-org cases return the same status/shape as their resource's own not-found case (SC-003)
 
 **Checkpoint**: All three user stories complete and independently verified.
 
