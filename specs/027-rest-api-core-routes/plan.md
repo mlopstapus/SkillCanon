@@ -24,7 +24,7 @@ Builds the REST surface for the self-hosted Free tier: Next.js App Router route 
 
 **Constraints**: FR-010's dual-mode auth must resolve *before* any resource is read (checked in `resolveCaller`, called first in every route). FR-011/M3's cross-org denial must be indistinguishable from not-found — achieved for free everywhere RLS already covers the underlying table (per the `026-skill-chains`/`022-project-skill-assignment` precedent: `withTenantContext` scopes every query, so a cross-org id is simply invisible, producing the BC's own `*NotFoundError` naturally) and reinforced by the error mapper never adding a distinguishing "forbidden, but it exists" code for `*NotFoundError` classes. FR-016's authDb/db split is enforced by *only* `resolveCaller` ever importing `authDb` — no route handler imports `authDb` directly. FR-017 (no BC internal-layer imports from a route handler) is already enforced today by `eslint-plugin-boundaries`' existing `src/app` element policy (whole-subtree match covers `src/app/api/**` with zero config changes — verified directly, see research.md).
 
-**Scale/Scope**: ~55 route handler files under `src/app/api/**` across 5 resource groups (teams, users+api-keys, projects, skills+versions+sharing+chain-runs, policies+objectives), 2 new shared modules (~450 LOC combined), 0 new DB migrations, 0 BC file changes. Per the originating backlog item's own note, implementation is organized and executed resource-group by resource-group even though tracked as one feature/spec.
+**Scale/Scope**: 38 route handler files under `src/app/api/**` across 5 resource groups (teams+reparent, users+api-keys, projects, skills+versions+sharing+expand+chain-runs, policies+objectives — see `tasks.md` for the exact enumeration), 4 new shared modules (`auth.ts`, `errors.ts`, `handler.ts`, `pagination.ts`, plus a test-helpers module), 0 new DB migrations, 0 BC file changes. Per the originating backlog item's own note, implementation is organized and executed resource-group by resource-group even though tracked as one feature/spec.
 
 ## Constitution Check
 
@@ -88,7 +88,9 @@ src/app/api/
 │   └── [teamId]/
 │       ├── route.ts                      ← GET, PUT, DELETE
 │       ├── route.test.ts
-│       └── insert-parent/route.ts        ← POST (insertTeamBetween: new team inserted above [teamId])
+│       ├── insert-parent/route.ts        ← POST (insertTeamBetween: new team inserted above [teamId])
+│       │   + route.test.ts
+│       └── reparent/route.ts             ← POST (reparentTeam: updateTeam excludes hierarchy changes)
 │           + route.test.ts
 ├── users/
 │   ├── route.ts                          ← POST (create, admin-only), GET (list; query teamId?)

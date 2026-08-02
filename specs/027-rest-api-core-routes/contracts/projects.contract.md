@@ -5,7 +5,7 @@ All endpoints require auth per `error-shape.contract.md`.
 | Method | Path | BC call |
 |---|---|---|
 | POST | `/api/projects` | `createProject(tx, params)` |
-| GET | `/api/projects` | `listProjectsByOrganization(tx, orgId)` or `listProjectsByTeam(tx, orgId, teamId)` if `?teamId=` given |
+| GET | `/api/projects` | `listProjectsByOrganization(tx, orgId)` or `listProjectsByTeam(tx, orgId, teamId)` if `?teamId=` given — paginated (`page`/`pageSize`, FR-015) |
 | GET | `/api/projects/{projectId}` | `getProject(tx, orgId, projectId)` |
 | PUT | `/api/projects/{projectId}` | `updateProject(orgId, projectId, fields)` — owner-team-admin-only |
 | DELETE | `/api/projects/{projectId}` | `deleteProject(orgId, projectId)` — owner-team-admin-only |

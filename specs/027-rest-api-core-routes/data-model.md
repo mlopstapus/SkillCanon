@@ -13,6 +13,15 @@ Every non-2xx response (mapped or unhandled) has this exact shape (FR-012):
 - `code`: stable, machine-readable, `SCREAMING_SNAKE_CASE`. `UNAUTHENTICATED` (401, no matching credential), `VALIDATION_FAILED` (422, Zod-caught wire-input failure — `details.fieldErrors` from `.flatten()`), `INTERNAL_ERROR` (500, unhandled/unrecognized), or one of the registry codes below (each 1:1 with one BC error class).
 - `details`: present only where the underlying error class or Zod carries field-level information; omitted (not `null`) otherwise.
 
+## `notFoundResponse` — manufactured 404s (no exception involved)
+
+Several BC read functions return `null` for "not found" rather than throwing (see research.md's three-shapes decision); `src/shared/api/errors.ts` also exports `notFoundResponse(code: string, message?: string)`, producing the identical envelope shape `mapError` would for a thrown class with that code — called directly by a route when a `getX` call resolves `null`. Two resources additionally have **no registered domain class at all** for "not found" (identity-access's `getTeam`/`getUser` throw a bare, untyped `Error` instead — a pre-existing BC inconsistency, see research.md): these two mint their own codes, used only by `notFoundResponse` at those specific route call sites, never by the `mapError` registry:
+
+| Code | Status | Used by |
+|---|---|---|
+| `TEAM_NOT_FOUND` | 404 | `GET/PUT /api/teams/{teamId}`, `POST /api/teams/{teamId}/reparent`, `POST /api/teams/{teamId}/insert-parent` — manufactured from catching `getTeam`/`updateTeam`/`reparentTeam`/`insertTeamBetween`'s bare `Error` (no registered class exists) |
+| `USER_NOT_FOUND` | 404 | `GET /api/users/{userId}` — manufactured from catching `getUser`'s bare `Error` |
+
 ## Error registry (`src/shared/api/errors.ts`)
 
 Every entry below is an existing `extends Error` class already exported from its BC's barrel — registering it here requires **zero changes to the class itself**. Only error classes reachable from a BC function this feature's routes actually call are registered; any other/unregistered thrown value falls through to the `500 INTERNAL_ERROR` fallback (logged, never leaked).
