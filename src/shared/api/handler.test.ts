@@ -33,7 +33,7 @@ describe("withApiRoute", () => {
     const handler = withApiRoute(async () => {
       invoked = true;
       return new Response(null, { status: 204 });
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/teams"), { params: Promise.resolve({}) });
 
@@ -48,7 +48,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute(async (_req, { caller }) => {
       return Response.json({ orgId: caller.organizationId, userId: caller.actingUser.id });
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/teams", { headers: { cookie } }), {
       params: Promise.resolve({}),
@@ -71,7 +71,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute(async (_req, { caller }) => {
       return Response.json({ orgId: caller.organizationId });
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/teams", { headers: { authorization: authHeader } }), {
       params: Promise.resolve({}),
@@ -95,7 +95,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute(async (_req, { caller }) => {
       return Response.json({ orgId: caller.organizationId });
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(
       new Request("http://x/teams", { headers: { cookie, authorization: authHeader } }),
@@ -112,7 +112,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute<{ teamId: string }>(async (_req, { params }) => {
       return Response.json({ teamId: params.teamId });
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/teams/abc", { headers: { cookie } }), {
       params: Promise.resolve({ teamId: "abc" }),
@@ -127,7 +127,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute(async () => {
       throw new PolicyNotFoundError("bogus-policy-id");
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/policies/bogus-policy-id", { headers: { cookie } }), {
       params: Promise.resolve({}),
@@ -145,7 +145,7 @@ describe("withApiRoute", () => {
 
     const handler = withApiRoute(async () => {
       throw new Error("something broke");
-    }, testDb.authDb);
+    }, { authDb: testDb.authDb });
 
     const response = await handler(new Request("http://x/teams", { headers: { cookie } }), {
       params: Promise.resolve({}),
