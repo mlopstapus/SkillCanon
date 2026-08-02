@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createLogger, logger } from "./index";
+import { createLogger, getLogger, logger } from "./index";
 
 describe("createLogger", () => {
   it("defaults to info level when LOG_LEVEL is unset", () => {
@@ -16,5 +16,13 @@ describe("logger", () => {
     expect(typeof logger.info).toBe("function");
     expect(typeof logger.warn).toBe("function");
     expect(typeof logger.error).toBe("function");
+  });
+});
+
+describe("getLogger", () => {
+  it("returns a child logger with bc bound", () => {
+    const log = getLogger("distribution");
+    expect(typeof log.info).toBe("function");
+    expect(log.bindings()).toMatchObject({ bc: "distribution" });
   });
 });
