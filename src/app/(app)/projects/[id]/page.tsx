@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
   getProject,
+  getProjectMetrics,
   listProjectMembers,
   listProjectRepos,
   listProjectSkillAssignmentsForOrganization,
@@ -30,7 +31,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }
 
     const actor = { organizationId: user.orgId, userId: user.id };
-    const [members, collaboratorTeams, repos, allTeams, allUsers, assignments, allSkills] = await Promise.all([
+    const [members, collaboratorTeams, repos, allTeams, allUsers, assignments, allSkills, metrics] = await Promise.all([
       listProjectMembers(tx, user.orgId, id),
       listProjectTeams(tx, user.orgId, id),
       listProjectRepos(tx, user.orgId, id),
@@ -38,10 +39,12 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       listUsers(tx, user),
       listProjectSkillAssignmentsForOrganization(tx, user.orgId),
       listSkillsByOrganization(tx, user.orgId),
+      getProjectMetrics(tx, user.orgId, id),
     ]);
 
     const teamNameById = new Map(allTeams.map((t) => [t.id, t.name]));
     const userNameById = new Map(allUsers.map((u) => [u.id, u.displayName]));
+    const skillNameById = new Map(allSkills.map((s) => [s.id, s.name]));
     const participatingTeamIds = new Set([project.teamId, ...collaboratorTeams.map((t) => t.teamId)]);
 
     const eligibleSkills = allSkills.filter(
@@ -93,6 +96,34 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
       requiredPrompts: skillRows.filter((s) => s.requirement === "required"),
       optionalPrompts: skillRows.filter((s) => s.requirement === "optional"),
       availablePrompts: skillRows.filter((s) => !s.requirement),
+      metrics: {
+        totalInvocations: metrics.totalInvocations,
+        activeSkillCount: metrics.activeSkillCount,
+        activeContributorCount: metrics.activeContributorCount,
+        coverageLabel: metrics.coverageLabel,
+        hasRequiredSkills: metrics.requiredSkillIds.length > 0,
+        allClear: metrics.allClear,
+        gapMembers: metrics.gapMembers.map((g) => ({
+          userId: g.userId,
+          name: userNameById.get(g.userId) ?? g.userId,
+          missingSkillNames: g.missingSkillIds.map((skillId) => skillNameById.get(skillId) ?? skillId),
+        })),
+        trend: metrics.trend,
+        trendSkills: metrics.bySkill.map((s) => ({ id: s.promptId, name: skillNameById.get(s.promptId) ?? s.promptId })),
+        bySkill: metrics.bySkill.map((s) => ({
+          promptId: s.promptId,
+          name: skillNameById.get(s.promptId) ?? s.promptId,
+          requirement: s.requirement,
+          runCount: s.runCount,
+          lastUsedAt: s.lastUsedAt.toISOString().slice(0, 10),
+        })),
+        byMember: metrics.byMember.map((m) => ({
+          userId: m.userId,
+          name: m.userId ? (userNameById.get(m.userId) ?? m.userId) : "No user",
+          runCount: m.runCount,
+          lastActiveAt: m.lastActiveAt.toISOString().slice(0, 10),
+        })),
+      },
     };
     return result;
   });

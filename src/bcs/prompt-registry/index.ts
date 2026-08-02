@@ -120,3 +120,9 @@ export {
   ProjectSkillAssignmentNotFoundError,
   SkillNotEligibleForProjectError,
 } from "./domain/project-skill-assignment";
+
+// ---------------------------------------------------------------------------
+// Project Usage Metrics Dashboard (feature 024-project-usage-metrics-dashboard)
+// ---------------------------------------------------------------------------
+export { getProjectMetrics } from "./application/get-project-metrics";
+export type { ProjectMetrics } from "./domain/project-metrics";

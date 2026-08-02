@@ -15,6 +15,7 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 - [ ] [003 - Web UI Shell & Core Pages](003-web-ui-shell-and-core-pages.md)
 - [ ] [004 - Usage Telemetry](004-usage-telemetry.md)
 - [ ] [002 - MCP Server & Tools](002-mcp-server-and-tools.md) — deprioritized, see file for rationale
+- [ ] [006 - Distribution Tenant Isolation Tests](006-distribution-tenant-isolation-tests.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 

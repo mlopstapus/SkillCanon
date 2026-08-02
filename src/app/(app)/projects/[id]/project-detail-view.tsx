@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { Badge } from "@/shared/ui";
+import { ProjectMetricsTrendChart, type ProjectMetricsTrendDay, type ProjectMetricsTrendSkill } from "./project-metrics-trend-chart";
 
 export interface ProjectSkillRow {
   id: string;
@@ -9,6 +10,20 @@ export interface ProjectSkillRow {
   description: string;
   activeVersion: string | null;
   requirement: "required" | "optional" | null;
+}
+
+export interface ProjectMetricsTileData {
+  totalInvocations: number;
+  activeSkillCount: number;
+  activeContributorCount: number;
+  coverageLabel: string;
+  hasRequiredSkills: boolean;
+  allClear: boolean;
+  gapMembers: Array<{ userId: string; name: string; missingSkillNames: string[] }>;
+  trend: ProjectMetricsTrendDay[];
+  trendSkills: ProjectMetricsTrendSkill[];
+  bySkill: Array<{ promptId: string; name: string; requirement: "required" | "optional" | null; runCount: number; lastUsedAt: string }>;
+  byMember: Array<{ userId: string | null; name: string; runCount: number; lastActiveAt: string }>;
 }
 
 export interface ProjectDetailData {
@@ -29,9 +44,10 @@ export interface ProjectDetailData {
   requiredPrompts: ProjectSkillRow[];
   optionalPrompts: ProjectSkillRow[];
   availablePrompts: ProjectSkillRow[];
+  metrics: ProjectMetricsTileData;
 }
 
-export type ProjectDetailTab = "members" | "prompts" | "repos" | "teams";
+export type ProjectDetailTab = "members" | "prompts" | "repos" | "teams" | "metrics";
 
 export interface ProjectDetailViewProps {
   data: ProjectDetailData;
@@ -85,6 +101,7 @@ export function ProjectDetailView({
                 ["prompts", `Prompts (${data.promptCount})`],
                 ["repos", `Repositories (${data.repoCount})`],
                 ["teams", `Teams (${data.teamCount})`],
+                ["metrics", "Metrics"],
               ] as const
             ).map(([key, label]) => (
               <button
@@ -218,7 +235,87 @@ export function ProjectDetailView({
             </PromptGroup>
           </div>
         ) : null}
+
+        {activeTab === "metrics" ? (
+          <div className="flex flex-col gap-5.5">
+            <div className="grid grid-cols-4 gap-2.5">
+              <MetricTile label="Total invocations" value={String(data.metrics.totalInvocations)} />
+              <MetricTile label="Active skills" value={String(data.metrics.activeSkillCount)} />
+              <MetricTile label="Active contributors" value={String(data.metrics.activeContributorCount)} />
+              <MetricTile label="Required-skill coverage" value={data.metrics.coverageLabel} />
+            </div>
+
+            {data.metrics.hasRequiredSkills && data.metrics.gapMembers.length > 0 ? (
+              <div className="rounded-card border border-red/30 bg-red-soft px-4 py-3.5">
+                <div className="mb-2.5 font-display text-[13.5px] font-semibold">Contributors not using required skills</div>
+                <div className="flex flex-col gap-1.5">
+                  {data.metrics.gapMembers.map((m) => (
+                    <div key={m.userId} className="text-[12.5px] text-dim">
+                      <span className="font-semibold text-text">{m.name}</span> — missing{" "}
+                      <span className="text-red">{m.missingSkillNames.join(", ")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {data.metrics.hasRequiredSkills && data.metrics.allClear ? (
+              <div className="rounded-card border border-border bg-surface px-4 py-3.5 text-[12.5px]">
+                Every contributor is current on required skills.
+              </div>
+            ) : null}
+
+            <div>
+              <span className="mb-3 block font-display text-[14px] font-semibold">Invocations, last 14 days</span>
+              <ProjectMetricsTrendChart trend={data.metrics.trend} skills={data.metrics.trendSkills} />
+            </div>
+
+            <div>
+              <span className="mb-3 block font-display text-[14px] font-semibold">Usage by skill</span>
+              {data.metrics.bySkill.length === 0 ? (
+                <div className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
+                  No skills curated for this project yet.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {data.metrics.bySkill.map((s) => (
+                    <div key={s.promptId} className="flex items-center gap-3 rounded-card border border-border bg-surface px-3.5 py-2.5">
+                      <span className="flex-1 font-mono text-[12.5px]">{s.name}</span>
+                      <span className="font-mono text-[11.5px] text-dim">{s.runCount} runs</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div>
+              <span className="mb-3 block font-display text-[14px] font-semibold">Usage by member</span>
+              {data.metrics.byMember.length === 0 ? (
+                <div className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
+                  No usage recorded for this project yet.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2.5">
+                  {data.metrics.byMember.map((m) => (
+                    <div key={m.userId ?? "no-user"} className="flex items-center gap-3 rounded-card border border-border bg-surface px-3.5 py-2.5">
+                      <span className="flex-1 text-[13px] font-semibold">{m.name}</span>
+                      <span className="font-mono text-[11.5px] text-dim">{m.runCount} runs</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
       </div>
+    </div>
+  );
+}
+
+function MetricTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-card border border-border bg-surface px-4 py-3.5">
+      <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
+      <div className="font-display text-[22px] font-bold">{value}</div>
     </div>
   );
 }

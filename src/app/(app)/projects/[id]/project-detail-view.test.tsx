@@ -20,6 +20,19 @@ const baseData: ProjectDetailData = {
   requiredPrompts: [{ id: "p1", name: "code-review-strict", description: "Strict review.", activeVersion: "v3", requirement: "required" }],
   optionalPrompts: [],
   availablePrompts: [{ id: "p2", name: "commit-message", description: "Commits.", activeVersion: "v1", requirement: null }],
+  metrics: {
+    totalInvocations: 42,
+    activeSkillCount: 3,
+    activeContributorCount: 2,
+    coverageLabel: "1/2",
+    hasRequiredSkills: true,
+    allClear: false,
+    gapMembers: [],
+    trend: Array.from({ length: 14 }, (_, i) => ({ day: `2026-08-${String(i + 1).padStart(2, "0")}`, countsByPromptId: {} })),
+    trendSkills: [{ id: "p1", name: "code-review-strict" }],
+    bySkill: [{ promptId: "p1", name: "code-review-strict", requirement: "required", runCount: 12, lastUsedAt: "2026-08-01" }],
+    byMember: [{ userId: "u1", name: "alice", runCount: 12, lastActiveAt: "2026-08-01" }],
+  },
 };
 
 const baseProps = {
@@ -70,5 +83,93 @@ describe("ProjectDetailView", () => {
     );
     expect(html).toContain("No repositories linked");
     expect(html).toContain("Add repository");
+  });
+
+  it("renders the four summary tiles on the Metrics tab", () => {
+    const html = renderToStaticMarkup(<ProjectDetailView {...baseProps} data={baseData} activeTab="metrics" />);
+    expect(html).toContain("Total invocations");
+    expect(html).toContain("42");
+    expect(html).toContain("Active skills");
+    expect(html).toContain("Active contributors");
+    expect(html).toContain("Required-skill coverage");
+    expect(html).toContain("1/2");
+  });
+
+  it("shows the neutral coverage state when the project has no required skills", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView
+        {...baseProps}
+        data={{ ...baseData, metrics: { ...baseData.metrics, coverageLabel: "—" } }}
+        activeTab="metrics"
+      />,
+    );
+    expect(html).toContain("—");
+  });
+
+  it("renders the gap panel with member name and missing skill names", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView
+        {...baseProps}
+        data={{
+          ...baseData,
+          metrics: {
+            ...baseData.metrics,
+            gapMembers: [{ userId: "u2", name: "bob", missingSkillNames: ["code-review-strict"] }],
+          },
+        }}
+        activeTab="metrics"
+      />,
+    );
+    expect(html).toContain("Contributors not using required skills");
+    expect(html).toContain("bob");
+    expect(html).toContain("code-review-strict");
+  });
+
+  it("shows the all-clear message when every contributor is current", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView
+        {...baseProps}
+        data={{ ...baseData, metrics: { ...baseData.metrics, allClear: true, gapMembers: [] } }}
+        activeTab="metrics"
+      />,
+    );
+    expect(html).toContain("Every contributor is current on required skills.");
+  });
+
+  it("renders neither the gap panel nor the all-clear message when the project has no required skills (not applicable)", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView
+        {...baseProps}
+        data={{
+          ...baseData,
+          metrics: { ...baseData.metrics, hasRequiredSkills: false, allClear: false, gapMembers: [] },
+        }}
+        activeTab="metrics"
+      />,
+    );
+    expect(html).not.toContain("Contributors not using required skills");
+    expect(html).not.toContain("Every contributor is current on required skills.");
+  });
+
+  it("renders the by-skill and by-member tables when populated", () => {
+    const html = renderToStaticMarkup(<ProjectDetailView {...baseProps} data={baseData} activeTab="metrics" />);
+    expect(html).toContain("Usage by skill");
+    expect(html).toContain("code-review-strict");
+    expect(html).toContain("12 runs");
+    expect(html).toContain("Usage by member");
+    expect(html).toContain("alice");
+    expect(html).toContain("Invocations, last 14 days");
+  });
+
+  it("shows independent empty states for the by-skill and by-member tables", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView
+        {...baseProps}
+        data={{ ...baseData, metrics: { ...baseData.metrics, bySkill: [], byMember: [] } }}
+        activeTab="metrics"
+      />,
+    );
+    expect(html).toContain("No skills curated for this project yet.");
+    expect(html).toContain("No usage recorded for this project yet.");
   });
 });
