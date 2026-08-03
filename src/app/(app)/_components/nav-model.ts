@@ -3,7 +3,6 @@ export type NavKey =
   | "prompts"
   | "governance"
   | "teams"
-  | "workflows"
   | "projects"
   | "metrics"
   | "apiKeys"
@@ -27,7 +26,6 @@ const directRoutes: ReadonlyArray<readonly [string, NavKey]> = [
   ["/dashboard", "overview"],
   ["/prompts", "prompts"],
   ["/teams", "teams"],
-  ["/workflows", "workflows"],
   ["/projects", "projects"],
   ["/metrics", "metrics"],
   ["/settings/api-keys", "apiKeys"],
@@ -47,7 +45,6 @@ export function getNavigation(teamId: string): NavSection[] {
           href: `/teams/${teamId}/policies`,
         },
         { key: "teams", label: "Teams", href: "/teams" },
-        { key: "workflows", label: "Workflows", href: "/workflows" },
         { key: "projects", label: "Projects", href: "/projects" },
         { key: "metrics", label: "Metrics", href: "/metrics" },
       ],

@@ -6,6 +6,8 @@ import {
   assignSkillToProjectAction,
   deprecatePromptAction,
   forkSkillForSelfAction,
+  getSkillChainRunAction,
+  listSkillChainRunsAction,
   publishVersionAction,
   reactivatePromptAction,
   rollbackPromptAction,
@@ -15,7 +17,12 @@ import {
 } from "../actions";
 import { AssignProjectsDrawer } from "./assign-projects-drawer";
 import { NewVersionDrawer } from "./new-version-drawer";
-import { PromptDetailView, type PromptDetailData, type PromptDetailTab } from "./prompt-detail-view";
+import {
+  PromptDetailView,
+  type ChainRunStepView,
+  type PromptDetailData,
+  type PromptDetailTab,
+} from "./prompt-detail-view";
 import { ShareDrawer } from "./share-drawer";
 import { VersionHistoryDrawer } from "./version-history-drawer";
 
@@ -39,11 +46,13 @@ function nextVersionLabel(versions: PromptDetailData["versions"]): string {
  */
 export function PromptDetail({ data }: PromptDetailProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<PromptDetailTab>("template");
+  const [activeTab, setActiveTab] = useState<PromptDetailTab>(data.kind === "chain" ? "steps" : "template");
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [chainRunsPage, setChainRunsPage] = useState(data.chainRuns);
+  const [runStepsByRunId, setRunStepsByRunId] = useState<Record<string, ChainRunStepView[] | undefined>>({});
 
   return (
     <>
@@ -51,6 +60,44 @@ export function PromptDetail({ data }: PromptDetailProps) {
         data={data}
         activeTab={activeTab}
         onTabChange={setActiveTab}
+        chainRunsPage={chainRunsPage}
+        onRunsPageChange={async (page) => {
+          const result = await listSkillChainRunsAction(data.id, page);
+          if (result.ok) {
+            setChainRunsPage({
+              items: result.items.map((run) => ({
+                id: run.id,
+                version: run.version,
+                status: run.status,
+                startedAt: run.startedAt.toISOString().slice(0, 16).replace("T", " "),
+              })),
+              page: result.page,
+              pageSize: result.pageSize,
+              total: result.total,
+            });
+          }
+        }}
+        runStepsByRunId={runStepsByRunId}
+        onRequestRunSteps={async (runId) => {
+          if (runStepsByRunId[runId]) {
+            return;
+          }
+          const result = await getSkillChainRunAction(runId);
+          if (result.ok) {
+            setRunStepsByRunId((prev) => ({
+              ...prev,
+              [runId]: result.steps.map((step) => ({
+                stepIndex: step.stepIndex,
+                promptName: step.promptName,
+                promptVersion: step.promptVersion,
+                systemMessage: step.systemMessage,
+                userMessage: step.userMessage,
+                reportedStatus: step.reportedStatus,
+                reportedError: step.reportedError,
+              })),
+            }));
+          }
+        }}
         onDeprecate={async () => {
           await deprecatePromptAction(data.name);
           router.refresh();
@@ -89,6 +136,14 @@ export function PromptDetail({ data }: PromptDetailProps) {
           systemTemplate={data.systemTemplate ?? ""}
           userTemplate={data.userTemplate ?? ""}
           tags={data.versions.find((v) => v.isActive)?.tags ?? []}
+          activeVersionKind={data.kind}
+          activeVersionSteps={(data.steps ?? []).map((s) => ({
+            id: s.id,
+            promptName: s.promptName,
+            promptVersion: s.promptVersionLabel ?? "",
+            dependsOn: s.dependsOn,
+          }))}
+          accessibleSkillNames={data.accessibleSkillNames}
           onClose={() => setNewVersionOpen(false)}
           onSubmit={async (values) => {
             const result = await publishVersionAction({ promptName: data.name, ...values });

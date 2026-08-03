@@ -103,7 +103,9 @@ describe("/api/skills/[name]/chain-runs", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body).toHaveLength(1);
+    expect(body.items).toHaveLength(1);
+    expect(body.page).toBe(1);
+    expect(body.total).toBe(1);
   });
 
   it("returns 404 SKILL_NOT_FOUND for a nonexistent skill", async () => {

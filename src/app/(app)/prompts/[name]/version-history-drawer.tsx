@@ -44,7 +44,7 @@ export function VersionHistoryDrawer({ versions, onClose, onSetActive }: Version
                 ))}
               </div>
               <pre className="m-0 max-h-[70px] overflow-hidden font-mono text-[11px] leading-relaxed text-dim">
-                {v.systemTemplate ?? "—"}
+                {v.kind === "chain" ? `${v.stepCount} steps` : (v.systemTemplate ?? "—")}
               </pre>
             </div>
           ))}
