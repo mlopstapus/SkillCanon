@@ -58,7 +58,7 @@ export {
 // ---------------------------------------------------------------------------
 // Skill Expansion Engine (feature 021-expansion-engine)
 // ---------------------------------------------------------------------------
-export { expand } from "./application/expand";
+export { expand, fetchExpandableVersion } from "./application/expand";
 export type { ExpandParams, ExpansionResult } from "./domain/expansion";
 export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expansion";
 
