@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { NavigationList } from "./app-navigation";
 
 describe("NavigationList", () => {
-  it("renders both labeled sections and all nine real hrefs", () => {
+  it("renders both labeled sections and all eight real hrefs", () => {
     const markup = renderToStaticMarkup(
       <NavigationList pathname="/dashboard" teamId="team-123" />,
     );
@@ -15,7 +15,6 @@ describe("NavigationList", () => {
       "/prompts",
       "/teams/team-123/policies",
       "/teams",
-      "/workflows",
       "/projects",
       "/metrics",
       "/settings/api-keys",
