@@ -1,0 +1,138 @@
+# Research: REST API Core Routes
+
+No `[NEEDS CLARIFICATION]` markers remained in spec.md after `/speckit-clarify` (both real ambiguities — chain-run synchronous convenience endpoint, and API-key auth scope — were answered "Option A" for both). This document captures the concrete engineering decisions needed to turn the spec/CONTRACT.md/api-conventions.md into a buildable route-handler design.
+
+## Decision: error mapping via a name-keyed registry, not a `DomainError` base-class retrofit
+
+**Decision**: `src/shared/api/errors.ts` exports `mapError(err: unknown): { status: number; body: { error: { code: string; message: string; details?: Record<string, unknown> } } }`. Internally it holds a `Map<Function, { code: string; status: number }>` populated with every existing error class exported by `identity-access`/`governance`/`prompt-registry`/`audit-compliance`'s barrels (confirmed via `grep -rn "class.*Error" src/bcs/*/domain/*.ts`: ~60 classes, all `extends Error` today — no `DomainError` base exists anywhere in code, despite `docs/context/api-conventions.md`'s illustrative sketch). `mapError` walks the registry with `instanceof`, falls back to a `ZodError` check (422, field errors from `.flatten()`), then falls back to an unhandled-error 500 (generic message, full error only to `shared/logging`).
+
+**Rationale**: The observable contract FR-012/013/014 requires is "same shape/status per class of failure, field detail on validation, no leaked internals on 500" — a registry keyed on class identity satisfies this exactly, without editing a single existing `domain/*.ts` file across three bounded contexts (and without touching any existing test that does `.rejects.toThrow(SpecificErrorClass)`, since the classes' identity/inheritance from `Error` is unchanged). This is a pure-addition change confined to `src/shared/api/`, matching this repo's own established bias toward minimal-blast-radius changes (see CLAUDE.md's `brace-expansion` override note, and the `022`/`023` "verify a signature change's real callers before it touches something else" pattern).
+
+**Alternatives considered**: Retrofitting every class to `extends DomainError` (adding `code`/`httpStatus`/`details` fields per api-conventions.md's sketch) — rejected: touches ~60 files across 3 BCs for a mechanical rename with zero new observable behavior, and risks a name/status typo landing far from where it's reviewed (buried in a domain file instead of one central table). If a future feature needs `code` to be introspectable *from the error itself* (e.g. an MCP tool handler that isn't a REST route), the registry can be inverted into a `WeakMap`-based decorator applied at class-definition time without changing this feature's routes.
+
+## Decision: dual-mode auth resolution — `src/shared/api/auth.ts`
+
+**Decision**:
+
+```ts
+export interface ResolvedCaller {
+  actingUser: UserSummary; // identity-access's UserSummary; AppSessionUser is a superset
+  organizationId: string;
+  auditContext: AuditContext; // { transport: "api", sourceIp }
+}
+
+export async function resolveCaller(request: Request): Promise<ResolvedCaller | null> {
+  const authHeader = request.headers.get("authorization");
+  const bearerMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+  if (bearerMatch) {
+    const result = await authenticateApiKey(authDb, bearerMatch[1]);
+    if (!result) return null;
+    return { actingUser: result.user, organizationId: result.user.orgId, auditContext: apiAuditContext(request) };
+  }
+  const user = await authenticateSession(authDb, request.headers.get("cookie"));
+  if (!user) return null;
+  return { actingUser: user, organizationId: user.orgId, auditContext: apiAuditContext(request) };
+}
+```
+
+Every route handler's first line (via the shared `withApiRoute` wrapper, see below) is `resolveCaller(request)`; a `null` result short-circuits to `401 { error: { code: "UNAUTHENTICATED", message: "..." } }` before any BC function runs (FR-010). `Bearer` is checked before the cookie so an API-key caller (e.g. the future Skill Sync CLI) never accidentally falls back to a stray browser cookie in the same request.
+
+**Rationale**: Both `authenticateApiKey` and `authenticateSession` already implement "never throw, resolve null for anything wrong" and already require `authDb` (FR-016) — `resolveCaller` is a thin, uniform composition of exactly those two existing functions, matching `(app)/prompts/[name]/page.tsx`'s own already-established `authenticateSession(authDb, cookieHeader)` → `withTenantContext(db, user.orgId, ...)` pattern, extended with the bearer-token branch. No new session/token logic is introduced.
+
+**Alternatives considered**: A route-level `requireAdmin`-style dependency-injection wrapper mirroring FastAPI's `Depends` — rejected as unnecessary abstraction; every BC application function already re-checks its own role/ownership requirement internally (e.g. `createTeam` throws `NotAuthorizedError` for a non-admin `actingUser`), so the route layer only needs to resolve *who* is calling, not *what* they're allowed to do.
+
+## Decision: `withApiRoute` wrapper — one place for auth + error mapping + logging
+
+**Decision**: `src/shared/api/handler.ts` exports `withApiRoute<T>(fn: (request: Request, ctx: { caller: ResolvedCaller; params: T }) => Promise<Response>)`, returning a Next.js route-handler-compatible function `(request, { params }) => Promise<Response>`. It: resolves `params` (awaiting the Next 16 `Promise<...>` shape), calls `resolveCaller`, 401s on `null`, otherwise invokes `fn` inside a `try/catch` that routes any thrown error through `mapError` and logs it via `getLogger("distribution")` (`code`/`err` fields per api-conventions.md's logging schema), and always logs one completion line with `durationMs`.
+
+**Rationale**: Every route needs the exact same three steps (auth, error-to-response, structured log) — writing them once here means a route handler's own body is just "parse input → call one BC function → shape response," matching the spec's own framing of this feature as "mostly wiring." This is the Distribution-layer equivalent of the `withAudit`/`withTenantContext` composition pattern this codebase already uses elsewhere (compose small, single-purpose wrappers rather than duplicating boilerplate per call site).
+
+**Alternatives considered**: Next.js middleware (`middleware.ts`) doing auth resolution repo-wide — rejected: middleware runs on the Edge runtime by default in this Next version and cannot easily call `authenticateSession`/`authenticateApiKey` (both do real Postgres queries via `authDb`, which needs the Node runtime); a per-route wrapper keeps everything on the Node runtime with no extra config.
+
+## Decision: tenant-context wrapping stays route-local, not inside `withApiRoute`
+
+**Decision**: `withApiRoute` resolves `caller` but does **not** itself call `withTenantContext` — each route body calls `withTenantContext(db, caller.organizationId, async (tx) => { ... })` explicitly around its own BC call(s).
+
+**Rationale**: Matches the codebase-wide, already-documented convention (CLAUDE.md: "no application function anywhere in this codebase calls `withTenantContext` internally... only ever called from a route handler, MCP handler, or a test, wrapping the *entire* call chain") — `src/app/api/**/route.ts` files *are* that composition root. Some routes need more than one BC call inside the same tenant-scoped transaction (e.g. `POST /api/projects/{id}/skills` calls `assignSkillToProject`, which itself is the single call — but `GET /api/skills` calling `listPrompts` plus resolving `projectId` context is a single-call case too); keeping the wrap at the route level (not baked into `withApiRoute`) leaves each route free to call one or several BC functions inside one transaction as needed, without a generic wrapper guessing at that shape.
+
+## Decision: pagination — shared `parsePageParams`, offset-based
+
+**Decision**: `src/shared/api/pagination.ts` exports `parsePageParams(url: URL, defaults = { page: 1, pageSize: 20 }): { page: number; pageSize: number }`, validating both are positive integers (`pageSize` capped at 100) and throwing a `ZodError`-shaped validation failure (via a tiny inline Zod schema) on anything else, so it flows through the same 422 path as any other input-validation failure. Applied to `GET /api/skills`, `GET /api/teams`, `GET /api/projects`, `GET /api/users` (FR-015's "collections that can grow without bound").
+
+**Rationale**: `docs/context/api-conventions.md` already decided page/page_size (offset-based) at the platform level; this is the one shared helper needed to apply it consistently across the four unbounded collections FR-015 names, rather than four slightly different ad hoc query-parsing blocks. `listPrompts`/`listTeams`/etc. themselves return full arrays today (no BC-level pagination exists yet) — this feature's routes apply the page/pageSize slice in the route handler after the BC call returns, since adding real DB-level `LIMIT`/`OFFSET` to every listed BC function is out of this feature's scope (a straight port plus error-shape consistency, per the spec's own framing) and each of these BCs' lists are per-organization, not global, so an in-memory slice of an already tenant-scoped result set is the pragmatic choice matching current data volumes (no BC in this codebase serves more than a few hundred rows per org today).
+
+**Alternatives considered**: Pushing real `LIMIT`/`OFFSET` into each BC's list function — rejected as scope creep for this feature (would require touching `identity-access`/`prompt-registry` infrastructure/application files, violating the "zero BC file changes" structure decision) and not required by any FR; FR-015 only requires that the *response* supports paging, not that every BC query does yet. Flagged as a natural follow-up for whichever future feature first needs it at real scale.
+
+## Decision: request validation — Zod schemas colocated per route
+
+**Decision**: Each route file defines its own small Zod schema(s) for its request body/query, parsed via `.parse()` (throwing `ZodError` on failure, caught by `withApiRoute`). No shared cross-resource schema module — each resource's shape is already defined by its BC's own `Insert*Params`/`Update*` TypeScript types, and Zod schemas here exist only to validate *untrusted wire input* before it reaches those typed BC calls, not to duplicate BC-level business validation (e.g. Zod checks "`name` is a non-empty string"; `createTeam` itself still checks slug uniqueness).
+
+**Rationale**: Keeps each route's input contract next to the route that owns it (same locality principle as the rest of this codebase's one-file-per-concern convention), and Zod is the natural fit for FR-013's "identify which field(s) failed, consistently structured" via `.safeParse().error.flatten()`.
+
+## Decision: module-boundary lint coverage for `src/app/api/**` — already enforced, no config change
+
+**Decision**: No `eslint.config.mjs` change. `boundaries/elements`' existing `{ type: "app", pattern: "src/app" }` entry (no trailing `**`, per the already-documented v7 `partialMatch` gotcha in CLAUDE.md) already covers the entire `src/app` subtree as one element, and the existing `boundaries/dependencies` policy already disallows *any* element — `app` included — from importing a `bc` element's non-`index.ts` path. Verified directly: a probe file at `src/app/api/__boundary_probe__/route.ts` importing `@/bcs/identity-access/infrastructure/api-keys-repo` (bypassing the barrel) fails `pnpm lint` today with exactly the expected `boundaries/dependencies` error, before any route from this feature exists.
+
+**Rationale**: FR-017/SC-005 ("no route handler imports another BC's internal schema/model files directly") is already mechanically guaranteed by the rule this repo built in `003-module-boundary-lint-enforcement` — this feature just needs to not violate it, not add new lint config. Documented here (rather than silently assumed) so `/speckit-analyze` and the implementer don't waste a task slot re-deriving or re-adding a rule that already exists.
+
+## Decision: audit-context threading uses the existing `"api"` transport value
+
+**Decision**: `apiAuditContext(request): AuditContext` returns `{ transport: "api", sourceIp: request.headers.get("x-forwarded-for") ?? null }`, passed as the `auditContext` option to every mutating BC call a route makes (every BC mutation function already accepts an optional `auditContext`, defaulting to `DEFAULT_WEB_AUDIT_CONTEXT` if omitted).
+
+**Rationale**: `AuditContext`'s `AuditTransport` union already includes `"api"` (`src/bcs/audit-compliance/domain/audit-event.ts`) — added in anticipation of exactly this feature, never previously used since no REST route existed yet. No new audit schema/value needed.
+
+## Decision: `GET /api/policies` and `GET /api/objectives` list semantics
+
+**Decision**: Governance's exposed reads are scope-specific (`listTeamPolicies(orgId, teamId)`, `listTeamObjectives`/`listUserObjectives`/`listProjectObjectives` — no single "list all" function exists). `GET /api/policies` requires exactly one of `?teamId=` (calls `listTeamPolicies`); `GET /api/objectives` requires exactly one of `?teamId=` / `?userId=` / `?projectId=` (dispatches to the matching `list*Objectives` call) — a request with zero or more than one of these query params is a 422 validation failure.
+
+**Rationale**: Mirrors the shape the BC contract actually exposes (constitution D1: routes call only what's already exposed, no new BC-level "list everything" function invented for this feature) while still satisfying FR-005's "read... policies and objectives" — a caller always has a scope in mind (a team's local rules, a project's objectives) since governance data is inherently scoped, never a flat organization-wide list in the underlying domain model.
+
+## Decision: skill-chain routes split between `/api/skills/{name}/chain-runs` and `/api/chain-runs/{runId}`
+
+**Decision**: Starting a run and listing a skill's runs stay nested under the skill (`POST|GET /api/skills/{name}/chain-runs`, since `startSkillChainRun(db, actor, promptName, version?)` and `listSkillChainRuns(orgId, promptId)` both take a prompt reference). Advancing, abandoning, and reading one run's state move to a top-level `/api/chain-runs/{runId}/*` (since `advanceSkillChainRun`/`abandonSkillChainRun`/`getSkillChainRun` all key purely off `runId`, with no `promptName` parameter at all).
+
+**Rationale**: Route shape follows each function's actual parameter list exactly (constitution III: no new business rules invented at the route layer, including implicit ones like "a run is always addressed through its skill") — inventing a `/api/skills/{name}/chain-runs/{runId}/advance` nesting would require the route handler to silently ignore `name` (never checked, since `advanceSkillChainRun` has no way to cross-check it) or add a redundant lookup no BC function needs, either of which misrepresents what the underlying call actually validates.
+
+## Decision: no synchronous chain "run to completion" endpoint (confirmed, 2026-08-02 clarification)
+
+**Decision**: No `POST /api/skills/{name}/chain-runs/run` or similar convenience endpoint. `startSkillChainRun`/`advanceSkillChainRun`/`abandonSkillChainRun`/`listSkillChainRuns`/`getSkillChainRun` are exposed 1:1, nothing more.
+
+**Rationale**: Directly the "Option A" answer already recorded in spec.md's Clarifications and FR-009.
+
+## Decision: "not found" via `null` return vs. a bare untyped `Error` vs. a registered domain class — three different shapes, one route-layer rule
+
+**Decision**: Auditing every BC function this feature's routes call (`getTeam`, `getUser`, `getProject`, `getPolicy`, `getObjective`, `getPromptVersion`, `getSkillChainRun`, `getPrompt`, etc.) surfaced three distinct existing "not found" shapes, not one:
+
+1. **Returns `null`** (the majority: `getProject`, `getPolicy`, `getObjective`, `getPromptVersion`, `getSkillChainRun`, `getPrompt`, and every BC's own list functions never throw for "found nothing"). **Route rule**: `if (!result) return notFoundResponse(SAME_CODE_AS_THE_RESOURCE'S_REGISTERED_NOT-FOUND_CLASS)` — e.g. a `null` from `getProject` returns the same `PROJECT_NOT_FOUND`/404 that `updateProject`'s thrown `ProjectNotFoundError` would, via a small `notFoundResponse(code, message)` helper in `src/shared/api/errors.ts` (same envelope shape as `mapError`'s output, just not driven by a caught exception).
+2. **Throws a registered domain class** (`ProjectNotFoundError`, `PolicyNotFoundError`, `CrossOrgUserAccessError`, etc. — mostly the write-path functions: update/delete/deactivate). **Route rule**: nothing special — flows through `mapError` like any other domain error.
+3. **Throws a bare, untyped `new Error(`No <resource> found with id "<id>".`)`** — confirmed in exactly five `identity-access` functions: `getTeam`, `getUser`, `updateTeam`, `insertTeamBetween`, `reparentTeam` (also `get-organization.ts`/`get-team-chain.ts`, not called by this feature's routes). No dedicated `TeamNotFoundError`/`UserNotFoundError` class exists anywhere in `identity-access` — this is a genuine, narrow inconsistency versus every other BC (and versus `identity-access`'s own `updateUser`/`deactivateUser`, which correctly throw the registered `CrossOrgUserAccessError` for the identical situation). **Route rule**: each of the five call sites is wrapped with a narrow, explicitly-commented catch that treats *any* error thrown by that specific call as `TEAM_NOT_FOUND`/`USER_NOT_FOUND` (404) — safe because each function's only throw path (confirmed by reading its full source) is this exact not-found case; a `NotAuthorizedError`/`CrossOrgReparentError`/`CycleError`/`DuplicateTeamSlugError` thrown by the same call is a distinct, already-registered class instance and is checked *first*, before the catch-all, so it still maps to its own correct code/status (only an error that is none of those known classes falls into the "must be the bare not-found Error" bucket).
+
+**Rationale**: This is a pre-existing BC-layer inconsistency, not something this feature introduces — fixing it "properly" (adding `TeamNotFoundError`/`UserNotFoundError` classes and swapping five throw sites) would touch `identity-access` domain/application files, violating this feature's zero-BC-file-changes structure decision for a small, mechanical, out-of-scope cleanup. Documented explicitly here (and flagged as a real, minor backlog item in `tasks.md`'s Polish phase) rather than silently worked around with a fragile message-string match, which is the alternative that actually *would* be a hack.
+
+**Alternatives considered**: Regex-matching `err.message` against `/^No .+ found with id/` generically in the shared mapper — rejected: couples the mapper to exact wording of a message that isn't part of any documented contract, and would silently swallow an unrelated future bare-`Error` throw from anywhere else in the codebase that happens to start with "No ". The five-call-site-scoped catch is narrower and safer because it only applies where the throw is already read and confirmed.
+
+## Decision: team reparenting needs its own route — `updateTeam` explicitly excludes it
+
+**Decision**: Add `POST /api/teams/{teamId}/reparent` (body `{ newParentTeamId }`) calling `reparentTeam(tx, teamId, newParentTeamId, actingUser)`, alongside the already-planned `insert-parent` route.
+
+**Rationale**: `updateTeam`'s own doc comment is explicit — "Updates a team's name/slug/description/owner only — never its hierarchy position" — hierarchy changes are `reparentTeam`'s job. The legacy Python `PUT /teams/{id}` likely folded parent-change into one call, but "functional equivalence, not literal method identity" (spec's own Assumptions) means the caller-visible capability (move a team to a new parent) still needs *a* route — omitting it would silently drop real legacy functionality, unlike the team-deletion gap (where no equivalent function exists in the BC *at all*). Found during `/speckit-analyze`-equivalent review of the initial task list, before implementation started — `tasks.md` is corrected accordingly, not left with the gap.
+
+## Decision: `getLogger(bc)` is added to `src/shared/logging`, not invented per call site
+
+**Decision**: `docs/context/api-conventions.md`'s logging section documents `getLogger(bcName)` as "the only way to obtain a logger," but the actual `src/shared/logging/index.ts` only exports `createLogger`/`logger` (a bare `pino` instance) today — confirmed via `grep -rn "getLogger" src/` returning zero results before this feature. Adds a two-line `getLogger(bc: string) { return logger.child({ bc }) }` to `src/shared/logging/index.ts`, fulfilling the already-documented design exactly, plus its own unit test.
+
+**Rationale**: This is a `src/shared/` addition, not a bounded-context change — the "zero BC file changes" structure decision applies to `identity-access`/`governance`/`prompt-registry` specifically (constitution D1/D2's actual concern), not to cross-cutting infrastructure every BC and Distribution equally depend on. No prior feature ever called the logger at all (confirmed by the same grep), so this feature is the natural first real consumer and the natural place to complete a two-line gap between an already-agreed design doc and the code.
+
+## Decision: `identity-access`'s barrel gains error-class re-exports, matching its sibling BCs' existing convention
+
+**Decision**: `governance`'s and `prompt-registry`'s `index.ts` barrels already re-export their own domain error classes (e.g. `export { PolicyNotFoundError, ... } from "./domain/policy"`) — confirmed by reading both files in full. `identity-access`'s barrel exports **zero** of its ~14 error classes (`CrossOrgReparentError`, `DuplicateUserError`, `NotAuthorizedError`, `ApiKeyNotFoundError`, etc. — all confirmed present in `domain/team.ts`/`domain/user.ts`/`domain/api-key.ts` but absent from `index.ts`). Since `src/shared/api/errors.ts` needs `instanceof` access to build its registry and can only import a BC's barrel (constitution D1, and the boundaries lint rule verified earlier), this feature adds the missing re-exports to `identity-access/index.ts` — three `export { ... } from "./domain/<file>"` blocks, zero lines of logic touched, mirroring `governance`'s own existing pattern exactly.
+
+**Rationale**: This is the barrel itself — the sanctioned surface for exposing more of a BC's already-implemented contract, not a `domain`/`application`/`infrastructure` change. It brings `identity-access` to parity with its two sibling BCs' own established convention rather than inventing a new one. Verified safe: `pnpm exec tsc --noEmit` and `pnpm exec eslint src/bcs/identity-access/index.ts` both pass clean after the addition, and no existing file's behavior changes (pure additive exports).
+
+**Alternatives considered**: Re-deriving each error's code from `err.constructor.name` via a naming convention (e.g. strip `Error` suffix, screaming-snake-case it) instead of an explicit per-class registry — rejected: loses the ability to give two different classes the same code where that's semantically correct (see data-model.md's `PromptNotFoundError`/`SourceSkillNotFoundError` → `SKILL_NOT_FOUND` case) and loses explicit control over the HTTP status per class, both of which the explicit registry gives for free.
+
+## Decision: route-handler integration testing without an HTTP server
+
+**Decision**: Every `route.test.ts` imports its sibling `route.ts`'s exported `GET`/`POST`/`PUT`/`DELETE` functions directly and invokes them with a hand-constructed `Request` (via `new Request(url, { method, headers, body })`) and a `{ params: Promise.resolve({...}) }` second argument — no `next dev`/real HTTP listener. Auth is set up via `src/shared/api/test-helpers.ts`'s `loginAndBuildCookie(authDb, email, password)` (calls the barrel-exported `login()` to get a real signed session cookie — **not** `identity-access`'s internal `infrastructure/jwt.ts` directly, since `src/shared/api/` is a different `boundaries/elements` type than `identity-access` and the existing lint rule blocks any non-barrel cross-element import, verified directly per the module-boundary decision above) and `buildApiKeyAuthHeader(tx, actingUser, name)` (calls the barrel-exported `createApiKey()` for a real `rawKey`), so the auth path under test is the real one, not a mock, and stays lint-clean.
+
+**Rationale**: Matches this repo's existing "no `next dev` in tests" posture (Testcontainers Vitest suite spins up Postgres, never a real Next.js server) and Next.js App Router route handlers are just exported async functions — directly callable, no framework needed to exercise them. Reusing the real JWT-signing/API-key-creation path (rather than mocking `authenticateSession`/`authenticateApiKey`) means these tests exercise the exact dual-mode auth resolution FR-010 requires, not a stand-in for it.

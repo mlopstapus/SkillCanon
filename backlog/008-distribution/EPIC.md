@@ -1,7 +1,7 @@
 # Epic 008: Distribution
 
 **Priority:** 8
-**Status:** not-started
+**Status:** in-progress
 **Goal:** Compose all six prior bounded contexts into the actual external surface — REST API, a Skill Sync CLI for Claude Code, and web UI — so the self-hosted Free tier is fully usable end-to-end. An MCP protocol server remains speced but deprioritized (see Feature 002).
 
 ## Overview
@@ -10,7 +10,7 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 
 ## Features
 
-- [ ] [001 - REST API Core Routes](001-rest-api-core-routes.md)
+- [x] [001 - REST API Core Routes](archive/001-rest-api-core-routes.md)
 - [ ] [005 - Skill Sync CLI](005-skill-sync-cli.md)
 - [ ] [003 - Web UI Shell & Core Pages](003-web-ui-shell-and-core-pages.md)
 - [ ] [004 - Usage Telemetry](004-usage-telemetry.md)
