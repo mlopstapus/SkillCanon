@@ -1,48 +1,17 @@
 """Characterization harness for the Skill Expansion Engine port (021-expansion-engine).
 
-Runs the REAL legacy `expand_prompt` (`src/spechub_server/services/prompt_service.py`)
-directly against a fixed set of fixture scenarios — no HTTP, no running server,
+Runs the real legacy `expand_prompt` (`src/skillcanon_server/services/prompt_service.py`)
+directly against a fixed set of fixture scenarios - no HTTP, no running server,
 just an in-memory SQLite-backed AsyncSession exactly like `tests/conftest.py`
 uses. Records each scenario's output as JSON to
 `expand_characterization_output.json` (in this same directory) so the
 TypeScript side (`src/bcs/prompt-registry/application/expand-characterization.test.ts`)
-can assert its own `expand()` produces identical output for the *same*
-fixture data, without needing Python/`uv` available at `vitest` run time.
+can assert its own `expand()` produces identical output for the same fixture
+data, without needing Python/`uv` available at `vitest` run time.
 
 Run via (per CLAUDE.md's legacy-test convention):
 
     cd legacy/backend && uv run python scratch/expand_characterization_harness.py
-
---------------------------------------------------------------------------
-Why this file bootstraps its own imports instead of `from src.spechub_server
-import ...` directly
---------------------------------------------------------------------------
-This repo's physical legacy package directory is `src/spechub_server/` (it
-was never `git mv`-ed), but a repo-wide SpecHub -> SkillCanon text-rename
-commit (115dbd2, "rename") already rewrote *every* internal absolute import
-inside that directory to say `from src.skillcanon_server....` instead —
-including `prompt_service.py` itself, `models.py`'s dependents,
-`policy_service.py`, `objective_service.py`, and `team_service.py`. That
-mismatch means the legacy backend's own test suite (`tests/conftest.py`,
-which imports `from src.skillcanon_server.models import ...`) is currently
-broken (`ModuleNotFoundError: No module named 'src.skillcanon_server'`),
-independent of anything in this feature.
-
-Renaming the physical directory was out of scope for this feature (a
-repo-wide change with its own blast radius) and a `git mv` was blocked by
-this environment's own safety classifier when attempted. Fixing it file by
-file (5 files reference `skillcanon_server`) would mean editing legacy
-application code to chase an unrelated bug. Instead, this harness aliases
-the module tree in `sys.modules` *before* importing anything from it: once
-`src.skillcanon_server` resolves to the real, physically-`spechub_server`
-package (with its correct on-disk `__path__`), every one of its own
-`from src.skillcanon_server...` imports resolves transparently through the
-same physical files — no source file is duplicated or re-executed under two
-different identities, and no legacy source is edited.
-
-If the physical directory is ever renamed to `skillcanon_server` (the
-"real" fix), this bootstrap becomes a no-op you can delete.
---------------------------------------------------------------------------
 
 Keeping fixtures in sync with the TypeScript side
 --------------------------------------------------------------------------
@@ -54,8 +23,8 @@ scenario set exercised in
 A shared JSON fixture file was considered and rejected: the two engines'
 underlying schemas differ enough (legacy has no `organizationId`/no
 team-vs-user skill ownership; ids/teams/users must be constructed
-differently on each side) that only the *literal* content — skill names,
-template strings, policy/objective names and content, and caller input —
+differently on each side) that only the literal content - skill names,
+template strings, policy/objective names and content, and caller input -
 actually needs to match, not the fixture-setup plumbing. Each scenario below
 is named and each literal value is called out in a comment; the TypeScript
 characterization test names its own scenarios identically and reuses the
@@ -69,18 +38,11 @@ import sys
 import uuid
 from pathlib import Path
 
-# --- Bootstrap: alias the mismatched module tree (see module docstring). ---
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import importlib  # noqa: E402
-
-_real_root = importlib.import_module("src.spechub_server")
-sys.modules.setdefault("src.skillcanon_server", _real_root)
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine  # noqa: E402
-
-models = importlib.import_module("src.skillcanon_server.models")
-prompt_service = importlib.import_module("src.skillcanon_server.services.prompt_service")
-schemas = importlib.import_module("src.skillcanon_server.schemas")
+from src.skillcanon_server import models, schemas  # noqa: E402
+from src.skillcanon_server.services import prompt_service  # noqa: E402
 
 Base = models.Base
 Team = models.Team
