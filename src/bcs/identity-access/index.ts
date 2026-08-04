@@ -70,3 +70,5 @@ export {
   NoScopesSelectedError,
   ScopeExceedsPermissionsError,
 } from "./domain/api-key";
+
+export { assertCoreFeaturesEnabled } from "./application/entitlement-gate";

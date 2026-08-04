@@ -58,7 +58,7 @@ export {
 // ---------------------------------------------------------------------------
 // Skill Expansion Engine (feature 021-expansion-engine)
 // ---------------------------------------------------------------------------
-export { expand } from "./application/expand";
+export { expand, fetchExpandableVersion } from "./application/expand";
 export type { ExpandParams, ExpansionResult } from "./domain/expansion";
 export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expansion";
 
@@ -140,6 +140,8 @@ export { listSkillChainRuns } from "./application/list-skill-chain-runs";
 export { getSkillChainRun } from "./application/get-skill-chain-run";
 export type {
   AdvanceRunResult,
+  ChainRunPage,
+  ChainRunPaginationOptions,
   ChainRunStepRecord,
   ChainRunSummary,
   ChainStep,
@@ -151,7 +153,9 @@ export type {
 } from "./domain/skill-chain";
 export {
   ChainStepResolutionFailedError,
+  DEFAULT_CHAIN_RUN_PAGE_SIZE,
   InvalidChainDependencyError,
+  MAX_CHAIN_RUN_PAGE_SIZE,
   MAX_REPORT_OUTPUT_BYTES,
   NotAChainVersionError,
   ReportOutputTooLargeError,

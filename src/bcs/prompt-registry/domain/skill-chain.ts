@@ -103,11 +103,51 @@ export type AdvanceRunResult = { step: ChainStepResolution } | { done: true };
 export interface ChainRunSummary {
   id: string;
   promptId: string;
+  /** The chain version label (e.g. "v2") this run executed (027-skill-chain-views-ui). */
+  version: string;
   userId: string;
   status: RunStatus;
   currentStepIndex: number;
   startedAt: Date;
   completedAt: Date | null;
+}
+
+// ---------------------------------------------------------------------------
+// Run-history pagination (027-skill-chain-views-ui)
+// ---------------------------------------------------------------------------
+
+/** Smaller than audit-compliance's page size — scoped to one skill's runs, not an org-wide event stream. */
+export const DEFAULT_CHAIN_RUN_PAGE_SIZE = 20;
+export const MAX_CHAIN_RUN_PAGE_SIZE = 100;
+
+export interface ChainRunPaginationOptions {
+  page?: number;
+  pageSize?: number;
+}
+
+/** Mirrors `audit-compliance`'s `normalizeAuditPagination` shape and clamping behavior. */
+export function normalizeChainRunPagination(options: ChainRunPaginationOptions = {}): {
+  page: number;
+  pageSize: number;
+  limit: number;
+  offset: number;
+} {
+  const page = Math.max(1, Math.trunc(options.page ?? 1));
+  const requestedPageSize = Math.trunc(options.pageSize ?? DEFAULT_CHAIN_RUN_PAGE_SIZE);
+  const pageSize = Math.min(MAX_CHAIN_RUN_PAGE_SIZE, Math.max(1, requestedPageSize));
+  return {
+    page,
+    pageSize,
+    limit: pageSize,
+    offset: (page - 1) * pageSize,
+  };
+}
+
+export interface ChainRunPage {
+  items: ChainRunSummary[];
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
 export interface ChainRunStepRecord {

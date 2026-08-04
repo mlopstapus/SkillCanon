@@ -24,6 +24,14 @@ describe("NavigationList", () => {
     }
   });
 
+  it("never renders a separate Workflows nav entry — chain and template skills share the Prompts nav item (027-skill-chain-views-ui, FR-016)", () => {
+    const markup = renderToStaticMarkup(
+      <NavigationList pathname="/dashboard" teamId="team-123" />,
+    );
+    expect(markup).not.toContain("Workflows");
+    expect(markup).not.toContain("/workflows");
+  });
+
   it("marks exactly one ownership-aware item as the current page", () => {
     const markup = renderToStaticMarkup(
       <NavigationList

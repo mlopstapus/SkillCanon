@@ -8,6 +8,8 @@ import {
   deprecatePrompt,
   forkSkill,
   getPrompt,
+  getSkillChainRun,
+  listSkillChainRuns,
   listVersions,
   publishVersion,
   reactivatePrompt,
@@ -15,6 +17,7 @@ import {
   subscribeSkill,
   unassignSkillFromProject,
   unsubscribeSkill,
+  type ChainStep,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
@@ -105,6 +108,7 @@ export async function publishVersionAction(params: {
   promptName: string;
   systemTemplate?: string;
   userTemplate?: string;
+  steps?: ChainStep[];
   tags?: string[];
   setActive?: boolean;
 }): Promise<PromptActionResult> {
@@ -118,12 +122,16 @@ export async function publishVersionAction(params: {
       ]);
       const previouslyActive = versions.find((v) => v.id === prompt?.activeVersionId);
       const version = nextVersionLabel(versions);
+      // Exactly one of template content or chain steps — never both (FR-001,
+      // PDR-017); publishVersion itself enforces this, this action just
+      // passes through whichever shape the caller provided.
       await publishVersion(tx, actor, {
         promptName: params.promptName,
         organizationId: actingUser.orgId,
         version,
-        systemTemplate: params.systemTemplate ?? null,
-        userTemplate: params.userTemplate ?? null,
+        ...(params.steps
+          ? { steps: params.steps }
+          : { systemTemplate: params.systemTemplate ?? null, userTemplate: params.userTemplate ?? null }),
         tags: params.tags ?? [],
       });
       // publishVersion always advances active_version_id — roll back to
@@ -253,6 +261,57 @@ export async function unassignSkillFromProjectAction(
     revalidatePath(`/projects/${projectId}`);
     if (promptName) revalidatePath(`/prompts/${promptName}`);
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export type ListSkillChainRunsActionResult =
+  | { ok: true; items: Awaited<ReturnType<typeof listSkillChainRuns>>["items"]; page: number; pageSize: number; total: number }
+  | { ok: false; error: string };
+
+/**
+ * Read-only (027-skill-chain-views-ui) — pages the Run History tab without
+ * a full route navigation (research.md: this page's other tabs are already
+ * local client state, so a read action keeps this one consistent with its
+ * siblings rather than introducing URL-driven paging for only this tab).
+ */
+export async function listSkillChainRunsAction(
+  promptId: string,
+  page: number,
+): Promise<ListSkillChainRunsActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const result = await withTenantContext(db, actingUser.orgId, (tx) =>
+      listSkillChainRuns(tx, actingUser.orgId, promptId, { page }),
+    );
+    return { ok: true, ...result };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+type SkillChainRunDetail = NonNullable<Awaited<ReturnType<typeof getSkillChainRun>>>;
+
+export type GetSkillChainRunActionResult =
+  | ({ ok: true } & SkillChainRunDetail)
+  | { ok: false; error: string };
+
+/**
+ * Read-only (027-skill-chain-views-ui) — fetches one run's full step detail
+ * lazily, the first time its row is expanded in the Run History tab (never
+ * prefetched for every row on the page — research.md).
+ */
+export async function getSkillChainRunAction(runId: string): Promise<GetSkillChainRunActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const result = await withTenantContext(db, actingUser.orgId, (tx) =>
+      getSkillChainRun(tx, actingUser.orgId, runId),
+    );
+    if (!result) {
+      return { ok: false, error: "Run not found." };
+    }
+    return { ok: true, run: result.run, steps: result.steps };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }
