@@ -34,7 +34,7 @@ docker compose up -d
 ## Type check
 pnpm typecheck
 
-Note: the new scaffold has strict TypeScript project-wide. Legacy backend has no type checker configured (no mypy/pyright) — it's the code this rewrite is replacing, not something to extend coverage to.
+Note: the new scaffold has strict TypeScript project-wide. Legacy backend has no type checker configured (no mypy/pyright) — it's the code this rewrite is replacing, not something to extend coverage to. `cli/` (see Test section below) is excluded from this root command — its own `pnpm --dir cli run typecheck` must be run separately.
 
 ## Lint
 pnpm lint
