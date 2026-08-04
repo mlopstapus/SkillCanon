@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { getPromptUsageSummaryForOrganization } from "@/bcs/distribution";
 import { createPrompt, publishVersion, startSkillChainRun, type ChainStep, type PromptActor } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
@@ -36,13 +37,13 @@ describe("/api/chain-runs/[runId]/advance", () => {
     return { organizationId: seeded.organizationId, userId: seeded.adminUserId };
   }
 
-  async function startOneStepChainRun(seeded: SeededOrg): Promise<string> {
+  async function startOneStepChainRun(seeded: SeededOrg): Promise<{ runId: string; stepVersionId: string; stepPromptId: string }> {
     const actor = actorFor(seeded);
     const chainName = `chain-${randomUUID()}`;
     const stepSkillName = `${chainName}-step`;
     return withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name: stepSkillName });
-      await publishVersion(tx, actor, {
+      const stepVersion = await publishVersion(tx, actor, {
         organizationId: seeded.organizationId,
         promptName: stepSkillName,
         version: "1.0.0",
@@ -60,14 +61,22 @@ describe("/api/chain-runs/[runId]/advance", () => {
       if (!("runId" in result)) {
         throw new Error("expected a runId");
       }
-      return result.runId;
+      return { runId: result.runId, stepVersionId: stepVersion.id, stepPromptId: stepVersion.promptId };
     });
   }
 
-  it("records the pending step's outcome and completes a one-step run", async () => {
+  async function usageSummary(organizationId: string) {
+    return withTenantContext(testDb.appDb, organizationId, (tx) =>
+      getPromptUsageSummaryForOrganization(tx, organizationId, {
+        window: { from: new Date(0), to: new Date(Date.now() + 1000) },
+      }),
+    );
+  }
+
+  it("records the pending step's success outcome, completes a one-step run, and records usage", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
-    const runId = await startOneStepChainRun(seeded);
+    const { runId, stepVersionId, stepPromptId } = await startOneStepChainRun(seeded);
     const POST = route();
 
     const response = await POST(
@@ -82,12 +91,41 @@ describe("/api/chain-runs/[runId]/advance", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.done).toBe(true);
+
+    const summary = await usageSummary(seeded.organizationId);
+    expect(summary.totalInvocations).toBe(1);
+    expect(summary.successCount).toBe(1);
+    expect(summary.bySkill).toEqual([
+      expect.objectContaining({ promptId: stepPromptId, promptVersionId: stepVersionId, promptVersion: "1.0.0" }),
+    ]);
   });
 
-  it("returns 409 CHAIN_RUN_STEP_CONFLICT for a stale stepIndex", async () => {
+  it("records an error step report as failed usage", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
-    const runId = await startOneStepChainRun(seeded);
+    const { runId } = await startOneStepChainRun(seeded);
+    const POST = route();
+
+    const response = await POST(
+      new Request(`http://x/api/chain-runs/${runId}/advance`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({ stepIndex: 0, status: "error", error: "model failed" }),
+      }),
+      { params: Promise.resolve({ runId }) },
+    );
+
+    expect(response.status).toBe(200);
+    const summary = await usageSummary(seeded.organizationId);
+    expect(summary.totalInvocations).toBe(1);
+    expect(summary.failureCount).toBe(1);
+    expect(summary.byStatus).toEqual([{ statusCode: 500, runCount: 1 }]);
+  });
+
+  it("returns 409 CHAIN_RUN_STEP_CONFLICT for a stale stepIndex without recording usage", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
+    const { runId } = await startOneStepChainRun(seeded);
     const POST = route();
 
     const response = await POST(
@@ -102,12 +140,13 @@ describe("/api/chain-runs/[runId]/advance", () => {
     expect(response.status).toBe(409);
     const body = await response.json();
     expect(body.error.code).toBe("CHAIN_RUN_STEP_CONFLICT");
+    expect((await usageSummary(seeded.organizationId)).totalInvocations).toBe(0);
   });
 
   it("returns 422 VALIDATION_FAILED for an invalid status value", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
-    const runId = await startOneStepChainRun(seeded);
+    const { runId } = await startOneStepChainRun(seeded);
     const POST = route();
 
     const response = await POST(

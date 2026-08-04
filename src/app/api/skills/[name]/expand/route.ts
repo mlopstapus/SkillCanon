@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { expand } from "@/bcs/prompt-registry";
+import { recordPromptUsage } from "@/bcs/distribution";
+import { expand, fetchExpandableVersion } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
 import type { ResolvedCaller } from "@/shared/api/auth";
@@ -12,30 +13,77 @@ const expandSchema = z.object({
   input: z.record(z.string(), z.unknown()),
   version: z.string().optional(),
   projectId: z.string().optional(),
+  gitRemoteUrl: z.string().nullable().optional(),
+  gitBranch: z.string().nullable().optional(),
+  gitCommitSha: z.string().nullable().optional(),
 });
 
 /**
- * Every route requires auth (FR-010) — unlike the legacy Python API's
- * anonymous `expand` endpoint, this one always resolves a caller and
- * threads it through as `userId` so governance (policies/objectives)
- * applies (research.md, FR-008).
+ * Authenticated genuine runtime expansion. Preview/test callers use the
+ * prompt-registry `expand()` service directly and therefore do not record
+ * Distribution usage telemetry.
  */
 export async function handlePost(
   request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
+  const startedAt = Date.now();
   const body = expandSchema.parse(await request.json());
-  const result = await withTenantContext(db, caller.organizationId, (tx) =>
-    expand(tx, {
-      organizationId: caller.organizationId,
-      promptName: params.name,
-      input: body.input,
-      userId: caller.actingUser.id,
-      projectId: body.projectId,
-      version: body.version,
-    }),
+  const versionToRecord = await withTenantContext(db, caller.organizationId, (tx) =>
+    fetchExpandableVersion(tx, caller.organizationId, params.name, body.version),
   );
-  return Response.json(result);
+
+  try {
+    const result = await withTenantContext(db, caller.organizationId, (tx) =>
+      expand(tx, {
+        organizationId: caller.organizationId,
+        promptName: params.name,
+        input: body.input,
+        userId: caller.actingUser.id,
+        projectId: body.projectId,
+        version: body.version,
+      }),
+    );
+
+    if (versionToRecord && versionToRecord.kind === "template") {
+      await withTenantContext(db, caller.organizationId, (tx) =>
+        recordPromptUsage(tx, {
+          organizationId: caller.organizationId,
+          promptId: versionToRecord.promptId,
+          promptVersionId: versionToRecord.id,
+          promptVersion: versionToRecord.version,
+          projectId: body.projectId ?? null,
+          userId: caller.actingUser.id,
+          statusCode: 200,
+          latencyMs: Date.now() - startedAt,
+          gitRemoteUrl: body.gitRemoteUrl ?? null,
+          gitBranch: body.gitBranch ?? null,
+          gitCommitSha: body.gitCommitSha ?? null,
+        }),
+      );
+    }
+
+    return Response.json(result);
+  } catch (err) {
+    if (versionToRecord && versionToRecord.kind === "template") {
+      await withTenantContext(db, caller.organizationId, (tx) =>
+        recordPromptUsage(tx, {
+          organizationId: caller.organizationId,
+          promptId: versionToRecord.promptId,
+          promptVersionId: versionToRecord.id,
+          promptVersion: versionToRecord.version,
+          projectId: body.projectId ?? null,
+          userId: caller.actingUser.id,
+          statusCode: 500,
+          latencyMs: Date.now() - startedAt,
+          gitRemoteUrl: body.gitRemoteUrl ?? null,
+          gitBranch: body.gitBranch ?? null,
+          gitCommitSha: body.gitCommitSha ?? null,
+        }),
+      );
+    }
+    throw err;
+  }
 }
 
 export const POST = withApiRoute<Params>(handlePost);
