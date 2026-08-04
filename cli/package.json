@@ -1,0 +1,26 @@
+{
+  "name": "skillcanon",
+  "version": "0.1.0",
+  "description": "Syncs a repository's Claude Code skills with a SkillCanon project's governed prompt roster, resolving each prompt live at invocation time.",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "skillcanon": "dist/index.js"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node -e \"require('fs').chmodSync('dist/index.js', 0o755)\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "commander": "^14.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
+}
