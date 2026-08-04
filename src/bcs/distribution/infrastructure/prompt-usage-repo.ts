@@ -1,4 +1,4 @@
-import { and, count, eq, gte, max, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, lte, max, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { RecordPromptUsageParams } from "../domain/prompt-usage";
 import { promptUsage } from "./schema";
@@ -11,8 +11,14 @@ export async function insert<TSchema extends Record<string, unknown>>(
     organizationId: params.organizationId,
     promptId: params.promptId,
     promptVersionId: params.promptVersionId,
+    promptVersion: params.promptVersion ?? "unknown",
     projectId: params.projectId ?? null,
     userId: params.userId ?? null,
+    statusCode: params.statusCode ?? 200,
+    latencyMs: params.latencyMs ?? null,
+    gitRemoteUrl: params.gitRemoteUrl ?? null,
+    gitBranch: params.gitBranch ?? null,
+    gitCommitSha: params.gitCommitSha ?? null,
   });
 }
 
@@ -91,4 +97,39 @@ export async function listDailyCountsBySkillForProject<TSchema extends Record<st
     )
     .groupBy(dayExpr, promptUsage.promptId);
   return rows;
+}
+
+export interface PromptUsageOrganizationRow {
+  promptId: string;
+  promptVersionId: string;
+  promptVersion: string;
+  statusCode: number;
+  latencyMs: number | null;
+  createdAt: Date;
+}
+
+export async function listForOrganizationWindow<TSchema extends Record<string, unknown>>(
+  tx: PostgresJsDatabase<TSchema>,
+  organizationId: string,
+  from: Date,
+  to: Date,
+): Promise<PromptUsageOrganizationRow[]> {
+  return tx
+    .select({
+      promptId: promptUsage.promptId,
+      promptVersionId: promptUsage.promptVersionId,
+      promptVersion: promptUsage.promptVersion,
+      statusCode: promptUsage.statusCode,
+      latencyMs: promptUsage.latencyMs,
+      createdAt: promptUsage.createdAt,
+    })
+    .from(promptUsage)
+    .where(
+      and(
+        eq(promptUsage.organizationId, organizationId),
+        gte(promptUsage.createdAt, from),
+        lte(promptUsage.createdAt, to),
+      ),
+    )
+    .orderBy(asc(promptUsage.createdAt));
 }

@@ -13,39 +13,54 @@ This is the system's actual external boundary — everything below is public:
 
 | Surface | Description |
 |---|---|
-| REST API (`/api/v1/...`) | Full CRUD over teams, projects, prompts, policies, objectives, workflows, api-keys — used by the web UI |
-| MCP endpoint (`/mcp`) | Streamable HTTP MCP server, bearer-authenticated via API key, tools listed above |
-| Web UI (`/app/...`) | Next.js pages, session-cookie authenticated |
-| GitHub webhook (`/api/webhooks/github`) | **New (011-vcs-integration).** Thin route handler — verifies nothing itself, forwards raw body/headers straight into VCS Integration's `handleGithubWebhook()`. Owned here per `repo-structure.md`'s rule that all `src/app/api/**` route files belong to Distribution, even when the domain logic behind them belongs to another BC. |
+| REST API (`/api/...`) | CRUD and runtime routes used by the web UI, direct REST clients, and Skill Sync CLI |
+| `POST /api/skills/{name}/expand` | Authenticated genuine skill expansion. Records one `PromptUsage` row for each visible template-skill invocation, including success/failure status, latency, optional project/user context, and optional git context supplied by Skill Sync CLI. Preview/test code paths do not call this route and do not record usage. |
+| `POST /api/chain-runs/{runId}/advance` | Authenticated skill-chain step report. Records one `PromptUsage` row for each accepted completed/failed terminal step report. Invalid, stale, abandoned, or unreported steps do not fabricate usage. |
+| `GET /api/metrics` | Authenticated organization-scoped aggregate usage: totals, status counts, skill/version breakdowns, latency summaries, and daily counts for a bounded window. |
+| MCP endpoint (`/mcp`) | Streamable HTTP MCP server, bearer-authenticated via API key. MCP usage parity is deferred; if `sh-run` is revised later, it must use the same telemetry semantics as REST expansion. |
+| Web UI (`src/app/(app)/**`) | Next.js pages, session-cookie authenticated. `/metrics` presents the same organization-scoped aggregate data as `/api/metrics`. |
+| GitHub webhook (`/api/webhooks/github`) | Thin route handler — verifies nothing itself, forwards raw body/headers straight into VCS Integration's `handleGithubWebhook()`. Owned here per `repo-structure.md`'s rule that all `src/app/api/**` route files belong to Distribution, even when the domain logic behind them belongs to another BC. |
 
-In addition to the external surface above, Distribution exposes internal, cross-BC read/write functions (not part of the REST/MCP/UI boundary):
+In addition to the external surface above, Distribution exposes internal, cross-BC read/write functions:
 
-| Endpoint / Method | Description | Consumers |
+| Method | Description | Consumers |
 |---|---|---|
-| `queryUsageByRepoAndCommits(orgId, gitRemoteUrl, commitShas[])` | **New (011-vcs-integration).** Returns `PromptUsage` rows whose `git_remote_url` matches and `git_commit_sha` is in the given list — the read side of the CLI-side git tagging in [PDR-013](../../../docs/pdr/013-cli-side-git-context-tagging.md). | VCS Integration |
-| `recordPromptUsage(db, { organizationId, promptId, promptVersionId, projectId?, userId? })` | **New (024-project-usage-metrics-dashboard, pulled forward from `008-distribution/004-usage-telemetry.md`).** Inserts one `PromptUsage` row. No audit write — usage telemetry is explicitly distinct from the audit trail. Not called by any production code path yet: no genuine (non-test) caller of `expand()` exists anywhere in the codebase, and the prompt detail page's live-preview/test flow must never call this (spec FR-002a) — tests call it directly to seed fixtures. | Prompt Registry (tests only, for now) |
-| `getPromptUsageSummaryForProject(db, orgId, projectId, { activeWindowDays, trendDays })` | **New (024-project-usage-metrics-dashboard).** Returns `{ totalInvocations, windowRows, bySkill, byMember, dailyCountsBySkill }` for one project, every internal query scoped by both `orgId` and `projectId`. `prompt-registry`'s `getProjectMetrics` composes this with its own project/member/skill-requirement data. | Prompt Registry |
+| `recordPromptUsage(db, params)` | Inserts one telemetry row. Required params are `organizationId`, `promptId`, and `promptVersionId`; optional params include `promptVersion`, `projectId`, `userId`, `statusCode`, `latencyMs`, `gitRemoteUrl`, `gitBranch`, and `gitCommitSha`. No audit write — usage telemetry is explicitly distinct from compliance audit logging. | Distribution REST/MCP route handlers; tests and fixture setup |
+| `getPromptUsageSummaryForProject(db, orgId, projectId, { activeWindowDays, trendDays })` | Returns project-scoped `{ totalInvocations, windowRows, bySkill, byMember, dailyCountsBySkill }`, every internal query scoped by both `orgId` and `projectId`. | Prompt Registry project metrics composition |
+| `getPromptUsageSummaryForOrganization(db, orgId, { window })` | Returns organization-scoped totals, success/failure counts, latency summaries, status counts, skill/version breakdowns, and daily counts for the requested bounded window. | `/api/metrics`, `/metrics` |
+| `queryUsageByRepoAndCommits(orgId, gitRemoteUrl, commitShas[])` | Planned VCS Integration read side for rows whose `git_remote_url` matches and `git_commit_sha` is in the supplied list. | VCS Integration |
 
 ## Events Published
 
-None domain-relevant — this context terminates event chains rather than starting them (it triggers writes in other contexts, which publish their own events).
+None domain-relevant — this context terminates external requests rather than starting domain event chains.
 
 ## Events Consumed
 
-| Event | From BC | What this BC does with it |
-|---|---|---|
-| `PromptExpanded` | Prompt Registry | **Correction (024-project-usage-metrics-dashboard):** no event-bus infrastructure exists anywhere in this codebase — this row previously implied a real pub/sub subscription that was never built. In practice, a `PromptExpanded`-worthy invocation is recorded via a direct call to `recordPromptUsage` from whatever call site represents genuine usage, not a subscribed event handler. No such call site exists yet (see above) — this row documents intended future wiring once `008-distribution` provides a genuine invocation transport (CLI/REST/MCP), not current behavior. |
-| `SkillChainRunCompleted` / `SkillChainRunFailed` (replaces `workflow-orchestration`'s planned `WorkflowRunCompleted`/`WorkflowRunFailed` — [PDR-017](../../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md)) | Prompt Registry | Writes `PromptUsage` rows per step — same caveat: no event bus exists, this is intended future direct-call wiring, not current behavior |
+No event bus infrastructure exists in this codebase. Telemetry is written directly by whichever Distribution route represents genuine usage. Prompt Registry remains the supplier of expansion/chain data; it does not import Distribution telemetry internals.
 
 ## Data Contracts
 
-MCP tool request/response shapes match the current tool set 1:1 (`sh-list`, `sh-search`, `sh-context`, `sh-run`, `sh-workflow-list`, `sh-workflow-run`) — this is a deliberate compatibility guarantee, since existing IDE configs point at these tool names.
+`PromptUsage` (`distribution.prompt_usage`) columns after `001-usage-telemetry`:
 
-`PromptUsage` (the `distribution.prompt_usage` table) was first created by `024-project-usage-metrics-dashboard` with columns `id`, `organizationId`, `promptId`, `promptVersionId`, nullable `projectId`, nullable `userId`, `createdAt` — deliberately diverging from `008-distribution/004-usage-telemetry.md`'s originally-planned `promptName`/`promptVersion` strings and `statusCode`/`latencyMs` columns (see that item's own Technical Notes for what's still open there). It gains three new nullable columns as of 011-vcs-integration: `gitRemoteUrl`, `gitBranch`, `gitCommitSha`, populated by the `skillcanon` CLI when it invokes the expand endpoint from inside a real git repo (null otherwise — e.g. web UI invocations). See [PDR-013](../../../docs/pdr/013-cli-side-git-context-tagging.md).
+- `id`
+- `organization_id`
+- `prompt_id`
+- `prompt_version_id`
+- `prompt_version`
+- nullable `project_id`
+- nullable `user_id`
+- `status_code`
+- nullable `latency_ms`
+- nullable `git_remote_url`
+- nullable `git_branch`
+- nullable `git_commit_sha`
+- `created_at`
+
+Rows store identifiers, status, latency, and optional runtime context only. They never store rendered prompt content, raw input, raw error details, API keys, JWTs, or secrets.
 
 ## Stability Guarantees
 
-MCP tool names and argument shapes are a public contract to every connected IDE; changing them is a breaking change to every user's existing MCP config, not just an internal refactor. `PromptUsage` rows carrying a non-null `gitCommitSha` are retained at least 90 days regardless of any general telemetry rollup policy — see [PDR-015](../../../docs/pdr/015-prompt-usage-retention-floor.md); this is no longer freely truncatable data.
+MCP tool names and argument shapes are a public contract to every connected IDE; changing them is a breaking change to every user's existing MCP config, not just an internal refactor. `PromptUsage` rows carrying a non-null `git_commit_sha` are retained at least 90 days regardless of any general telemetry rollup policy — see [PDR-015](../../../docs/pdr/015-prompt-usage-retention-floor.md); this is no longer freely truncatable data.
 
 ## Breaking Change Policy
 

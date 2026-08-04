@@ -176,6 +176,13 @@
       "when": 1785638663256,
       "tag": "0024_drop_workflow_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1785801600000,
+      "tag": "0025_distribution_usage_telemetry",
+      "breakpoints": true
     }
   ]
 }
