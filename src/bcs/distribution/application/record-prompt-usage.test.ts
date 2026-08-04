@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
-import { listGroupedByMemberForProject } from "../infrastructure/prompt-usage-repo";
+import { listForOrganizationWindow, listGroupedByMemberForProject } from "../infrastructure/prompt-usage-repo";
 import { recordPromptUsage } from "./record-prompt-usage";
 
 describe("recordPromptUsage", () => {
@@ -24,8 +24,33 @@ describe("recordPromptUsage", () => {
     const promptVersionId = randomUUID();
 
     await withTenantContext(testDb.appDb, organizationId, (tx) =>
-      recordPromptUsage(tx, { organizationId, promptId, promptVersionId, projectId, userId }),
+      recordPromptUsage(tx, {
+        organizationId,
+        promptId,
+        promptVersionId,
+        promptVersion: "1.2.3",
+        projectId,
+        userId,
+        statusCode: 201,
+        latencyMs: 42,
+        gitRemoteUrl: "git@example.com:org/repo.git",
+        gitBranch: "main",
+        gitCommitSha: "abc123",
+      }),
     );
+
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      listForOrganizationWindow(tx, organizationId, new Date(0), new Date(Date.now() + 1000)),
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({
+        promptId,
+        promptVersionId,
+        promptVersion: "1.2.3",
+        statusCode: 201,
+        latencyMs: 42,
+      }),
+    ]);
 
     const byMember = await withTenantContext(testDb.appDb, organizationId, (tx) =>
       listGroupedByMemberForProject(tx, organizationId, projectId),
@@ -33,16 +58,27 @@ describe("recordPromptUsage", () => {
     expect(byMember).toEqual([{ userId, runCount: 1, lastActiveAt: expect.any(Date) }]);
   });
 
-  it("inserts successfully with nullable projectId/userId (ad hoc, ungoverned usage)", async () => {
+  it("inserts successfully with nullable projectId/userId and legacy-compatible telemetry defaults", async () => {
     const organizationId = randomUUID();
     const promptId = randomUUID();
     const promptVersionId = randomUUID();
 
-    await expect(
-      withTenantContext(testDb.appDb, organizationId, (tx) =>
-        recordPromptUsage(tx, { organizationId, promptId, promptVersionId, projectId: null, userId: null }),
-      ),
-    ).resolves.toBeUndefined();
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      recordPromptUsage(tx, { organizationId, promptId, promptVersionId, projectId: null, userId: null }),
+    );
+
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      listForOrganizationWindow(tx, organizationId, new Date(0), new Date(Date.now() + 1000)),
+    );
+    expect(rows).toEqual([
+      expect.objectContaining({
+        promptId,
+        promptVersionId,
+        promptVersion: "unknown",
+        statusCode: 200,
+        latencyMs: null,
+      }),
+    ]);
   });
 
   it("scopes a row to its own organizationId/projectId", async () => {
