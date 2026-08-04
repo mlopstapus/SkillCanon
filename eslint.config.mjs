@@ -5,6 +5,7 @@ const eslintConfig = [
   {
     ignores: [
       "legacy/**",
+      "cli/**",
       ".next/**",
       "node_modules/**",
       "dist/**",
