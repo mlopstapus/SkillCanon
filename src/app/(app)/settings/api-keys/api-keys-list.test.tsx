@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import type { ApiKeySummary, AppSessionUser } from "@/bcs/identity-access";
 import { ApiKeysListView } from "./api-keys-list";
 
@@ -59,11 +60,14 @@ describe("ApiKeysListView", () => {
     expect(markup).not.toContain(">Revoke<");
   });
 
-  it("shows the empty state when there are no keys", () => {
+  it("shows the empty state when there are no keys", async () => {
     const markup = renderToStaticMarkup(
       <ApiKeysListView currentUser={adminSession} keys={[]} refresh={noop} />,
     );
 
     expect(markup).toContain("No API keys yet");
+    expect(markup).toContain('role="status"');
+    expect(markup).toContain("Issue key");
+    await expectNoCriticalOrSeriousAxeViolations(markup);
   });
 });

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AuditActorOption, ResolvedAuditRow } from "@/bcs/audit-compliance";
-import { Badge, type BadgeProps } from "@/shared/ui";
+import { AppState, Badge, type BadgeProps } from "@/shared/ui";
 import { FilterBar } from "./filter-bar";
 import { hasActiveFilters, type AuditLogFilterState } from "./filter-params";
 import { EventDetailDrawer } from "./event-detail-drawer";
@@ -128,25 +128,26 @@ export function AuditLogView({
 
       <div className="flex-1 overflow-y-auto">
         {isEmpty || isNoMatch ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-20 text-center">
-            <p className="font-display text-[15px] font-semibold">
-              {isEmpty ? "No audit events yet" : "No events match these filters"}
-            </p>
-            <p className="max-w-[400px] text-[12.5px] leading-relaxed text-dim">
-              {isEmpty
+          <AppState
+            variant="empty"
+            title={isEmpty ? "No audit events yet" : "No events match these filters"}
+            description={
+              isEmpty
                 ? "As soon as anyone changes a policy, project, key, or team, the change is captured here in the same transaction."
-                : "Try a broader resource type, a different actor, or clear the search to see the full trail."}
-            </p>
-            {isNoMatch && filtersActive ? (
-              <button
-                type="button"
-                onClick={onClearFilters}
-                className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-text"
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
+                : "Try a broader resource type, a different actor, or clear the search to see the full trail."
+            }
+            action={
+              isNoMatch && filtersActive ? (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-text"
+                >
+                  Clear filters
+                </button>
+              ) : null
+            }
+          />
         ) : (
           <div>
             {rows.map((row) => (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppState } from "@/shared/ui";
 
 export interface ProjectListRow {
   id: string;
@@ -67,7 +68,21 @@ export function ProjectsListView({ rows, onNewProject }: ProjectsListViewProps) 
             </Link>
           ))}
           {rows.length === 0 ? (
-            <div className="py-16 text-center text-[12.5px] text-dim">No projects yet.</div>
+            <AppState
+              variant="empty"
+              title="No projects yet"
+              description="Create a project to group prompts, repos, collaborators, and usage history under one team-owned workspace."
+              action={
+                <button
+                  type="button"
+                  onClick={onNewProject}
+                  className="rounded-control border border-border-2 bg-surface px-4 py-2 text-[12.5px] font-semibold"
+                >
+                  New project
+                </button>
+              }
+              className="max-w-[520px] py-16"
+            />
           ) : null}
         </div>
       </div>

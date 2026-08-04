@@ -11,3 +11,4 @@ export {
   TableCell,
   TableCaption,
 } from "./table";
+export { AppState, type AppStateProps, type AppStateVariant } from "./app-state";
