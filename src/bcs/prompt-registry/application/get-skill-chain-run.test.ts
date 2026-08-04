@@ -3,7 +3,12 @@ import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { advanceSkillChainRun } from "./advance-skill-chain-run";
 import { getSkillChainRun } from "./get-skill-chain-run";
-import { makeChainFixtureOrg, publishThreeStepChain, type ChainFixtureOrg } from "./skill-chain-test-helpers";
+import { publishVersion } from "./publish-version";
+import {
+  makeChainFixtureOrg,
+  publishThreeStepChain,
+  type ChainFixtureOrg,
+} from "./skill-chain-test-helpers";
 import { startSkillChainRun } from "./start-skill-chain-run";
 
 describe("getSkillChainRun", () => {
@@ -17,9 +22,9 @@ describe("getSkillChainRun", () => {
     await testDb.teardown();
   });
 
-  async function start(fixture: ChainFixtureOrg, promptName: string) {
+  async function start(fixture: ChainFixtureOrg, promptName: string, version?: string) {
     return withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      startSkillChainRun(tx, fixture.actor, promptName),
+      startSkillChainRun(tx, fixture.actor, promptName, version),
     );
   }
 
@@ -53,6 +58,7 @@ describe("getSkillChainRun", () => {
     if (!result) throw new Error("expected a run");
 
     expect(result.run.status).toBe("completed");
+    expect(result.run.version).toBe("1.0.0");
     expect(result.steps).toHaveLength(3);
     expect(result.steps.map((s) => s.stepIndex)).toEqual([0, 1, 2]);
     expect(result.steps[0]?.userMessage).toBe(started.step.userMessage);
@@ -87,5 +93,28 @@ describe("getSkillChainRun", () => {
 
     const nonexistentResult = await getRun(fixtureA, "00000000-0000-0000-0000-000000000000");
     expect(nonexistentResult).toBeNull();
+  });
+
+  it("reports the specific chain version a run executed, across two published versions", async () => {
+    const fixture = await makeChainFixtureOrg(testDb);
+    const chain = await publishThreeStepChain(testDb, fixture, "get-run-multi-version-chain");
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        promptName: chain.promptName,
+        version: "2.0.0",
+        steps: chain.steps,
+      }),
+    );
+
+    const runV1 = await start(fixture, chain.promptName, "1.0.0");
+    const runV2 = await start(fixture, chain.promptName, "2.0.0");
+    if (!("runId" in runV1) || !("runId" in runV2)) throw new Error("expected runIds");
+
+    const resultV1 = await getRun(fixture, runV1.runId);
+    const resultV2 = await getRun(fixture, runV2.runId);
+
+    expect(resultV1?.run.version).toBe("1.0.0");
+    expect(resultV2?.run.version).toBe("2.0.0");
   });
 });

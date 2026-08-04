@@ -3,6 +3,7 @@ import { getPrompt, listSkillChainRuns, startSkillChainRun } from "@/bcs/prompt-
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
 import { notFoundResponse } from "@/shared/api/errors";
+import { parsePageParams } from "@/shared/api/pagination";
 import type { ResolvedCaller } from "@/shared/api/auth";
 
 interface Params {
@@ -34,12 +35,13 @@ export async function handleGet(
   request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
+  const pageParams = parsePageParams(new URL(request.url));
   const result = await withTenantContext(db, caller.organizationId, async (tx) => {
     const prompt = await getPrompt(tx, { organizationId: caller.organizationId, userId: caller.actingUser.id }, params.name);
     if (!prompt) {
       return null;
     }
-    return listSkillChainRuns(tx, caller.organizationId, prompt.id);
+    return listSkillChainRuns(tx, caller.organizationId, prompt.id, pageParams);
   });
 
   if (result === null) {

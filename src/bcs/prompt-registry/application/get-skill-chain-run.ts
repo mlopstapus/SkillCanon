@@ -28,6 +28,7 @@ export async function getSkillChainRun(
     run: {
       id: runRow.id,
       promptId: runRow.promptId,
+      version: runRow.version,
       userId: runRow.userId,
       status: runRow.status,
       currentStepIndex: runRow.currentStepIndex,

@@ -140,6 +140,8 @@ export { listSkillChainRuns } from "./application/list-skill-chain-runs";
 export { getSkillChainRun } from "./application/get-skill-chain-run";
 export type {
   AdvanceRunResult,
+  ChainRunPage,
+  ChainRunPaginationOptions,
   ChainRunStepRecord,
   ChainRunSummary,
   ChainStep,
@@ -151,7 +153,9 @@ export type {
 } from "./domain/skill-chain";
 export {
   ChainStepResolutionFailedError,
+  DEFAULT_CHAIN_RUN_PAGE_SIZE,
   InvalidChainDependencyError,
+  MAX_CHAIN_RUN_PAGE_SIZE,
   MAX_REPORT_OUTPUT_BYTES,
   NotAChainVersionError,
   ReportOutputTooLargeError,

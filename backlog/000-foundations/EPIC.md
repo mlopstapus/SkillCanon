@@ -24,6 +24,7 @@ None of epic 001 (TypeScript Refactor Foundation) should start until items 001, 
 - [x] [010 - Design System](archive/010-design-system.md) → `docs/context/design-system.md`
 - [ ] [011 - Fix Missing Migration Snapshot Files](011-fix-missing-migration-snapshot-files.md) — repo-hygiene bug discovered 2026-07-27, not a convention decision like the others; tracked here since it's database-tooling and this epic already owns `002`'s migration-naming convention
 - [ ] [012 - Fix Legacy Backend Import Path Mismatch](012-fix-legacy-backend-import-path-mismatch.md) — repo-hygiene bug discovered 2026-07-29 (`spechub_server` directory vs. `skillcanon_server` internal imports), same "not a convention decision, tracked here anyway" rationale as 011
+- [ ] [013 - Fix Non-Idempotent Workflow Schema Drop Migration](013-fix-non-idempotent-workflow-schema-drop-migration.md) — migration-hygiene bug discovered 2026-08-02 while live-verifying `027-skill-chain-views-ui` (`0024_drop_workflow_schema.sql`'s `DROP TABLE` has no `IF EXISTS`, breaking `pnpm db:migrate` on any database that never had `workflow.workflows` in the first place), same "not a convention decision, tracked here anyway" rationale as 011/012
 
 *Completed items are moved to `archive/` and checked off here.*
 

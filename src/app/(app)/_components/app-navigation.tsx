@@ -16,8 +16,6 @@ const iconPaths: Record<NavKey, string> = {
   governance: "M12 3l8 4v5c0 5-3.4 8-8 9-4.6-1-8-4-8-9V7l8-4zM9 12l2 2 4-4",
   teams:
     "M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-2a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v2M16 4a4 4 0 0 1 0 8M17 14a5 5 0 0 1 5 5v2",
-  workflows:
-    "M5 4h5v5H5zM14 15h5v5h-5zM10 6.5h4a3 3 0 0 1 3 3V15M7.5 9v6a3 3 0 0 0 3 3H14",
   projects: "M3 7h7l2 2h9v11H3V7zM3 7V4h7l2 3",
   metrics: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   apiKeys: "M14 8a5 5 0 1 1-2 4l2 2h3v3h3v3h2v-4l-8-8zM7 9h.01",
