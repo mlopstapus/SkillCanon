@@ -20,7 +20,7 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 - [x] [006 - Prompt Registry Views UI](archive/006-prompt-registry-views-ui.md)
 - [x] [007 - Project Skill Assignment](archive/007-project-skill-assignment.md)
 - [x] [008 - Project Usage Metrics Dashboard](archive/008-project-usage-metrics-dashboard.md)
-- [ ] [009 - Skill Chains](009-skill-chains.md)
+- [x] [009 - Skill Chains](archive/009-skill-chains.md)
 - [ ] [010 - Skill Chain Views UI](010-skill-chain-views-ui.md)
 
 *Completed features are moved to `archive/` and checked off here.*

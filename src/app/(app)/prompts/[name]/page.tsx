@@ -3,8 +3,10 @@ import { notFound, redirect } from "next/navigation";
 import {
   expand,
   getPrompt,
+  listPrompts,
   listProjectSkillAssignmentsForOrganization,
   listProjectsByOrganization,
+  listSkillChainRuns,
   listSubscriptionsForSkill,
   listVersions,
 } from "@/bcs/prompt-registry";
@@ -30,13 +32,14 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       return null;
     }
 
-    const [versions, users, teams, projects, assignments, subscriptions] = await Promise.all([
+    const [versions, users, teams, projects, assignments, subscriptions, accessibleSkills] = await Promise.all([
       listVersions(tx, actor, name),
       listUsers(tx, user),
       listTeams(tx, user.orgId),
       listProjectsByOrganization(tx, user.orgId),
       listProjectSkillAssignmentsForOrganization(tx, user.orgId),
       listSubscriptionsForSkill(tx, user.orgId, prompt.id),
+      listPrompts(tx, actor),
     ]);
 
     const userNameById = new Map(users.map((u) => [u.id, u.displayName]));
@@ -47,6 +50,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
 
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
+    const kind = activeVersion?.kind ?? "template";
 
     const inputSchemaRows = Array.isArray(activeVersion?.inputSchema)
       ? (activeVersion.inputSchema as Array<{ name: string; type: string; required?: boolean }>).map((f) => ({
@@ -61,21 +65,53 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
     let preview: PromptDetailData["preview"] = null;
     let previewError: string | null = null;
     let resolvedAppliedPolicies: PromptDetailData["appliedPolicies"] = [];
-    try {
-      const expansion = await expand(tx, {
-        organizationId: user.orgId,
-        promptName: name,
-        input: sampleInput,
-        userId: user.id,
-      });
-      preview = { systemMessage: expansion.systemMessage, userMessage: expansion.userMessage };
-      const effectivePolicies = await resolveAllPolicies(tx, actor, user.id);
-      resolvedAppliedPolicies = effectivePolicies
-        .filter((p) => expansion.appliedPolicies.includes(p.name))
-        .map((p) => ({ label: p.name, type: p.enforcementType }));
-    } catch (err) {
-      previewError = err instanceof Error ? err.message : "This prompt's preview could not be rendered.";
+    // A chain version has no template to render — nothing to preview or
+    // resolve policies against (FR-001).
+    if (kind === "template") {
+      try {
+        const expansion = await expand(tx, {
+          organizationId: user.orgId,
+          promptName: name,
+          input: sampleInput,
+          userId: user.id,
+        });
+        preview = { systemMessage: expansion.systemMessage, userMessage: expansion.userMessage };
+        const effectivePolicies = await resolveAllPolicies(tx, actor, user.id);
+        resolvedAppliedPolicies = effectivePolicies
+          .filter((p) => expansion.appliedPolicies.includes(p.name))
+          .map((p) => ({ label: p.name, type: p.enforcementType }));
+      } catch (err) {
+        previewError = err instanceof Error ? err.message : "This prompt's preview could not be rendered.";
+      }
     }
+
+    const steps: PromptDetailData["steps"] =
+      kind === "chain"
+        ? (activeVersion?.steps ?? []).map((step) => ({
+            id: step.id,
+            promptName: step.promptName,
+            promptVersionLabel: step.promptVersion ?? null,
+            dependsOn: step.dependsOn,
+          }))
+        : null;
+
+    const chainRuns: PromptDetailData["chainRuns"] =
+      kind === "chain"
+        ? await (async () => {
+            const page = await listSkillChainRuns(tx, user.orgId, prompt.id, { page: 1 });
+            return {
+              items: page.items.map((run) => ({
+                id: run.id,
+                version: run.version,
+                status: run.status,
+                startedAt: run.startedAt.toISOString().slice(0, 16).replace("T", " "),
+              })),
+              page: page.page,
+              pageSize: page.pageSize,
+              total: page.total,
+            };
+          })()
+        : null;
 
     const projectAssociations = assignments.filter((a) => a.skillId === prompt.id);
     const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
@@ -110,14 +146,20 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
         createdAt: v.createdAt.toISOString().slice(0, 10),
         tags: (v.tags as string[] | undefined) ?? [],
         isActive: v.id === prompt.activeVersionId,
+        kind: v.kind,
         systemTemplate: v.systemTemplate,
+        stepCount: v.steps?.length ?? 0,
       })),
+      kind,
       systemTemplate: activeVersion?.systemTemplate ?? null,
       userTemplate: activeVersion?.userTemplate ?? null,
       inputSchemaRows,
       preview,
       previewError,
       appliedPolicies: resolvedAppliedPolicies,
+      steps,
+      chainRuns,
+      accessibleSkillNames: accessibleSkills.map((s) => s.name),
       shareState: {
         users: users
           .filter((u) => !(prompt.ownerType === "user" && u.id === prompt.ownerId))

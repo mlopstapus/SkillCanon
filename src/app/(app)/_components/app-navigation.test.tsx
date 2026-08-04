@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { NavigationList } from "./app-navigation";
 
 describe("NavigationList", () => {
-  it("renders both labeled sections and all nine real hrefs", () => {
+  it("renders both labeled sections and all eight real hrefs", () => {
     const markup = renderToStaticMarkup(
       <NavigationList pathname="/dashboard" teamId="team-123" />,
     );
@@ -15,7 +15,6 @@ describe("NavigationList", () => {
       "/prompts",
       "/teams/team-123/policies",
       "/teams",
-      "/workflows",
       "/projects",
       "/metrics",
       "/settings/api-keys",
@@ -23,6 +22,14 @@ describe("NavigationList", () => {
     ]) {
       expect(markup).toContain(`href="${href}"`);
     }
+  });
+
+  it("never renders a separate Workflows nav entry — chain and template skills share the Prompts nav item (027-skill-chain-views-ui, FR-016)", () => {
+    const markup = renderToStaticMarkup(
+      <NavigationList pathname="/dashboard" teamId="team-123" />,
+    );
+    expect(markup).not.toContain("Workflows");
+    expect(markup).not.toContain("/workflows");
   });
 
   it("marks exactly one ownership-aware item as the current page", () => {

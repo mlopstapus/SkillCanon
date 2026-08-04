@@ -1,7 +1,7 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { RunStatus } from "../domain/skill-chain";
-import { skillChainRuns } from "./schema";
+import { promptVersions, skillChainRuns } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -39,12 +39,14 @@ export async function findByIdForUpdate(tx: Tx, organizationId: string, runId: s
   return row ?? null;
 }
 
+/** Joins to `promptVersions` for the run's `version` label (027-skill-chain-views-ui). */
 export async function findByIdForOrg(tx: Tx, organizationId: string, runId: string) {
   const [row] = await tx
-    .select()
+    .select({ run: skillChainRuns, version: promptVersions.version })
     .from(skillChainRuns)
+    .innerJoin(promptVersions, eq(promptVersions.id, skillChainRuns.promptVersionId))
     .where(and(eq(skillChainRuns.id, runId), eq(skillChainRuns.organizationId, organizationId)));
-  return row ?? null;
+  return row ? { ...row.run, version: row.version } : null;
 }
 
 export interface UpdateRunStatusParams {
@@ -69,10 +71,29 @@ export async function updateStatus(
   return row;
 }
 
-export async function listByPromptForOrg(tx: Tx, organizationId: string, promptId: string) {
-  return tx
-    .select()
+/** Joins to `promptVersions` for each run's `version` label; paginated (027-skill-chain-views-ui). */
+export async function listByPromptForOrg(
+  tx: Tx,
+  organizationId: string,
+  promptId: string,
+  limit: number,
+  offset: number,
+) {
+  const rows = await tx
+    .select({ run: skillChainRuns, version: promptVersions.version })
     .from(skillChainRuns)
+    .innerJoin(promptVersions, eq(promptVersions.id, skillChainRuns.promptVersionId))
     .where(and(eq(skillChainRuns.organizationId, organizationId), eq(skillChainRuns.promptId, promptId)))
-    .orderBy(desc(skillChainRuns.startedAt));
+    .orderBy(desc(skillChainRuns.startedAt))
+    .limit(limit)
+    .offset(offset);
+  return rows.map((row) => ({ ...row.run, version: row.version }));
+}
+
+export async function countByPromptForOrg(tx: Tx, organizationId: string, promptId: string) {
+  const [row] = await tx
+    .select({ count: count() })
+    .from(skillChainRuns)
+    .where(and(eq(skillChainRuns.organizationId, organizationId), eq(skillChainRuns.promptId, promptId)));
+  return row?.count ?? 0;
 }
