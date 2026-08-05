@@ -1,7 +1,7 @@
 # Epic 005: Governance
 
 **Priority:** 5
-**Status:** not-started
+**Status:** in-progress (feature 005 done; features 001–004 have real, previously-unreflected implementation code per session notes elsewhere — not re-audited here, out of scope for this change)
 **Goal:** Port Policy, Objective, and the hierarchical resolution engine — the first of SkillCanon's two core-domain contexts — with characterization tests proving the new TS implementation matches the current Python behavior exactly before anything downstream depends on it.
 
 ## Overview
