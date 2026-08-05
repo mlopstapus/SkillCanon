@@ -130,4 +130,14 @@ describe("GovernanceView", () => {
     expect(html).toContain('aria-label="Edit local-rule"');
     expect(html).not.toContain('aria-label="Edit inherited-rule"');
   });
+
+  it("renders a mobile scope toggle, closed by default, with the scope tree off-canvas and hidden", () => {
+    const html = renderToStaticMarkup(<GovernanceView {...baseProps()} />);
+
+    expect(html).toContain('aria-label="Open scope list"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-controls="governance-scope-tree"');
+    const scopeTreeWrapper = html.match(/<div id="governance-scope-tree"[^>]*>/)?.[0] ?? "";
+    expect(scopeTreeWrapper).toMatch(/class="[^"]*\bhidden\b/);
+  });
 });

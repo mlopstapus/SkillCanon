@@ -11,17 +11,17 @@ dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "bac
 
 ## Requirements
 
-- [ ] Empty, loading, and error states are visually consistent across every page built across all owning epics (one pattern per state type, not a different one per page)
-- [ ] Light/dark mode (per whatever `004-app-shell-and-landing/001-design-tokens-and-theming.md` decided) verified across every page, not just the pages built first
-- [ ] Keyboard navigation and focus states verified across every page
-- [ ] Accessibility audit (automated — e.g. axe — plus manual screen-reader spot-check) across every page; issues fixed, not just logged
-- [ ] Responsive layout verified end-to-end across the full page set at mobile/tablet/desktop breakpoints
+- [X] Empty, loading, and error states are visually consistent across every page built across all owning epics (one pattern per state type, not a different one per page)
+- [X] Light/dark mode (per whatever `004-app-shell-and-landing/001-design-tokens-and-theming.md` decided) verified across every page, not just the pages built first — the authenticated `(app)` route group is dark-only by design (per `CLAUDE.md`'s established convention, no light-token context applies there), confirmed no unthemed surfaces on any touched page
+- [ ] Keyboard navigation and focus states verified across every page — spot-checked (governance's mobile nav, tab order/focus-ring visibility) and indirectly covered (no interactive `<div onClick>` elements found anywhere in the app — see 2026-08-05 audit note below), but not an exhaustive manual tab-through of every single route
+- [ ] Accessibility audit (automated — e.g. axe — plus manual screen-reader spot-check) across every page; issues fixed, not just logged — automated axe coverage is real and passing repo-wide; manual screen-reader (VoiceOver/NVDA) spot-check has not been performed
+- [X] Responsive layout verified end-to-end across the full page set at mobile/tablet/desktop breakpoints — the site-wide mobile-nav blocker is resolved (`backlog/004-app-shell-and-landing/archive/005-mobile-responsive-nav.md`); live-verified at 390px on `/prompts`, `/dashboard`, both governance pages, and `/login` (the `(auth)` route group was already responsive, uses its own `lg:` breakpoint)
 
 ## Acceptance Criteria
 
-- [ ] Automated accessibility scan reports no critical/serious violations on any page
-- [ ] A single documented pattern each for empty/loading/error states, referenced from `context/design-system.md`
-- [ ] Manual smoke test across the full app: register → accept invite → create a team → create a project → create a policy → create a prompt → expand it → create a workflow → run it → view the audit log — every step visually consistent with no regressions from any individual page feature
+- [X] Automated accessibility scan reports no critical/serious violations on any page
+- [X] A single documented pattern each for empty/loading/error states, referenced from `context/design-system.md`
+- [ ] Manual smoke test across the full app: register → accept invite → create a team → create a project → create a policy → create a prompt → expand it → create a workflow → run it → view the audit log — every step visually consistent with no regressions from any individual page feature — the register→team→project→policy→prompt→expand portion is confirmed working (see 2026-08-05 update below); invite, skill-chain workflow create/run, and audit-log viewing portions are unrun
 
 ## Open Questions
 
@@ -35,11 +35,11 @@ dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "bac
 
 **Update (2026-08-05, route-inventory audit extended):** every remaining untouched page from the earlier status check now has real coverage — teams, metrics, project/prompt detail pages, and the full `(auth)` route group (register/login/invite/welcome), plus governance's two new pages. Real fixes: 3 hand-rolled page-level empty states converted to the shared `AppState` primitive (teams' org-wide empty state, metrics' empty state, and governance's own two empty states, which had drifted from the design-system convention within the same session that wrote both); `role="status"` added to 8 in-page-section empty notices that intentionally keep their own compact layout (documented as an explicit exception category in `docs/context/design-system.md` §7, resolving an ambiguity the original doc left open); the `(auth)` group's `TerminalState` component (invite/register terminal states) was missing `role`/`aria-live` entirely and had zero test coverage — both fixed; 15 of 16 drawer backdrop scrims across the app were missing `aria-hidden="true"` — fixed for consistency (all have a real, separate keyboard-reachable close button, so this was never a keyboard-trap bug). Full recorded evidence in `specs/001-cross-page-polish/quickstart.md`'s Manual Evidence Checklist. Full suite: 96 files / 426 tests passing, zero critical/serious axe violations anywhere touched.
 
-**Two requirements are still genuinely failing, not just unverified — do not check off "Responsive layout" or consider this item's Requirements complete:**
-1. **Mobile responsive layout fails site-wide.** At a true mobile viewport (390px), the shared app shell's left nav never collapses on any page — confirmed on both `/prompts` and governance's pages, the latter unusable (its own second sidebar pushes all content fully off-screen). This is shell-level, pre-existing, and affects every route in the inventory simultaneously. Tracked at `backlog/004-app-shell-and-landing/005-mobile-responsive-nav.md`; this item cannot close until that ships.
-2. **`/dashboard` has no content to audit.** Just a static title since the shell was first built — not a state/accessibility issue, a missing-content issue. Tracked at `backlog/004-app-shell-and-landing/004-dashboard-overview-content.md`.
+**Update (2026-08-05, both blockers resolved):** the user asked to resolve the two blockers directly to close out this pass. Both are done and archived:
+1. **Mobile-responsive nav** (`backlog/004-app-shell-and-landing/archive/005-mobile-responsive-nav.md`) — the app shell's left nav now collapses below `md:` (768px) into a hamburger-triggered off-canvas drawer (reusing the app's existing drawer visual language); governance's second scope-tree sidebar got the identical treatment. Live-verified at 390px on `/prompts`, `/dashboard`, both governance pages, and confirmed `(auth)` pages were already fine.
+2. **`/dashboard` content** (`backlog/004-app-shell-and-landing/archive/004-dashboard-overview-content.md`) — built a real cross-BC workspace snapshot (team/member/project/prompt counts, last-30-days usage, recent prompts) with no source mockup, as an explicit design decision. Live-verified against real data, including at mobile width.
 
-Manual screen-reader spot-check (VoiceOver/NVDA) and the full register→invite→...→audit-log smoke path remain unrun.
+What's left on **this** item specifically (not the two now-closed blockers): manual screen-reader spot-check, an exhaustive per-route keyboard tab-through, and the full register→invite→...→workflow-run→audit-log smoke path (only the register→team→project→policy→prompt→expand portion has been run). This item stays `open` until those are done.
 
 ## Dependencies
 

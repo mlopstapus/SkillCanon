@@ -1,7 +1,7 @@
 # Epic 004: App Shell & Landing
 
 **Priority:** 4
-**Status:** in-progress (reopened 2026-08-05 — see Features; original three features complete, was picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
+**Status:** done (reopened and re-closed 2026-08-05 — features 004/005 filed and resolved same-day, see Features and Notes; was picked up ahead of `003-audit-compliance`'s remaining items — see Notes)
 **Goal:** Build and design, for real, the two structural surfaces every later epic's UI depends on — the authenticated app shell (nav/layout every bounded context composes its own pages into) and the public marketing landing page — early enough that every downstream epic, including `003-audit-compliance`'s own remaining UI work, composes its real, finished pages into an already-real shell instead of building a temporary one first.
 
 ## Overview
@@ -17,8 +17,8 @@
 - [x] [001 - Design Tokens & Theming](archive/001-design-tokens-and-theming.md)
 - [x] [002 - App Shell & Navigation](archive/002-app-shell-and-navigation.md)
 - [x] [003 - Marketing Landing Page](archive/003-marketing-landing-page.md)
-- [ ] [004 - Dashboard ("Overview") Content](004-dashboard-overview-content.md) — reopened 2026-08-05, discovered while auditing `010-ui-polish-and-accessibility/001`: `/dashboard` has never had real content, just a static title
-- [ ] [005 - Mobile-Responsive App Shell Nav](005-mobile-responsive-nav.md) — reopened 2026-08-05, discovered while auditing `010-ui-polish-and-accessibility/001`: the shared nav never collapses at mobile widths, blocking every page
+- [x] [004 - Dashboard ("Overview") Content](archive/004-dashboard-overview-content.md) — reopened and resolved 2026-08-05, discovered while auditing `010-ui-polish-and-accessibility/001`: `/dashboard` had never had real content, just a static title
+- [x] [005 - Mobile-Responsive App Shell Nav](archive/005-mobile-responsive-nav.md) — reopened and resolved 2026-08-05, discovered while auditing `010-ui-polish-and-accessibility/001`: the shared nav never collapsed at mobile widths, blocking every page
 
 *Completed features are moved to `archive/` and checked off here.*
 

@@ -1,7 +1,7 @@
 # Epic 010: UI Polish & Accessibility
 
 **Priority:** 11
-**Status:** in-progress (blocked)
+**Status:** in-progress (unblocked 2026-08-05 — remaining work is manual audit, not a build blocker; see Notes)
 **Goal:** A final consistency and accessibility pass across every page in the product, once every page already has its own real, finished design — the last thing that happens before go-live.
 
 ## Overview
@@ -37,8 +37,8 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
 - `backlog/006-prompt-registry/010-skill-chain-views-ui.md`
 - `backlog/011-vcs-integration/006-vcs-integration-dashboard-ui.md`
-- `backlog/004-app-shell-and-landing/004-dashboard-overview-content.md` (added 2026-08-05 — `/dashboard` has no content to audit yet)
-- `backlog/004-app-shell-and-landing/005-mobile-responsive-nav.md` (added 2026-08-05 — this epic's responsive-layout requirement fails site-wide until this ships)
+- `backlog/004-app-shell-and-landing/archive/004-dashboard-overview-content.md` (added and resolved 2026-08-05)
+- `backlog/004-app-shell-and-landing/archive/005-mobile-responsive-nav.md` (added and resolved 2026-08-05)
 
 ## Notes
 
@@ -52,4 +52,6 @@ If a future page redesign surfaces a real UX gap (missing empty state, confusing
 
 **Status check (2026-08-05):** partial progress landed (`specs/001-cross-page-polish/`, 5 of the in-scope pages). `backlog/005-governance/005-governance-views-ui.md` — this epic's former hard blocker on the smoke test's "create a policy" step — has since shipped and archived (`backlog/005-governance/archive/005-governance-views-ui.md`). This epic's sole feature is still not done, though: most of the route inventory (teams, dashboard, metrics, settings, auth pages, plus the two new governance pages) still hasn't had the actual polish/accessibility pass applied, and the full end-to-end smoke test still hasn't been run and recorded. See `001-cross-page-polish-and-accessibility.md`'s own status check for details.
 
-**Update (2026-08-05, route-inventory audit extended):** the remaining route inventory (teams, metrics, project/prompt detail, auth pages, governance's two pages) now has real empty-state/accessibility coverage — see `001-cross-page-polish-and-accessibility.md`'s latest status update for specifics. Two genuinely new, real gaps surfaced during that pass and are now this epic's actual remaining blockers: `/dashboard` has never had real content (`backlog/004-app-shell-and-landing/004-dashboard-overview-content.md`), and the shared app shell's nav never collapses at mobile widths, failing this epic's responsive-layout requirement on every single page at once (`backlog/004-app-shell-and-landing/005-mobile-responsive-nav.md`). This epic cannot close until both ship.
+**Update (2026-08-05, route-inventory audit extended):** the remaining route inventory (teams, metrics, project/prompt detail, auth pages, governance's two pages) now has real empty-state/accessibility coverage — see `001-cross-page-polish-and-accessibility.md`'s latest status update for specifics. Two genuinely new, real gaps surfaced during that pass: `/dashboard` had never had real content, and the shared app shell's nav never collapsed at mobile widths, failing this epic's responsive-layout requirement on every single page at once.
+
+**Update (2026-08-05, both blockers resolved):** both gaps above are now done and archived (`backlog/004-app-shell-and-landing/archive/004-dashboard-overview-content.md`, `backlog/004-app-shell-and-landing/archive/005-mobile-responsive-nav.md`). This epic's sole feature (`001-cross-page-polish-and-accessibility.md`) is still not done, though — manual screen-reader spot-check, an exhaustive per-route keyboard tab-through, and the full end-to-end smoke path (invite/workflow-run/audit-log portions) remain unrun. See that item's own latest status for specifics.

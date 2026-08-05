@@ -122,6 +122,22 @@ describe("ScopeTree", () => {
     expect(html).toContain("alice");
     expect(html).not.toContain("Platform");
   });
+
+  it("omits the close button when no onClose is supplied", () => {
+    const rows = buildScopeRows([root], [], () => 0);
+    const html = renderToStaticMarkup(
+      <ScopeTree rows={rows} selectedScope={selectedScope} filterText="" onFilterChange={() => {}} onSelect={() => {}} />,
+    );
+    expect(html).not.toContain('aria-label="Close scope list"');
+  });
+
+  it("renders a mobile-only close button when onClose is supplied (off-canvas usage)", () => {
+    const rows = buildScopeRows([root], [], () => 0);
+    const html = renderToStaticMarkup(
+      <ScopeTree rows={rows} selectedScope={selectedScope} filterText="" onFilterChange={() => {}} onSelect={() => {}} onClose={() => {}} />,
+    );
+    expect(html).toContain('aria-label="Close scope list"');
+  });
 });
 
 describe("scopeKey", () => {

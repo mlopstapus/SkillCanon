@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { EffectiveObjective, EffectiveObjectiveSet, PolicyEnforcementType } from "@/bcs/governance";
 import type { EffectivePolicy, EffectivePolicySet } from "@/bcs/governance";
 import { AppState, Badge } from "@/shared/ui";
@@ -132,12 +133,50 @@ export function GovernanceView(props: GovernanceViewProps) {
   } = props;
 
   const isPersonScope = scope.kind === "person";
+  const [scopeTreeOpen, setScopeTreeOpen] = useState(false);
+
+  function selectScope(nextScope: Scope) {
+    setScopeTreeOpen(false);
+    onSelectScope(nextScope);
+  }
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-[288px_minmax(0,1fr)]">
-      <ScopeTree rows={rows} selectedScope={scope} filterText={filterText} onFilterChange={onFilterChange} onSelect={onSelectScope} />
+    <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[288px_minmax(0,1fr)]">
+      {scopeTreeOpen ? (
+        <div
+          aria-hidden="true"
+          onClick={() => setScopeTreeOpen(false)}
+          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] md:hidden"
+        />
+      ) : null}
+
+      <div
+        id="governance-scope-tree"
+        className={`${scopeTreeOpen ? "flex" : "hidden"} fixed inset-y-0 left-0 z-[105] w-[288px] max-w-[85vw] flex-col md:static md:z-auto md:flex md:w-auto md:max-w-none`}
+      >
+        <ScopeTree
+          rows={rows}
+          selectedScope={scope}
+          filterText={filterText}
+          onFilterChange={onFilterChange}
+          onSelect={selectScope}
+          onClose={() => setScopeTreeOpen(false)}
+        />
+      </div>
 
       <main className="flex min-h-0 flex-col overflow-hidden">
+        <div className="flex items-center gap-2.5 border-b border-border px-4 py-2.5 md:hidden">
+          <button
+            type="button"
+            onClick={() => setScopeTreeOpen(true)}
+            aria-label="Open scope list"
+            aria-expanded={scopeTreeOpen}
+            aria-controls="governance-scope-tree"
+            className="flex items-center gap-1.5 rounded-control border border-border-2 bg-surface px-2.5 py-1.5 text-[12px] font-medium text-dim"
+          >
+            Scope: <span className="text-text">{scope.label}</span>
+          </button>
+        </div>
         <div className="border-b border-border px-6.5 pt-3.5">
           <div className="flex items-start justify-between gap-5">
             <div className="min-w-0">

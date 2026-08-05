@@ -9,6 +9,8 @@ export interface ScopeTreeProps {
   filterText: string;
   onFilterChange: (text: string) => void;
   onSelect: (scope: Scope) => void;
+  /** Renders a mobile-only close button in the header when provided (off-canvas usage). */
+  onClose?: () => void;
 }
 
 function matchesFilter(row: ScopeRow, filterText: string): boolean {
@@ -16,17 +18,29 @@ function matchesFilter(row: ScopeRow, filterText: string): boolean {
   return row.scope.label.toLowerCase().includes(filterText.trim().toLowerCase());
 }
 
-export function ScopeTree({ rows, selectedScope, filterText, onFilterChange, onSelect }: ScopeTreeProps) {
+export function ScopeTree({ rows, selectedScope, filterText, onFilterChange, onSelect, onClose }: ScopeTreeProps) {
   const selectedKey = scopeKey(selectedScope);
   const visibleRows = rows.filter((row) => matchesFilter(row, filterText));
 
   return (
-    <aside className="flex min-h-0 flex-col border-r border-border bg-panel">
+    <aside className="flex h-full min-h-0 flex-col border-r border-border bg-panel">
       <div className="flex h-14 items-center justify-between border-b border-border px-4">
         <span className="font-display text-[13.5px] font-semibold">Scope</span>
-        <span className="rounded-control border border-border px-2 py-0.5 font-mono text-[10.5px] text-faint">
-          team tree
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="hidden rounded-control border border-border px-2 py-0.5 font-mono text-[10.5px] text-faint md:inline">
+            team tree
+          </span>
+          {onClose ? (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close scope list"
+              className="grid size-7.5 place-items-center rounded-control border border-border text-dim md:hidden"
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
       </div>
       <div className="px-3.5 pb-2 pt-3">
         <input
