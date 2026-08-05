@@ -107,9 +107,9 @@ Single unified Next.js app at the repo root (`src/`), per `docs/context/repo-str
 **Purpose**: Validate the feature end to end and keep documentation consistent.
 
 - [X] T019 Run `pnpm typecheck`, `pnpm lint`, and `pnpm build` (the build step specifically to catch any Node-only import leaking into a `"use client"` component, per this repo's documented `.next/standalone` gotcha) — confirm `/teams/[teamId]/policies` and `/objectives` compile as real dynamic routes
-- [ ] T020 Run the full test suite (`pnpm exec vitest run --fileParallelism=false --testTimeout=30000`, per this repo's documented reliable full-suite command) and confirm no regressions, particularly in `src/bcs/governance` and `src/app/(app)/teams`
-- [ ] T021 Update `backlog/005-governance/005-governance-views-ui.md`'s frontmatter to `status: done`, check off its Requirements/Acceptance Criteria, move it to `archive/`, update `EPIC.md`'s checkbox + link and epic status
-- [ ] T022 Follow up on the two features this unblocks: note in `backlog/008-distribution/003-web-ui-shell-and-core-pages.md` and `backlog/010-ui-polish-and-accessibility/001-cross-page-polish-and-accessibility.md` that the policy/objective UI gap blocking both is now closed, without marking either fully done (each has its own remaining scope)
+- [X] T020 Run the full test suite (`pnpm exec vitest run --fileParallelism=false --testTimeout=30000`, per this repo's documented reliable full-suite command) and confirm no regressions, particularly in `src/bcs/governance` and `src/app/(app)/teams`
+- [X] T021 Update `backlog/005-governance/005-governance-views-ui.md`'s frontmatter to `status: done`, check off its Requirements/Acceptance Criteria, move it to `archive/`, update `EPIC.md`'s checkbox + link and epic status
+- [X] T022 Follow up on the two features this unblocks: note in `backlog/008-distribution/003-web-ui-shell-and-core-pages.md` and `backlog/010-ui-polish-and-accessibility/001-cross-page-polish-and-accessibility.md` that the policy/objective UI gap blocking both is now closed, without marking either fully done (each has its own remaining scope)
 
 ---
 
