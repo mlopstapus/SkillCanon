@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { EffectiveObjective, EffectiveObjectiveSet, EffectivePolicy, EffectivePolicySet } from "@/bcs/governance";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { GovernanceView, type GovernanceViewProps } from "./governance-view";
 import type { Scope } from "./scope-tree-data";
 
@@ -75,10 +76,27 @@ describe("GovernanceView", () => {
     expect(html).toContain("Local");
   });
 
-  it("shows the local-policies empty state with a call to action when there are none", () => {
+  it("shows the local-policies empty state with a call to action when there are none", async () => {
     const html = renderToStaticMarkup(<GovernanceView {...baseProps()} />);
     expect(html).toContain("No local policies at Platform");
     expect(html).toContain("New policy");
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
+    await expectNoCriticalOrSeriousAxeViolations(html);
+  });
+
+  it("shows the local-objectives empty state with a call to action when there are none", async () => {
+    const html = renderToStaticMarkup(<GovernanceView {...baseProps({ tab: "objectives" })} />);
+    expect(html).toContain("No local objectives at Platform");
+    expect(html).toContain("New objective");
+    expect(html).toContain('role="status"');
+    await expectNoCriticalOrSeriousAxeViolations(html);
+  });
+
+  it("omits the 'New policy' action from the person-scope policies empty state", () => {
+    const html = renderToStaticMarkup(<GovernanceView {...baseProps({ scope: personScope })} />);
+    expect(html).toContain("No local policies at alice");
+    expect(html).not.toContain(">New policy<");
   });
 
   it("switches to the objectives tab and renders objective counts", () => {

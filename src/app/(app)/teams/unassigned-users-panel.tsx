@@ -78,7 +78,7 @@ export function UnassignedUsersPanel({ users, teams, onAssigned }: UnassignedUse
         Unassigned users
       </p>
       {users.length === 0 ? (
-        <p className="text-[12.5px] text-dim">No unassigned users right now.</p>
+        <p role="status" className="text-[12.5px] text-dim">No unassigned users right now.</p>
       ) : (
         <div className="flex flex-col gap-2.5">
           {users.map((u) => (

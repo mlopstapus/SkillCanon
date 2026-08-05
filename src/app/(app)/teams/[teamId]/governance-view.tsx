@@ -2,7 +2,7 @@
 
 import type { EffectiveObjective, EffectiveObjectiveSet, PolicyEnforcementType } from "@/bcs/governance";
 import type { EffectivePolicy, EffectivePolicySet } from "@/bcs/governance";
-import { Badge } from "@/shared/ui";
+import { AppState, Badge } from "@/shared/ui";
 import { ScopeTree } from "./scope-tree";
 import type { Scope, ScopeRow } from "./scope-tree-data";
 
@@ -223,13 +223,26 @@ export function GovernanceView(props: GovernanceViewProps) {
                 <span className="rounded-control bg-a-soft px-1.5 py-px font-mono text-[10.5px] text-a">editable</span>
               </div>
               {policies.local.length === 0 ? (
-                <div className="rounded-tile border border-dashed border-border-2 px-6 py-9.5 text-center">
-                  <p className="mb-1.5 font-display text-[15px] font-semibold">No local policies at {scope.label}</p>
-                  <p className="mx-auto max-w-[380px] text-[12.5px] leading-[1.55] text-dim">
-                    {scope.label} inherits every policy above and applies them unchanged.
-                    {isPersonScope ? "" : " Add a scoped policy here to layer on extra rules — they cascade to everything below."}
-                  </p>
-                </div>
+                <AppState
+                  variant="empty"
+                  title={`No local policies at ${scope.label}`}
+                  description={
+                    isPersonScope
+                      ? `${scope.label} inherits every policy above and applies them unchanged.`
+                      : `${scope.label} inherits every policy above and applies them unchanged. Add a scoped policy here to layer on extra rules — they cascade to everything below.`
+                  }
+                  action={
+                    isPersonScope ? undefined : (
+                      <button
+                        type="button"
+                        onClick={onOpenNewPolicy}
+                        className="flex items-center gap-1.5 rounded-cta bg-a px-3.5 py-2 text-[13px] font-semibold text-a-fg"
+                      >
+                        New policy
+                      </button>
+                    )
+                  }
+                />
               ) : (
                 <div className="flex flex-col gap-2.5">
                   {policies.local.map((policy) => (
@@ -264,12 +277,20 @@ export function GovernanceView(props: GovernanceViewProps) {
                 <span className="rounded-control bg-a-soft px-1.5 py-px font-mono text-[10.5px] text-a">editable</span>
               </div>
               {objectives.local.length === 0 ? (
-                <div className="rounded-tile border border-dashed border-border-2 px-6 py-9.5 text-center">
-                  <p className="mb-1.5 font-display text-[15px] font-semibold">No local objectives at {scope.label}</p>
-                  <p className="mx-auto max-w-[380px] text-[12.5px] leading-[1.55] text-dim">
-                    Objectives surface alongside every expansion as guidance. {scope.label} currently relies on inherited objectives only.
-                  </p>
-                </div>
+                <AppState
+                  variant="empty"
+                  title={`No local objectives at ${scope.label}`}
+                  description={`Objectives surface alongside every expansion as guidance. ${scope.label} currently relies on inherited objectives only.`}
+                  action={
+                    <button
+                      type="button"
+                      onClick={onOpenNewObjective}
+                      className="flex items-center gap-1.5 rounded-cta bg-a px-3.5 py-2 text-[13px] font-semibold text-a-fg"
+                    >
+                      New objective
+                    </button>
+                  }
+                />
               ) : (
                 <div className="flex flex-col gap-2.5">
                   {objectives.local.map((objective) => (

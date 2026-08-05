@@ -339,7 +339,7 @@ export function PromptDetailView({
 
         {activeTab === "policies" ? (
           data.appliedPolicies.length === 0 ? (
-            <div className="py-10 text-center text-[12.5px] text-dim">No governance policies applied.</div>
+            <div role="status" className="py-10 text-center text-[12.5px] text-dim">No governance policies applied.</div>
           ) : (
             <div className="overflow-hidden rounded-card border border-border">
               {data.appliedPolicies.map((p) => (
@@ -354,7 +354,7 @@ export function PromptDetailView({
 
         {activeTab === "steps" ? (
           !data.steps || data.steps.length === 0 ? (
-            <div className="py-10 text-center text-[12.5px] text-dim">No steps defined.</div>
+            <div role="status" className="py-10 text-center text-[12.5px] text-dim">No steps defined.</div>
           ) : (
             <div className="flex flex-col gap-2.5">
               <div className="flex gap-2 rounded-card border border-violet/25 bg-violet-soft p-3 text-[11.5px] text-dim">
@@ -387,7 +387,7 @@ export function PromptDetailView({
 
         {activeTab === "runs" ? (
           !chainRunsPage || chainRunsPage.items.length === 0 ? (
-            <div className="rounded-card border border-border py-8 text-center text-[12.5px] text-dim">
+            <div role="status" className="rounded-card border border-border py-8 text-center text-[12.5px] text-dim">
               No runs yet. Runs happen client-side — this fills in once a caller reports progress via the
               chain-run API.
             </div>

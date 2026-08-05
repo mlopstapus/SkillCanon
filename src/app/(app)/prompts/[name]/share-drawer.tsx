@@ -51,7 +51,7 @@ export function ShareDrawer({
 
   return (
     <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
+      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
       <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
           <span className="font-display text-[15px] font-semibold">Share {promptName}</span>

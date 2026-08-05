@@ -1,9 +1,10 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { MetricsPageView } from "./page";
 
 describe("MetricsPageView", () => {
-  it("renders the zero usage state", () => {
+  it("renders the zero usage state", async () => {
     const html = renderToStaticMarkup(
       <MetricsPageView
         data={{
@@ -21,8 +22,11 @@ describe("MetricsPageView", () => {
     );
 
     expect(html).toContain("Metrics");
-    expect(html).toContain("No usage recorded for this organization yet.");
+    expect(html).toContain("No usage recorded yet");
     expect(html).toContain("Avg latency");
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 
   it("renders populated aggregate usage", () => {
