@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
-import { Badge } from "@/shared/ui";
+import { AppState, Badge } from "@/shared/ui";
 import { InviteMemberDrawer } from "./invite-member-drawer";
 import { RemoveMemberConfirm } from "./remove-member-confirm";
 import { TeamFormDrawer, type TeamFormMode } from "./team-form-drawer";
@@ -278,7 +278,26 @@ export function TeamsExplorerView({
       <div className="grid min-h-full grid-cols-[280px_minmax(0,1fr)]">
         {sidebar}
         <main className="p-8">
-          <p className="text-dim">No teams exist in this organization yet.</p>
+          <AppState
+            variant="empty"
+            title="No teams yet"
+            description={
+              isAdmin
+                ? "Create your organization's first team to start assigning members and governance."
+                : "No teams exist in this organization yet. An admin needs to create one."
+            }
+            action={
+              isAdmin ? (
+                <button
+                  type="button"
+                  onClick={() => setDrawer({ mode: "new", contextTeam: null })}
+                  className="rounded-cta bg-a px-3.5 py-2 text-[13px] font-semibold text-a-fg"
+                >
+                  New team
+                </button>
+              ) : undefined
+            }
+          />
         </main>
       </div>
     );
@@ -419,7 +438,7 @@ export function TeamsExplorerView({
 
           <div className={tab === "subteams" ? "flex flex-col gap-2.5" : "hidden"}>
             {children.length === 0 ? (
-              <div className="rounded-card border border-dashed border-border-2 p-9 text-center">
+              <div role="status" className="rounded-card border border-dashed border-border-2 p-9 text-center">
                 <p className="mb-1.5 font-display text-[15px] font-semibold">
                   No sub-teams under {selectedTeam.name}
                 </p>
@@ -481,7 +500,7 @@ export function TeamsExplorerView({
               </div>
             ) : null}
             {members.length === 0 ? (
-              <p className="text-[12.5px] text-dim">No members on this team yet.</p>
+              <p role="status" className="text-[12.5px] text-dim">No members on this team yet.</p>
             ) : (
               members.map((m) => (
                 <div

@@ -7,6 +7,7 @@ import {
 import { withAudit } from "@/shared/db";
 import { PolicyNotFoundError, type PolicyActor } from "../domain/policy";
 import { deactivate, findByOrgAndId } from "../infrastructure/policies-repo";
+import { assertCanManagePolicyForTeam } from "./authorize-policy-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -20,6 +21,7 @@ export async function deletePolicy(
   if (!current) {
     throw new PolicyNotFoundError(policyId);
   }
+  await assertCanManagePolicyForTeam(db, actor, current.teamId);
   if (!current.isActive) {
     return false;
   }

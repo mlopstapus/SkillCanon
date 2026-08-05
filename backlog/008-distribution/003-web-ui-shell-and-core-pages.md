@@ -19,13 +19,19 @@ dependencies: ["001-rest-api-core-routes.md", "backlog/004-app-shell-and-landing
 
 - [ ] Every core workflow available in the legacy frontend (create/view/edit a prompt, policy, objective, workflow, team, project) is available in the rebuilt UI, end to end, through the real composed shell
 - [ ] Unauthenticated access to any `(app)` route redirects to login
-- [ ] Manual smoke test: create a team → create a project → create a policy → create a prompt → expand it via the UI, confirms the applied policy appears in the result
+- [X] Manual smoke test: create a team → create a project → create a policy → create a prompt → expand it via the UI, confirms the applied policy appears in the result
 
 ## Open Questions
 
 - None currently — the page-by-page parity list is this feature's own first requirement now, not an open question to resolve later.
 
 **Status check (2026-08-05):** app-shell composition and most owning-epic pages are real and wired into the live shell (dashboard, metrics, projects, prompts, settings/api-keys, settings/audit-log, teams, all auth pages) — unauthenticated `(app)` redirect confirmed (`src/app/(app)/layout.tsx:17`). But per this item's own Acceptance Criteria above, there is a real, confirmed gap: **no policy or objective UI exists anywhere in `src/app`** (create/edit/delete forms existed in `legacy/frontend/src/app/teams/page.tsx`, ~lines 90-403; nothing equivalent has been built in the new app). Per this file's own Technical Notes, tracking the gap back to its owning epic rather than building it here: this item cannot close until `backlog/005-governance/005-governance-views-ui.md` ships. That same gap also blocks `backlog/010-ui-polish-and-accessibility/001-cross-page-polish-and-accessibility.md`'s own required smoke test.
+
+**Update (2026-08-05):** `005-governance-views-ui` shipped and archived (`backlog/005-governance/archive/005-governance-views-ui.md`) — the policy/objective UI gap above is closed; `/teams/[teamId]/policies` and `/objectives` are real, live-verified pages (scope tree, inherited/local split, create/edit/delete for both, all four policy enforcement types).
+
+**Update (2026-08-05, smoke test run):** the full manual smoke test now passes end-to-end against a live self-hosted instance: created team "Platform" (via registration) → project "Smoke Test Project" → policy `require-typed-errors` (`append`, at Platform) → prompt `smoke-test-prompt` → Preview tab shows the rendered user message with the policy's content correctly appended, and the Applied Policies tab correctly lists it (1 entry, `append` / `require-typed-errors`). That Acceptance Criteria bullet is now checked off. The other two Acceptance Criteria (full legacy-parity workflow coverage including workflow/run, and unauthenticated-redirect — the latter already previously confirmed) and both remaining Requirements (shell-composition audit, standalone-shell-stand-in cleanup, legacy parity audit) still haven't been run in this session — this item stays `open`.
+
+**Side finding (not actioned here, already tracked):** the prompt creation/new-version UI has no input-schema field at all, so any `{{ variable }}` in a template throws a Nunjucks strict-undefined error in Preview (no way to supply a value through this UI). This is expected given the current state of the still-in-progress skill-file-format transition — `backlog/006-prompt-registry/011-skill-file-format-refactor.md` already explicitly plans to remove `inputSchema` entirely in favor of markdown + template files (calling the current `inputSchema` "already unvalidated, dead weight"), so this isn't a new gap to file, just a live confirmation that refactor is real, needed work. The smoke test above avoided it by using a template with no `{{ }}` placeholders.
 
 ## Dependencies
 

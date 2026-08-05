@@ -4,6 +4,7 @@ import { getPromptUsageSummaryForOrganization, type PromptUsageSummaryForOrganiz
 import { authenticateSession } from "@/bcs/identity-access";
 import { listSkillsByOrganization } from "@/bcs/prompt-registry";
 import { authDb, db, withTenantContext } from "@/shared/db";
+import { AppState } from "@/shared/ui";
 
 interface MetricsPageSkillRow {
   promptId: string;
@@ -58,9 +59,11 @@ export function MetricsPageView({ data }: { data: MetricsPageData }) {
       </div>
 
       {!hasUsage ? (
-        <div className="rounded-card border border-border bg-surface px-5 py-8 text-center text-[13px] text-dim">
-          No usage recorded for this organization yet.
-        </div>
+        <AppState
+          variant="empty"
+          title="No usage recorded yet"
+          description="Metrics populate once a skill is expanded through the API or CLI. Come back after your first run."
+        />
       ) : null}
 
       {hasUsage ? (

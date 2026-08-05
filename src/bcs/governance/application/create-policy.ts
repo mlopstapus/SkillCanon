@@ -14,6 +14,7 @@ import {
   type PolicyScopeVerifier,
 } from "../domain/policy";
 import { insert } from "../infrastructure/policies-repo";
+import { assertCanManagePolicyForTeam } from "./authorize-policy-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -43,6 +44,7 @@ export async function createPolicy(
   auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ) {
   await assertTeamBelongsToOrganization(actor, params, scopeVerifier);
+  await assertCanManagePolicyForTeam(db, actor, params.teamId);
   const id = randomUUID();
   const after = {
     id,

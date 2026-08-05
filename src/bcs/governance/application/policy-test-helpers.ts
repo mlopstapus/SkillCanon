@@ -12,6 +12,7 @@ export interface PolicyFixtureOrg {
   userId: string;
 }
 
+/** fixture.actor is org 'admin' (031-governance-views-ui) so it satisfies assertCanManagePolicyForTeam's org-admin-or-team-owner rule by default — most tests only care about resolution/scoping behavior, not authorization itself. */
 export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtureOrg> {
   const organizationId = randomUUID();
   const teamId = randomUUID();
@@ -29,7 +30,7 @@ export async function makePolicyFixtureOrg(testDb: TestDb): Promise<PolicyFixtur
   `);
   await testDb.ownerDb.execute(sql`
     insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
-    values (${userId}, ${organizationId}, ${teamId}, ${`user-${randomUUID()}`}, 'Test User', ${`${randomUUID()}@example.com`}, 'member', true)
+    values (${userId}, ${organizationId}, ${teamId}, ${`user-${randomUUID()}`}, 'Test User', ${`${randomUUID()}@example.com`}, 'admin', true)
   `);
 
   return {

@@ -26,4 +26,23 @@ describe("AppShell", () => {
     expect(markup).toContain("Admin · Platform");
     expect(markup).toContain("Protected child content");
   });
+
+  it("renders a mobile nav toggle, closed by default, with the off-canvas nav hidden and correctly wired via ARIA", () => {
+    const markup = renderToStaticMarkup(
+      <AppShell navigation={<nav>Workspace navigation</nav>} user={user}>
+        <main>Protected child content</main>
+      </AppShell>,
+    );
+
+    expect(markup).toContain('aria-label="Open navigation"');
+    expect(markup).toContain('aria-expanded="false"');
+    expect(markup).toContain('aria-controls="app-shell-nav"');
+    expect(markup).toContain('id="app-shell-nav"');
+    // Off-canvas aside starts hidden (not just visually offset) so its links
+    // are out of tab order until opened.
+    const asideTag = markup.match(/<aside[^>]*>/)?.[0] ?? "";
+    expect(asideTag).toContain('id="app-shell-nav"');
+    expect(asideTag).toMatch(/class="[^"]*\bhidden\b/);
+    expect(markup).toContain('aria-label="Close navigation"');
+  });
 });

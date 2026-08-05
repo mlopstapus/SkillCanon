@@ -7,6 +7,7 @@ import {
 import { withAudit } from "@/shared/db";
 import { ObjectiveNotFoundError, type ObjectiveActor } from "../domain/objective";
 import { findByOrgAndId, hardDelete } from "../infrastructure/objectives-repo";
+import { assertCanManageObjective } from "./authorize-objective-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -25,6 +26,11 @@ export async function deleteObjective(
       if (!before) {
         throw new ObjectiveNotFoundError(objectiveId);
       }
+      await assertCanManageObjective(tx, actor, {
+        teamId: before.teamId,
+        projectId: before.projectId,
+        userId: before.userId,
+      });
       const deleted = await hardDelete(tx, actor.organizationId, objectiveId);
       if (!deleted) {
         throw new ObjectiveNotFoundError(objectiveId);

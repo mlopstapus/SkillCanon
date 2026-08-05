@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { TeamsExplorerView } from "./teams-explorer";
 
 const now = new Date("2026-01-01T00:00:00Z");
@@ -158,6 +159,38 @@ describe("TeamsExplorer", () => {
 
     expect(markup).toContain("No sub-teams under Acme Corp");
     expect(markup).not.toContain("New sub-team");
+  });
+
+  it("renders the shared empty state with a 'New team' CTA when the org has no teams at all, for an admin", async () => {
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={adminSession}
+        teams={[]}
+        users={[]}
+        initialSelectedTeamId=""
+      refresh={noop}
+      />,
+    );
+
+    expect(markup).toContain("No teams yet");
+    expect(markup).toContain("New team");
+    expect(markup).toContain('role="status"');
+    await expectNoCriticalOrSeriousAxeViolations(markup);
+  });
+
+  it("does not show the 'New team' CTA in the org-wide empty state to a non-admin", () => {
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={memberSession}
+        teams={[]}
+        users={[]}
+        initialSelectedTeamId=""
+      refresh={noop}
+      />,
+    );
+
+    expect(markup).toContain("No teams yet");
+    expect(markup).not.toContain("New team");
   });
 
   it("orders the sidebar by tree structure (parent, then its children, then the next sibling) — not a flat alphabetical sort", () => {

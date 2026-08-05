@@ -9,6 +9,7 @@ import { withAudit } from "@/shared/db";
 import type { CreateObjectiveParams, ObjectiveActor, ObjectiveScopeVerifier } from "../domain/objective";
 import { insert } from "../infrastructure/objectives-repo";
 import { assertObjectiveScopesBelongToOrganization, assertParentObjectiveCanBeUsed } from "./objective-validation";
+import { assertCanManageObjective } from "./authorize-objective-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -20,6 +21,11 @@ export async function createObjective(
   auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
 ) {
   await assertObjectiveScopesBelongToOrganization(actor.organizationId, params, scopeVerifier);
+  await assertCanManageObjective(db, actor, {
+    teamId: params.teamId ?? null,
+    projectId: params.projectId ?? null,
+    userId: params.userId ?? null,
+  });
   const id = params.id ?? randomUUID();
   const after = {
     id,

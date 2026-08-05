@@ -36,8 +36,9 @@ export function TerminalState({
   tone = "neutral",
   icon,
 }: TerminalStateProps) {
+  const role = tone === "danger" ? "alert" : "status";
   return (
-    <section className="grid gap-6 text-center">
+    <section role={role} aria-live="polite" className="grid gap-6 text-center">
       <div
         aria-hidden="true"
         className={`mx-auto grid h-14 w-14 place-items-center rounded-2xl border ${toneClass[tone]}`}

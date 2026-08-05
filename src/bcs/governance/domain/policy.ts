@@ -78,3 +78,11 @@ export class PolicyNotFoundError extends Error {
     this.name = "PolicyNotFoundError";
   }
 }
+
+/** Thrown when the acting user is neither an org admin nor the target team's owner (031-governance-views-ui). */
+export class PolicyNotAuthorizedError extends Error {
+  constructor() {
+    super("Only an organization admin or the team's owner may manage this team's policies.");
+    this.name = "PolicyNotAuthorizedError";
+  }
+}

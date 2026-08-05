@@ -140,7 +140,7 @@ export function ProjectDetailView({
         {activeTab === "teams" ? (
           <div className="flex flex-col gap-2.5">
             {data.collaboratorTeams.length === 0 ? (
-              <div className="py-10 text-center text-[12.5px] text-dim">No teams associated with this project yet.</div>
+              <div role="status" className="py-10 text-center text-[12.5px] text-dim">No teams associated with this project yet.</div>
             ) : null}
             {data.collaboratorTeams.map((t) => (
               <div key={t.id} className="flex items-center gap-3 rounded-card border border-border bg-surface px-3.5 py-3">
@@ -156,7 +156,7 @@ export function ProjectDetailView({
         {activeTab === "members" ? (
           <div className="flex flex-col gap-2.5">
             {data.members.length === 0 ? (
-              <div className="py-10 text-center text-[12.5px] text-dim">No members yet.</div>
+              <div role="status" className="py-10 text-center text-[12.5px] text-dim">No members yet.</div>
             ) : null}
             {data.members.map((m) => (
               <div key={m.userId} className="flex items-center gap-3 rounded-card border border-border bg-surface px-3.5 py-2.5">
@@ -173,7 +173,7 @@ export function ProjectDetailView({
         {activeTab === "repos" ? (
           <div className="flex flex-col gap-2.5">
             {data.repos.length === 0 ? (
-              <div className="rounded-card border border-dashed border-border-2 py-9 text-center">
+              <div role="status" className="rounded-card border border-dashed border-border-2 py-9 text-center">
                 <div className="mb-1.5 font-display text-[15px] font-semibold">No repositories linked</div>
                 <button type="button" onClick={onOpenAddRepo} className="mt-2 rounded-control bg-a px-3.5 py-2 text-[12.5px] font-semibold text-a-fg">
                   Add repository
@@ -272,7 +272,7 @@ export function ProjectDetailView({
             <div>
               <span className="mb-3 block font-display text-[14px] font-semibold">Usage by skill</span>
               {data.metrics.bySkill.length === 0 ? (
-                <div className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
+                <div role="status" className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
                   No skills curated for this project yet.
                 </div>
               ) : (
@@ -290,7 +290,7 @@ export function ProjectDetailView({
             <div>
               <span className="mb-3 block font-display text-[14px] font-semibold">Usage by member</span>
               {data.metrics.byMember.length === 0 ? (
-                <div className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
+                <div role="status" className="rounded-card border border-border py-5 text-center text-[12.5px] text-dim">
                   No usage recorded for this project yet.
                 </div>
               ) : (
@@ -338,7 +338,7 @@ function PromptGroup({
         <span className="h-px flex-1 bg-border" />
       </div>
       {rows.length === 0 ? (
-        <div className="py-1 text-[12px] text-faint">No {label.toLowerCase()} prompts yet.</div>
+        <div role="status" className="py-1 text-[12px] text-faint">No {label.toLowerCase()} prompts yet.</div>
       ) : (
         <div className="flex flex-col gap-2">
           {rows.map((row) => (

@@ -14,8 +14,16 @@ Policy resolution is **purely team + invoking-user scoped — never project-scop
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
 | `resolveEffectivePolicies(orgId, userId)` | Returns `{ inherited: Policy[], local: Policy[] }`, inherited from ancestor teams (immutable), local from the user's own team | Prompt Registry, Distribution (`sh-context` tool) |
+| `resolveEffectivePoliciesForTeam(orgId, teamId)` (031-governance-views-ui) | Same shape as `resolveEffectivePolicies`, but for a bare team scope directly — no user lookup, chain walked from `teamId` itself. Needed because the views UI's scope tree lets an admin select a team node, not only a person. | Distribution (governance views) |
 | `resolveEffectiveObjectives(orgId, userId, projectId?)` | Same shape, for objectives | Prompt Registry, Distribution |
+| `resolveEffectiveObjectivesForTeam(orgId, teamId)` (031-governance-views-ui) | Team-scope counterpart to `resolveEffectiveObjectivesForTeam` — no per-user or per-project branches, since a bare team scope has neither | Distribution (governance views) |
 | `resolveAllPolicies(orgId, userId)` | Single merged list, priority desc, inherited wins ties | Prompt Registry (expansion) |
+| `resolveAllObjectives(orgId, userId, projectId?)` | Single flat list of objective titles (inherited + local + directly-assigned + project-scoped) | Prompt Registry (expansion) |
+| `countLocalPoliciesAndObjectives(orgId, { type: "team" \| "user", id })` | `{ policyCount, objectiveCount, total }` of active local (not inherited) records at one scope node — a `"user"` node only ever has an objective count (policies are always team-scoped) | Distribution (governance views scope-tree count badges) |
+| `listTeamPolicies(orgId, teamId)` / `listTeamObjectives(orgId, teamId)` | Local-only (not inherited) records at one team, no chain walk | Distribution |
+| `listUserObjectives(orgId, userId)` | A user's own directly-assigned objectives | Distribution |
+| `listProjectObjectives(orgId, projectId)` | A project's own directly-assigned objectives | Distribution |
+| `getPolicy(orgId, policyId)` / `getObjective(orgId, objectiveId)` | Single record by id, org-scoped | Distribution |
 | `createPolicy`, `updatePolicy`, `deletePolicy`, `createObjective`, `updateObjective`, `deleteObjective` | Standard write operations, org-scoped | Distribution (route handlers) |
 
 ## Events Published
