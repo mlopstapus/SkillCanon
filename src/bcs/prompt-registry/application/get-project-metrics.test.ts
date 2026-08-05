@@ -61,20 +61,24 @@ describe("getProjectMetrics", () => {
     await addMember(testDb, fixture, memberB);
     const skillId = await assignRequiredSkill(testDb, fixture);
 
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberA,
-    });
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberB,
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberA,
+      }),
+    );
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberB,
+      }),
+    );
 
     const metrics = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
@@ -107,13 +111,15 @@ describe("getProjectMetrics", () => {
     await addMember(testDb, fixture, memberMissing);
     const skillId = await assignRequiredSkill(testDb, fixture);
 
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberCurrent,
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberCurrent,
+      }),
+    );
 
     const metrics = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
@@ -129,13 +135,15 @@ describe("getProjectMetrics", () => {
     await addMember(testDb, fixture, memberA);
     const skillId = await assignRequiredSkill(testDb, fixture);
 
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberA,
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberA,
+      }),
+    );
 
     const metrics = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
@@ -151,13 +159,15 @@ describe("getProjectMetrics", () => {
     const memberInactive = randomUUID();
     await addMember(testDb, fixture, memberActive);
     const skillId = await assignRequiredSkill(testDb, fixture);
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberActive,
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberActive,
+      }),
+    );
 
     const beforeInactiveMember = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
@@ -183,20 +193,24 @@ describe("getProjectMetrics", () => {
     await addMember(testDb, fixture, memberA);
     const skillId = await assignRequiredSkill(testDb, fixture);
 
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: memberA,
-    });
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: null,
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: memberA,
+      }),
+    );
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: null,
+      }),
+    );
 
     const metrics = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
@@ -211,13 +225,15 @@ describe("getProjectMetrics", () => {
   it("returns a 14-entry trend, zero-filled for days with no invocations (Acceptance Scenario 3.2)", async () => {
     const fixture = await makeProjectTeamFixtureOrg(testDb);
     const skillId = await assignRequiredSkill(testDb, fixture);
-    await recordPromptUsage(testDb.appDb, {
-      organizationId: fixture.organizationId,
-      promptId: skillId,
-      promptVersionId: randomUUID(),
-      projectId: fixture.projectId,
-      userId: randomUUID(),
-    });
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      recordPromptUsage(tx, {
+        organizationId: fixture.organizationId,
+        promptId: skillId,
+        promptVersionId: randomUUID(),
+        projectId: fixture.projectId,
+        userId: randomUUID(),
+      }),
+    );
 
     const metrics = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getProjectMetrics(tx, fixture.organizationId, fixture.projectId),
