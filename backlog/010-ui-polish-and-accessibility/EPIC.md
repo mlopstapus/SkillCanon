@@ -15,7 +15,7 @@ As a result, this epic's original per-page features were distributed into the ep
 | `001-design-tokens-and-theming.md` | already done, `backlog/004-app-shell-and-landing/archive/001-design-tokens-and-theming.md` |
 | `002-auth-and-onboarding-redesign.md` | `backlog/002-identity-access/009-auth-and-onboarding-ui.md` |
 | `003-workspace-redesign.md` (dashboard/teams/projects) | Dashboard/landing → already done, `backlog/004-app-shell-and-landing/archive/003-marketing-landing-page.md`, and the shell's own composition (already done, `backlog/004-app-shell-and-landing/archive/002-app-shell-and-navigation.md`); teams → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; projects → `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
-| `004-governance-views-redesign.md` | `backlog/005-governance/005-governance-views-ui.md` |
+| `004-governance-views-redesign.md` | already done, `backlog/005-governance/archive/005-governance-views-ui.md` |
 | `005-prompt-registry-views-redesign.md` | `backlog/006-prompt-registry/006-prompt-registry-views-ui.md` |
 | `006-workflow-views-redesign.md` | `backlog/006-prompt-registry/010-skill-chain-views-ui.md` (formerly `007-workflow-orchestration/005-workflow-views-ui.md`, retired per [PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md)) |
 | `007-settings-and-admin-views-redesign.md` (api-keys/org-team/audit-log/billing) | api-keys/org-team → `backlog/002-identity-access/010-account-and-team-settings-ui.md`; audit-log → already done, `backlog/003-audit-compliance/003-audit-log-ui.md`; billing → `backlog/009-billing-entitlements/003-billing-portal-and-ui.md` |
@@ -33,7 +33,7 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 
 - `backlog/002-identity-access/EPIC.md` (features 009/010)
 - `backlog/004-app-shell-and-landing/EPIC.md`
-- `backlog/005-governance/005-governance-views-ui.md`
+- `backlog/005-governance/archive/005-governance-views-ui.md`
 - `backlog/006-prompt-registry/006-prompt-registry-views-ui.md`
 - `backlog/006-prompt-registry/010-skill-chain-views-ui.md`
 - `backlog/011-vcs-integration/006-vcs-integration-dashboard-ui.md`
@@ -48,4 +48,4 @@ This epic no longer gates on `backlog/000-foundations/010-design-system.md` dire
 
 If a future page redesign surfaces a real UX gap (missing empty state, confusing flow, etc.) during that page's own owning-epic build, track it as a new feature in that epic, not here — this epic's scope is verification/consistency across already-built pages, not building anything new itself.
 
-**Status check (2026-08-05):** partial progress landed (`specs/001-cross-page-polish/`, 5 of the in-scope pages), but this epic's sole feature is genuinely blocked, not done — its own required smoke test needs a policy/objective UI that doesn't exist anywhere yet. The actual gate is `backlog/005-governance/005-governance-views-ui.md`, which was never built despite this epic's own dependency list already naming it. See `001-cross-page-polish-and-accessibility.md`'s own status check for details.
+**Status check (2026-08-05):** partial progress landed (`specs/001-cross-page-polish/`, 5 of the in-scope pages). `backlog/005-governance/005-governance-views-ui.md` — this epic's former hard blocker on the smoke test's "create a policy" step — has since shipped and archived (`backlog/005-governance/archive/005-governance-views-ui.md`). This epic's sole feature is still not done, though: most of the route inventory (teams, dashboard, metrics, settings, auth pages, plus the two new governance pages) still hasn't had the actual polish/accessibility pass applied, and the full end-to-end smoke test still hasn't been run and recorded. See `001-cross-page-polish-and-accessibility.md`'s own status check for details.

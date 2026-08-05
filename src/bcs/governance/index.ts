@@ -1,6 +1,10 @@
-export { countLocalPoliciesAndObjectives } from "./application/count-local-policies-and-objectives";
+export {
+  countLocalPoliciesAndObjectives,
+  type LocalGovernanceNode,
+} from "./application/count-local-policies-and-objectives";
 export { resolveAllPolicies } from "./application/resolve-all-policies";
 export { resolveEffectivePolicies } from "./application/resolve-effective-policies";
+export { resolveEffectivePoliciesForTeam } from "./application/resolve-effective-policies-for-team";
 export { createPolicy } from "./application/create-policy";
 export { deletePolicy } from "./application/delete-policy";
 export { getPolicy } from "./application/get-policy";
@@ -20,11 +24,13 @@ export type {
 export {
   InvalidPolicyScopeError,
   POLICY_ENFORCEMENT_TYPES,
+  PolicyNotAuthorizedError,
   PolicyNotFoundError,
   PolicyScopeNotFoundError,
 } from "./domain/policy";
 
 export { resolveEffectiveObjectives } from "./application/resolve-effective-objectives";
+export { resolveEffectiveObjectivesForTeam } from "./application/resolve-effective-objectives-for-team";
 export { resolveAllObjectives } from "./application/resolve-all-objectives";
 export { createObjective } from "./application/create-objective";
 export { deleteObjective } from "./application/delete-objective";
@@ -45,6 +51,7 @@ export type {
 export {
   InvalidObjectiveInputError,
   ObjectiveCycleError,
+  ObjectiveNotAuthorizedError,
   ObjectiveNotFoundError,
   ObjectiveParentNotFoundError,
   ObjectiveScopeNotFoundError,

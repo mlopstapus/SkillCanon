@@ -13,6 +13,7 @@ import {
 } from "../domain/objective";
 import { findByOrgAndId, update } from "../infrastructure/objectives-repo";
 import { assertObjectiveScopesBelongToOrganization, assertParentObjectiveCanBeUsed } from "./objective-validation";
+import { assertCanManageObjective } from "./authorize-objective-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -40,6 +41,11 @@ export async function updateObjective(
       if (!before) {
         throw new ObjectiveNotFoundError(objectiveId);
       }
+      await assertCanManageObjective(tx, actor, {
+        teamId: before.teamId,
+        projectId: before.projectId,
+        userId: before.userId,
+      });
       if (Object.hasOwn(updateFields, "parentObjectiveId")) {
         await assertParentObjectiveCanBeUsed(
           tx,

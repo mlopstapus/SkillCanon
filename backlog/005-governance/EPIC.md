@@ -14,7 +14,8 @@ This is the highest-risk port in the whole refactor. The resolution engine's cor
 - [ ] [002 - Objective Model & CRUD](002-objective-model-and-crud.md)
 - [ ] [003 - Hierarchical Resolution Engine](003-hierarchical-resolution-engine.md)
 - [ ] [004 - Governance Tenant Isolation Tests](004-governance-tenant-isolation-tests.md)
-- [ ] [005 - Governance Views UI](005-governance-views-ui.md)
+- [X] [005 - Governance Views UI](archive/005-governance-views-ui.md)
+- [ ] [006 - Project-Scoped Governance UI](006-project-scoped-governance-ui.md) — deferred out of 005, no project scope in that feature's source mockup
 
 *Completed features are moved to `archive/` and checked off here.*
 

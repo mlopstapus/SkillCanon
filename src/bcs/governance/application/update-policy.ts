@@ -7,6 +7,7 @@ import {
 import { withAudit } from "@/shared/db";
 import { PolicyNotFoundError, type PolicyActor, type UpdatePolicyFields } from "../domain/policy";
 import { findByOrgAndId, update } from "../infrastructure/policies-repo";
+import { assertCanManagePolicyForTeam } from "./authorize-policy-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -27,6 +28,7 @@ export async function updatePolicy(
       if (!before) {
         throw new PolicyNotFoundError(policyId);
       }
+      await assertCanManagePolicyForTeam(tx, actor, before.teamId);
       after = await update(tx, actor.organizationId, policyId, fields);
       if (!after) {
         throw new PolicyNotFoundError(policyId);

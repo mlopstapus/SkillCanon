@@ -89,6 +89,14 @@ export class ObjectiveNotFoundError extends Error {
   }
 }
 
+/** Thrown when the acting user isn't authorized to manage the objective's scope (031-governance-views-ui). */
+export class ObjectiveNotAuthorizedError extends Error {
+  constructor() {
+    super("Not authorized to manage this objective.");
+    this.name = "ObjectiveNotAuthorizedError";
+  }
+}
+
 export function assertValidObjectiveTitle(title: string): void {
   if (title.trim().length === 0) {
     throw new InvalidObjectiveInputError("Objective title is required.");

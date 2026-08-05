@@ -13,6 +13,7 @@ export interface ObjectiveFixtureOrg {
   userId: string;
 }
 
+/** fixture.actor is org 'admin' (031-governance-views-ui) so it satisfies assertCanManageObjective's authorization rule for both team- and user-scoped objectives by default. */
 export async function makeObjectiveFixtureOrg(testDb: TestDb): Promise<ObjectiveFixtureOrg> {
   const organizationId = randomUUID();
   const teamId = randomUUID();
@@ -33,7 +34,7 @@ export async function makeObjectiveFixtureOrg(testDb: TestDb): Promise<Objective
   `);
   await testDb.ownerDb.execute(sql`
     insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
-    values (${userId}, ${organizationId}, ${teamId}, ${username}, 'Test User', ${email}, 'member', true)
+    values (${userId}, ${organizationId}, ${teamId}, ${username}, 'Test User', ${email}, 'admin', true)
   `);
 
   return {
