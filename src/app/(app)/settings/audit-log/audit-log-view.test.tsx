@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import type { AuditEvent, ResolvedAuditRow } from "@/bcs/audit-compliance";
 import { AuditLogView, type AuditLogViewProps } from "./audit-log-view";
 
@@ -68,14 +69,16 @@ describe("AuditLogView", () => {
     expect(markup).not.toContain("Free");
   });
 
-  it("shows the distinct 'no events at all' empty state, with no Clear filters action, for a zero-event org", () => {
+  it("shows the distinct 'no events at all' empty state, with no Clear filters action, for a zero-event org", async () => {
     const markup = renderToStaticMarkup(<AuditLogView {...baseProps({ total: 0, rows: [] })} />);
 
     expect(markup).toContain("No audit events yet");
+    expect(markup).toContain('role="status"');
     expect(markup).not.toContain("Clear filters");
+    await expectNoCriticalOrSeriousAxeViolations(markup);
   });
 
-  it("shows the distinct 'no match' empty state, with a Clear filters action, when active filters return zero results", () => {
+  it("shows the distinct 'no match' empty state, with a Clear filters action, when active filters return zero results", async () => {
     // `total` always reflects the *filtered* count (there is no separate
     // unfiltered org-wide count) — a real bug caught via manual browser
     // verification was passing an unrealistic `total: 5` here, which masked
@@ -89,5 +92,6 @@ describe("AuditLogView", () => {
     expect(markup).toContain("No events match these filters");
     expect(markup).toContain("Clear filters");
     expect(markup).not.toContain("No audit events yet");
+    await expectNoCriticalOrSeriousAxeViolations(markup);
   });
 });

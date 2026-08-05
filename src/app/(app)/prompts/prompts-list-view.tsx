@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Badge } from "@/shared/ui";
+import { AppState, Badge } from "@/shared/ui";
 
 export interface PromptListRow {
   id: string;
@@ -83,11 +83,13 @@ export function PromptsListView({
             <input
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
+              aria-label="Search prompts"
               placeholder="Search prompts…"
               className="flex-1 bg-transparent text-[12.5px] text-text outline-none"
             />
           </div>
           <select
+            aria-label="Filter prompts by project"
             value={filters.project}
             onChange={(e) => onProjectChange(e.target.value)}
             className="rounded-control border border-border-2 bg-surface px-3 py-2 font-mono text-[11.5px] text-text outline-none"
@@ -99,7 +101,7 @@ export function PromptsListView({
               </option>
             ))}
           </select>
-          <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5">
+          <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5" role="group" aria-label="Filter prompts by owner">
             {(["all", "mine", "shared"] as const).map((owner) => (
               <button
                 key={owner}
@@ -136,25 +138,26 @@ export function PromptsListView({
         </div>
 
         {rows.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-            <div className="mb-3.5 font-display text-[16px] font-semibold">
-              {activeFilters ? "No prompts match these filters" : "No prompts yet"}
-            </div>
-            <p className="mb-4.5 max-w-[400px] text-[12.5px] leading-relaxed text-dim">
-              {activeFilters
+          <AppState
+            variant="empty"
+            title={activeFilters ? "No prompts match these filters" : "No prompts yet"}
+            description={
+              activeFilters
                 ? "Try a different project or owner filter, or clear the search."
-                : "Create your first prompt to start versioning and expanding it with governance applied."}
-            </p>
-            {activeFilters ? (
-              <button
-                type="button"
-                onClick={onClearFilters}
-                className="rounded-control border border-border-2 bg-surface px-4 py-2 text-[12.5px] font-semibold"
-              >
-                Clear filters
-              </button>
-            ) : null}
-          </div>
+                : "Create your first prompt to start versioning and expanding it with governance applied."
+            }
+            action={
+              activeFilters ? (
+                <button
+                  type="button"
+                  onClick={onClearFilters}
+                  className="rounded-control border border-border-2 bg-surface px-4 py-2 text-[12.5px] font-semibold"
+                >
+                  Clear filters
+                </button>
+              ) : null
+            }
+          />
         ) : (
           rows.map((row) => (
             <Link

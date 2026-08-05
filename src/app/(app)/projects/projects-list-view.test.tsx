@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { ProjectsListView, type ProjectListRow } from "./projects-list-view";
 
 const rows: ProjectListRow[] = [
@@ -25,9 +26,12 @@ describe("ProjectsListView", () => {
     expect(html).toContain("3 prompts");
   });
 
-  it("shows an empty state when there are no projects", () => {
+  it("shows an empty state when there are no projects", async () => {
     const html = renderToStaticMarkup(<ProjectsListView rows={[]} onNewProject={vi.fn()} />);
 
     expect(html).toContain("No projects yet");
+    expect(html).toContain('role="status"');
+    expect(html).toContain("New project");
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 });
