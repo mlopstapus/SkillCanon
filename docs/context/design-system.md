@@ -140,3 +140,18 @@ Spline Sans Mono:wght@400;500;600
 
 ## 6. Voice
 Confident, technical, developer-to-developer. Short declarative headlines ("Ship prompts like you ship code."). Concrete nouns over adjectives. Mono type carries the "real system" credibility — actual commands, file paths, event IDs, counts. No emoji.
+---
+
+## 7. Cross-page state patterns
+
+All in-scope app pages use one shared state presentation primitive for empty, loading, and recoverable error states. The page owns domain-specific copy and the optional action; the component owns layout, emphasis, icon treatment, and accessibility behavior.
+
+**Empty states** use `AppState variant="empty"` from `@/shared/ui`. Copy names the missing resource and the next useful action. The optional action appears below the description and should be the same primary action the populated page exposes elsewhere, not an extra explanatory control.
+
+**Loading states** use `AppState variant="loading"`. The spinner is decorative (`aria-hidden="true"`), the state uses `role="status"`, and the block keeps stable spacing so content does not jump when data arrives.
+
+**Error states** use `AppState variant="error"` for recoverable page or data failures. The state uses `role="alert"`, keeps `aria-live="polite"`, and includes a recovery action when one exists. Access-denied and entitlement-denied pages may use the same variant without an action when retrying cannot resolve the condition.
+
+**Shared accessibility contract**: every state has `aria-live="polite"`; empty/loading states expose `role="status"`; error states expose `role="alert"`; icons are decorative; action labels are unique within the state block. Page-specific exceptions may change copy or actions only. Layout, icon placement, role behavior, focus visibility, and responsive constraints remain shared.
+
+**Verification**: representative route states are covered by Vitest render assertions and static `axe-core` checks for critical/serious violations. Release-owner manual checks still cover keyboard order, screen-reader comprehension, responsive behavior, and both supported token contexts across the full smoke path.

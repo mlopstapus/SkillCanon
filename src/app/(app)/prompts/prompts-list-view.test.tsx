@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { PromptsListView, type PromptListRow } from "./prompts-list-view";
 
 const rows: PromptListRow[] = [
@@ -56,22 +57,26 @@ describe("PromptsListView", () => {
     expect(html).toContain("conventional");
   });
 
-  it("shows the 'nothing yet' empty state when there are no rows and no active filters", () => {
+  it("shows the 'nothing yet' empty state when there are no rows and no active filters", async () => {
     const html = renderToStaticMarkup(
       <PromptsListView {...baseProps} rows={[]} filters={{ q: "", project: "all", owner: "all" }} />,
     );
 
     expect(html).toContain("No prompts yet");
+    expect(html).toContain('role="status"');
+    expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("Clear filters");
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 
-  it("shows the 'no match' empty state (with a Clear filters action) when filters are active but nothing matches", () => {
+  it("shows the 'no match' empty state (with a Clear filters action) when filters are active but nothing matches", async () => {
     const html = renderToStaticMarkup(
       <PromptsListView {...baseProps} rows={[]} filters={{ q: "xyz", project: "all", owner: "all" }} />,
     );
 
     expect(html).toContain("No prompts match these filters");
     expect(html).toContain("Clear filters");
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 
   it("shows a Clear action in the filter bar only when a filter is active", () => {

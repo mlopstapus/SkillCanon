@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ApiKeySummary, AppSessionUser } from "@/bcs/identity-access";
-import { Badge } from "@/shared/ui";
+import { AppState, Badge } from "@/shared/ui";
 import { IssueKeyDrawer } from "./issue-key-drawer";
 import { KeyRevealModal } from "./key-reveal-modal";
 import { revokeApiKeyAction } from "./actions";
@@ -64,7 +64,21 @@ export function ApiKeysListView({ currentUser, keys, refresh }: ApiKeysListViewP
 
       <div className="flex flex-col gap-2.5">
         {keys.length === 0 ? (
-          <p className="text-[12.5px] text-dim">No API keys yet.</p>
+          <AppState
+            variant="empty"
+            title="No API keys yet"
+            description="Issue a scoped key when a tool or automation needs to call SkillCanon outside the browser session."
+            action={
+              <button
+                type="button"
+                onClick={() => setIssueOpen(true)}
+                className="rounded-control border border-border-2 bg-surface px-4 py-2 text-[12.5px] font-semibold"
+              >
+                Issue key
+              </button>
+            }
+            className="max-w-[520px] py-14"
+          />
         ) : (
           keys.map((k) => {
             const status = statusOf(k);
