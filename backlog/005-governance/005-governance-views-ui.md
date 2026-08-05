@@ -9,6 +9,8 @@ dependencies: ["003-hierarchical-resolution-engine.md", "004-governance-tenant-i
 
 The real, finished policies/objectives UI — owned by this BC per `bcs/governance/OWNERSHIP.md` (`src/app/(app)/teams/*/policies`, `/objectives`) — built directly against the real `SkillCanon Governance.dc.html` mockup (claude.ai/design project `7babdbf3-c063-46b5-84df-ffa9f588d88a`, via the `claude_design` MCP server), mirroring `003-audit-compliance/003-audit-log-ui.md`'s pattern: schema/query gaps found while reading the mockup were fed back into this epic's other features first (see the notes added to `001-policy-model-and-crud.md` and `003-hierarchical-resolution-engine.md`), and this feature builds the page for real, composed into the shared shell from `004-app-shell-and-landing/002-app-shell-and-navigation.md` rather than a placeholder.
 
+**Blocking note (2026-08-05):** confirmed via audit that no policy/objective UI exists anywhere in the app yet (only the legacy Python frontend had one) — this item is directly blocking `backlog/008-distribution/003-web-ui-shell-and-core-pages.md` and `backlog/010-ui-polish-and-accessibility/001-cross-page-polish-and-accessibility.md`, both of which need a working "create a policy" flow for their own required smoke tests. Worth prioritizing above other still-open items in this epic given that downstream blast radius.
+
 ## Requirements
 
 - [ ] Scope tree sidebar: filterable team/user hierarchy, each node showing a local policy+objective count badge — requires a per-node aggregate count query (see the new requirement added to `003-hierarchical-resolution-engine.md`)

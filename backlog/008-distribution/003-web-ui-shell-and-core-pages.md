@@ -25,6 +25,8 @@ dependencies: ["001-rest-api-core-routes.md", "backlog/004-app-shell-and-landing
 
 - None currently — the page-by-page parity list is this feature's own first requirement now, not an open question to resolve later.
 
+**Status check (2026-08-05):** app-shell composition and most owning-epic pages are real and wired into the live shell (dashboard, metrics, projects, prompts, settings/api-keys, settings/audit-log, teams, all auth pages) — unauthenticated `(app)` redirect confirmed (`src/app/(app)/layout.tsx:17`). But per this item's own Acceptance Criteria above, there is a real, confirmed gap: **no policy or objective UI exists anywhere in `src/app`** (create/edit/delete forms existed in `legacy/frontend/src/app/teams/page.tsx`, ~lines 90-403; nothing equivalent has been built in the new app). Per this file's own Technical Notes, tracking the gap back to its owning epic rather than building it here: this item cannot close until `backlog/005-governance/005-governance-views-ui.md` ships. That same gap also blocks `backlog/010-ui-polish-and-accessibility/001-cross-page-polish-and-accessibility.md`'s own required smoke test.
+
 ## Dependencies
 
 - `001-rest-api-core-routes.md`

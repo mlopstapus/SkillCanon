@@ -21,7 +21,8 @@ A skill (the `Prompt` aggregate) is owned by exactly one user or exactly one tea
 - [x] [007 - Project Skill Assignment](archive/007-project-skill-assignment.md)
 - [x] [008 - Project Usage Metrics Dashboard](archive/008-project-usage-metrics-dashboard.md)
 - [x] [009 - Skill Chains](archive/009-skill-chains.md)
-- [ ] [010 - Skill Chain Views UI](010-skill-chain-views-ui.md)
+- [x] [010 - Skill Chain Views UI](archive/010-skill-chain-views-ui.md)
+- [ ] [011 - Skill File Format Refactor](011-skill-file-format-refactor.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -47,3 +48,7 @@ Feature 004 must call Governance only through `resolveEffectivePolicies`/`resolv
 **Completed 2026-07-31**: feature 006 shipped via the full speckit loop (`specs/023-prompt-registry-views-ui/`), which also caught and fixed feature 005 sitting fully-shipped-but-unarchived since `022-prompt-registry-tenant-isolation` landed — another instance of this epic's recurring backlog-lags-code pattern (see feature 001/007's note above). Both are now archived. Only feature 008 (metrics dashboard) remains open in this epic.
 
 **Added 2026-08-01 ([PDR-017](../../docs/pdr/017-fold-workflow-orchestration-into-prompt-registry.md))**: `backlog/007-workflow-orchestration/` is retired and folded into this epic as features 009-010. A "workflow" was never a distinct domain concept — it's a `PromptVersion` whose content is an ordered step list instead of a template. Feature 009 carries forward `007-workflow-orchestration/001-workflow-model-and-crud.md` (already shipped, now being reworked in place rather than left running as a separate BC) and `002-workflow-runner.md` (never implemented, only speced at `specs/025-workflow-runner`, now superseded). `007-workflow-orchestration/004-workflow-sharing.md`'s entire scope turned out to already be satisfied by this epic's existing `subscribeSkill`/`forkSkill` — no replacement item needed for it, since a chain is a skill and sharing already works generically over any `Prompt`. `007-workflow-orchestration/003-workflow-tenant-isolation-tests.md`'s scope is folded into feature 009's own requirements (new tables get RLS from the start, no separate follow-up).
+
+**Completed 2026-08-05**: Feature 010 confirmed fully shipped (`specs/028-skill-chain-views-ui/`, merged via PR #57) — another instance of the backlog-lags-code pattern noted above (tracked open in this file despite being done). With 001-010 all archived, this epic was fully complete as originally scoped.
+
+**Reopened 2026-08-05 (PDR-018)**: New feature 011 adds a real, user-driven scope change — skills drop the vestigial `input_schema`/structured-`input` calling convention entirely (never validated, legacy carryover) and move from a single flat template string to a required Markdown file plus optional accompanying template/reference files, matching the real Claude Code skill convention rather than SkillCanon's own bespoke one. `expand()` keeps resolving live per-invocation (policy/objective injection stays fresh on every call, per [PDR-010](../../docs/pdr/010-skill-based-distribution-not-mcp.md)) — only the authored content shape and calling convention change, not when/how a skill is resolved. See [PDR-018](../../docs/pdr/018-skill-file-format-and-registry-import.md) for the full decision. This epic is in-progress again until 011 ships; a corresponding Distribution-side feature (CLI stub/sync rework) is tracked at `backlog/008-distribution/007-skill-file-format-cli-support.md`.

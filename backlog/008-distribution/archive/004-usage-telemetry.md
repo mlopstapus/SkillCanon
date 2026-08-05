@@ -1,7 +1,7 @@
 ---
 epic: 008-distribution
 feature: 004-usage-telemetry
-status: open
+status: done
 dependencies: ["001-rest-api-core-routes.md"]
 ---
 
@@ -9,19 +9,21 @@ dependencies: ["001-rest-api-core-routes.md"]
 
 Port `PromptUsage` recording from the current Python `metrics_service.py`, owned by Distribution per `bcs/distribution/OWNERSHIP.md` — telemetry only, not domain state, safe to roll up or truncate without affecting any bounded context's correctness.
 
+**Delivered** by `specs/001-usage-telemetry/` (tasks.md 25/25 complete), commit `61f6926` on `main`. `distribution.prompt_usage` (migration `0025`) records REST expand + chain-step usage; `/api/metrics` + `/metrics` page ship the aggregate view; `sh-run`'s MCP path (`002-mcp-server-and-tools.md`) already calls `recordPromptUsage` too, satisfying the transport-parity bullet ahead of schedule.
+
 ## Requirements
 
-- [ ] `distribution.prompt_usage` table: `id`, `prompt_name`, `prompt_version`, `status_code`, `latency_ms`, `created_at`
-- [ ] Recorded for every expansion via REST (`001-rest-api-core-routes.md`'s expand endpoint) — this is also the transport `005-skill-sync-cli.md`'s `skillcanon run` uses, so skill-sync invocations get telemetry for free with no separate wiring
-- [ ] If/when `002-mcp-server-and-tools.md` (currently deprioritized) is built, its `sh-run` must record the same way — parity across whichever transports actually exist, matching the parity requirement tenet C1 established for audit logging generally
-- [ ] Recorded for every chain step via `SkillChainRunCompleted`/`SkillChainRunFailed`/`SkillChainRunAbandoned` (renamed from the originally-planned `WorkflowRunCompleted`/`WorkflowRunFailed` — see Technical Notes)
-- [ ] Basic metrics endpoint/page (matching current `routers/metrics.py`) surfacing aggregate usage
+- [x] `distribution.prompt_usage` table: `id`, `prompt_name`, `prompt_version`, `status_code`, `latency_ms`, `created_at`
+- [x] Recorded for every expansion via REST (`001-rest-api-core-routes.md`'s expand endpoint) — this is also the transport `005-skill-sync-cli.md`'s `skillcanon run` uses, so skill-sync invocations get telemetry for free with no separate wiring
+- [x] If/when `002-mcp-server-and-tools.md` (currently deprioritized) is built, its `sh-run` must record the same way — parity across whichever transports actually exist, matching the parity requirement tenet C1 established for audit logging generally
+- [x] Recorded for every chain step via `SkillChainRunCompleted`/`SkillChainRunFailed`/`SkillChainRunAbandoned` (renamed from the originally-planned `WorkflowRunCompleted`/`WorkflowRunFailed` — see Technical Notes)
+- [x] Basic metrics endpoint/page (matching current `routers/metrics.py`) surfacing aggregate usage
 
 ## Acceptance Criteria
 
-- [ ] An expansion via REST (including via `skillcanon run`) produces a `prompt_usage` row
-- [ ] Metrics endpoint returns correctly org-scoped aggregates (no cross-org leakage)
-- [ ] If `002-mcp-server-and-tools.md` is later built, its `sh-run` produces an equivalent row — parity between transports verified by test at that time, not required now
+- [x] An expansion via REST (including via `skillcanon run`) produces a `prompt_usage` row
+- [x] Metrics endpoint returns correctly org-scoped aggregates (no cross-org leakage) — independently backstopped by RLS, see `backlog/008-distribution/archive/006-distribution-tenant-isolation-tests.md`
+- [x] If `002-mcp-server-and-tools.md` is later built, its `sh-run` produces an equivalent row — parity between transports verified by test at that time, not required now — confirmed done ahead of schedule (`mcp-tools.ts`'s `shRun` calls `recordPromptUsage`)
 
 ## Open Questions
 

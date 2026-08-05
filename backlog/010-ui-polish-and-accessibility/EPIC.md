@@ -1,7 +1,7 @@
 # Epic 010: UI Polish & Accessibility
 
 **Priority:** 11
-**Status:** not-started
+**Status:** in-progress (blocked)
 **Goal:** A final consistency and accessibility pass across every page in the product, once every page already has its own real, finished design — the last thing that happens before go-live.
 
 ## Overview
@@ -47,3 +47,5 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 This epic no longer gates on `backlog/000-foundations/010-design-system.md` directly — that foundations item's deliverable (`context/design-system.md`) is now produced by `backlog/004-app-shell-and-landing/001-design-tokens-and-theming.md`, much earlier in the backlog than this epic's original slot.
 
 If a future page redesign surfaces a real UX gap (missing empty state, confusing flow, etc.) during that page's own owning-epic build, track it as a new feature in that epic, not here — this epic's scope is verification/consistency across already-built pages, not building anything new itself.
+
+**Status check (2026-08-05):** partial progress landed (`specs/001-cross-page-polish/`, 5 of the in-scope pages), but this epic's sole feature is genuinely blocked, not done — its own required smoke test needs a policy/objective UI that doesn't exist anywhere yet. The actual gate is `backlog/005-governance/005-governance-views-ui.md`, which was never built despite this epic's own dependency list already naming it. See `001-cross-page-polish-and-accessibility.md`'s own status check for details.

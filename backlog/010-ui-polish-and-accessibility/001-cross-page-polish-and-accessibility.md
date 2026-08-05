@@ -27,6 +27,8 @@ dependencies: ["backlog/002-identity-access/009-auth-and-onboarding-ui.md", "bac
 
 - None currently.
 
+**Status check (2026-08-05):** real work has landed — `specs/001-cross-page-polish/tasks.md` shows 27/27 checked, and the `AppState` component + `src/shared/testing/accessibility.ts` axe helper + focus-visible CSS tokens are real, shipped infrastructure. But this is partial, not complete: only 5 pages were actually touched (prompts-list, projects-list, audit-log, api-keys, access-unavailable) against a much larger in-scope route inventory the spec itself lists (teams, dashboard, metrics, settings, auth pages never touched). The Acceptance Criteria's manual smoke test above (which already required "create a policy") is currently impossible to perform — no policy/objective UI exists anywhere (see `backlog/008-distribution/003-web-ui-shell-and-core-pages.md`'s own status check) — and the spec's own "Manual Evidence Checklist" was found empty, not filled in with recorded results. This item stays `open`; do not mark it done from the 27/27 tasks.md checkmark alone.
+
 ## Dependencies
 
 - `backlog/002-identity-access/009-auth-and-onboarding-ui.md`
