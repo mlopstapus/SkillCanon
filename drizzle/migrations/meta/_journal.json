@@ -183,6 +183,13 @@
       "when": 1785801600000,
       "tag": "0025_distribution_usage_telemetry",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1785809589889,
+      "tag": "0026_distribution_rls",
+      "breakpoints": true
     }
   ]
 }
