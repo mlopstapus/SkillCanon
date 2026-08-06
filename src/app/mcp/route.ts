@@ -145,7 +145,18 @@ async function handleMcpRequest(request: Request, deps: { authDb?: Db; db?: Db }
     return transportOrResponse;
   }
 
-  const sessionId = transportOrResponse.sessionId ?? getSessionId(request) ?? "pending";
+  // transportOrResponse.sessionId is only assigned once the SDK actually
+  // processes this request's body (inside .handleRequest, called below) —
+  // for a brand-new session's very first (initialize) message it is always
+  // undefined here. A shared literal fallback (e.g. "pending") would make
+  // every such first-message request key into the *same* McpSessionManager
+  // bucket, so once any one caller's identity is cached there, every later
+  // new session's first message would silently reuse that cached caller
+  // instead of validating its own bearer key — a real cross-session
+  // authentication bypass, not just a naming nit. A fresh random id per
+  // request guarantees this fallback bucket is never shared across two
+  // distinct requests.
+  const sessionId = transportOrResponse.sessionId ?? getSessionId(request) ?? randomUUID();
   const caller = await resolveMcpCaller(deps.authDb ?? defaultAuthDb, rawApiKey, sessionId, mcpSessionManager);
   if (!caller) {
     log.info({ path: "/mcp", method: request.method, durationMs: Date.now() - start }, "unauthenticated MCP request rejected");
@@ -206,4 +217,4 @@ export async function DELETE(request: Request): Promise<Response> {
   return handleMcpRequest(request);
 }
 
-export const _test = { handleMcpRequest, createSkillCanonMcpServer, transports };
+export const _test = { handleMcpRequest, createSkillCanonMcpServer, transports, log };
