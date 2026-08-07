@@ -24,10 +24,18 @@ export interface ChainRunStepView {
   stepIndex: number;
   promptName: string;
   promptVersion: string;
-  systemMessage: string | null;
-  userMessage: string;
+  /** The step's resolved expansion content (032-skill-file-format-refactor) — replaces systemMessage/userMessage. */
+  content: string;
   reportedStatus: "success" | "error" | null;
   reportedError: string | null;
+}
+
+/** A named file (main or supporting) belonging to a new-shape template-kind version (032-skill-file-format-refactor). */
+export interface PromptDetailFileView {
+  id: string;
+  name: string;
+  content: string;
+  isMain: boolean;
 }
 
 export interface PromptDetailData {
@@ -45,15 +53,27 @@ export interface PromptDetailData {
     tags: string[];
     isActive: boolean;
     kind: "template" | "chain";
-    systemTemplate: string | null;
     stepCount: number;
+    /** Main file content (new-shape) or legacy system/user content, for the version-history drawer's short preview. `null` for a chain-kind version. */
+    contentPreview: string | null;
   }>;
   /** Of the currently-active version. Drives which section set renders (FR-001). */
   kind: "template" | "chain";
-  systemTemplate: string | null;
-  userTemplate: string | null;
-  inputSchemaRows: Array<{ name: string; type: string; required: boolean }>;
-  preview: { systemMessage: string | null; userMessage: string } | null;
+  /** False when the skill has never had a version published (createPrompt-only state). */
+  hasActiveVersion: boolean;
+  /**
+   * True for a template-kind active version published before
+   * 032-skill-file-format-refactor shipped (no `files` at all) — the Files
+   * tab is not offered for it; Overview shows its legacy content inline
+   * instead (FR-019).
+   */
+  isLegacyShape: boolean;
+  /** New-shape (`kind === "template" && !isLegacyShape`) file bundle: required main file (`SKILL.md`) plus zero or more supporting files. */
+  files: PromptDetailFileView[];
+  legacySystemTemplate: string | null;
+  legacyUserTemplate: string | null;
+  /** Resolved content (governance-applied) for the active template-kind version, or `null` if resolution failed. */
+  preview: string | null;
   previewError: string | null;
   appliedPolicies: Array<{ label: string; type: "prepend" | "append" | "inject" | "validate" }>;
   /** Non-null only when `kind === "chain"` (FR-002). */
@@ -70,7 +90,7 @@ export interface PromptDetailData {
   accessibleSkillNames: string[];
 }
 
-export type PromptDetailTab = "template" | "preview" | "policies" | "steps" | "runs";
+export type PromptDetailTab = "overview" | "files" | "preview" | "policies" | "steps" | "runs";
 
 export interface PromptDetailViewProps {
   data: PromptDetailData;
@@ -125,6 +145,11 @@ export function PromptDetailView({
 }: PromptDetailViewProps) {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(new Set());
+  const mainFile = data.files.find((f) => f.isMain) ?? null;
+  const supportingFiles = data.files.filter((f) => !f.isMain);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(mainFile?.id ?? null);
+  const [fileView, setFileView] = useState<"preview" | "plain">("preview");
+  const selectedFile = data.files.find((f) => f.id === selectedFileId) ?? mainFile;
   const totalGrants = data.shareState.teams.filter((t) => t.granted).length +
     data.shareState.projects.filter((p) => p.granted).length;
 
@@ -143,6 +168,25 @@ export function PromptDetailView({
       return next;
     });
   }
+
+  const tabs: Array<[PromptDetailTab, string]> =
+    data.kind === "chain"
+      ? [
+          ["steps", `Steps (${data.steps?.length ?? 0})`],
+          ["runs", "Run history"],
+        ]
+      : data.isLegacyShape
+        ? [
+            ["overview", "Overview"],
+            ["preview", "Preview"],
+            ["policies", `Applied policies (${data.appliedPolicies.length})`],
+          ]
+        : [
+            ["overview", "Overview"],
+            ["files", `Files (${data.files.length})`],
+            ["preview", "Preview"],
+            ["policies", `Applied policies (${data.appliedPolicies.length})`],
+          ];
 
   return (
     <div className="flex h-full flex-col">
@@ -271,18 +315,7 @@ export function PromptDetailView({
           </button>
         ) : null}
         <div className="flex gap-0.5 border-b border-border">
-          {(
-            data.kind === "chain"
-              ? ([
-                  ["steps", `Steps (${data.steps?.length ?? 0})`],
-                  ["runs", "Run history"],
-                ] as const)
-              : ([
-                  ["template", "Template"],
-                  ["preview", "Preview"],
-                  ["policies", `Applied policies (${data.appliedPolicies.length})`],
-                ] as const)
-          ).map(([key, label]) => (
+          {tabs.map(([key, label]) => (
             <button
               key={key}
               type="button"
@@ -298,29 +331,135 @@ export function PromptDetailView({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-6.5 py-5">
-        {activeTab === "template" ? (
-          <div className="flex flex-col gap-4">
-            <TemplateBlock label="System template" content={data.systemTemplate} />
-            <TemplateBlock label="User template" content={data.userTemplate} />
-            {data.inputSchemaRows.length > 0 ? (
+        {activeTab === "overview" ? (
+          !data.hasActiveVersion ? (
+            <div role="status" className="py-10 text-center text-[12.5px] text-dim">
+              No version published yet. Click <span className="text-text">+ New version</span> to author this
+              skill&apos;s instructions.
+            </div>
+          ) : data.isLegacyShape ? (
+            <div className="flex flex-col gap-4">
+              <div className="rounded-card border border-border-2 bg-surface p-3.5 text-[11.5px] leading-relaxed text-dim">
+                This version predates file-based skills — its instructions are a single system/user template
+                pair, shown read-only below. Publish a new version to move it to the current file-based format.
+              </div>
+              <TextBlock label="System template" content={data.legacySystemTemplate} />
+              <TextBlock label="User template" content={data.legacyUserTemplate} />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <SummaryCard label="Active version" value={data.activeVersion ?? "—"} />
+                <SummaryCard label="Files" value={String(data.files.length)} />
+                <SummaryCard label="Applied policies" value={String(data.appliedPolicies.length)} />
+                <SummaryCard label="Owner" value={data.ownerLabel} />
+              </div>
               <div>
-                <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">Input schema</div>
-                <div className="flex flex-col gap-1.5">
-                  {data.inputSchemaRows.map((f) => (
-                    <div
-                      key={f.name}
-                      className="flex items-center gap-2.5 rounded-control border border-border bg-surface px-3.5 py-2.5"
+                <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">
+                  Files in this version
+                </div>
+                <div className="flex flex-col gap-2">
+                  {data.files.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedFileId(f.id);
+                        onTabChange("files");
+                      }}
+                      className="flex items-center gap-2.5 rounded-control border border-border bg-surface px-3.5 py-2.5 text-left"
                     >
                       <span className="font-mono text-[12.5px] text-text">{f.name}</span>
-                      <Badge variant="blue">{f.type}</Badge>
-                      <span className="ml-auto font-mono text-[10px] text-faint">
-                        {f.required ? "required" : "optional"}
-                      </span>
-                    </div>
+                      {f.isMain ? (
+                        <span className="rounded-[5px] bg-a-soft px-1.5 py-0.5 font-mono text-[9.5px] text-a">
+                          required
+                        </span>
+                      ) : null}
+                    </button>
                   ))}
                 </div>
               </div>
-            ) : null}
+            </div>
+          )
+        ) : null}
+
+        {activeTab === "files" ? (
+          <div className="flex min-h-[420px] overflow-hidden rounded-card border border-border">
+            <div className="flex w-[220px] shrink-0 flex-col gap-4 border-r border-border bg-surface p-3.5">
+              <div>
+                <div className="mb-1.5 px-1 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">
+                  Main file
+                </div>
+                {mainFile ? (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFileId(mainFile.id)}
+                    className={`flex w-full items-center gap-2 rounded-control px-2.5 py-1.5 text-left font-mono text-[12px] ${
+                      selectedFile?.id === mainFile.id ? "bg-a-soft text-text" : "text-text"
+                    }`}
+                  >
+                    {mainFile.name}
+                  </button>
+                ) : null}
+              </div>
+              <div>
+                <div className="mb-1.5 px-1 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">
+                  Supporting ({supportingFiles.length})
+                </div>
+                {supportingFiles.length === 0 ? (
+                  <div className="px-1 text-[11px] text-faint">No supporting files.</div>
+                ) : (
+                  <div className="flex flex-col gap-0.5">
+                    {supportingFiles.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => setSelectedFileId(f.id)}
+                        className={`w-full truncate rounded-control px-2.5 py-1.5 text-left font-mono text-[12px] ${
+                          selectedFile?.id === f.id ? "bg-a-soft text-text" : "text-text"
+                        }`}
+                      >
+                        {f.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <div className="flex items-center justify-between border-b border-border bg-bg px-4 py-2.5">
+                <span className="font-mono text-[12.5px] text-dim">{selectedFile?.name}</span>
+                <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setFileView("preview")}
+                    className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
+                      fileView === "preview" ? "bg-a-soft text-a" : "text-dim"
+                    }`}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFileView("plain")}
+                    className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
+                      fileView === "plain" ? "bg-a-soft text-a" : "text-dim"
+                    }`}
+                  >
+                    Plain text
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4.5">
+                {fileView === "plain" || !selectedFile ? (
+                  <pre className="m-0 whitespace-pre-wrap font-mono text-[12.5px] leading-relaxed text-text">
+                    {selectedFile?.content ?? "—"}
+                  </pre>
+                ) : (
+                  <MarkdownPreview content={selectedFile.content} />
+                )}
+              </div>
+            </div>
           </div>
         ) : null}
 
@@ -330,10 +469,7 @@ export function PromptDetailView({
               {data.previewError}
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
-              <TemplateBlock label="Rendered system message" content={data.preview?.systemMessage ?? null} accent />
-              <TemplateBlock label="Rendered user message" content={data.preview?.userMessage ?? null} accent />
-            </div>
+            <TextBlock label="Resolved content" content={data.preview} accent />
           )
         ) : null}
 
@@ -443,8 +579,7 @@ export function PromptDetailView({
                                       {sd.reportedError ?? "This step was reported as failed."}
                                     </div>
                                   ) : null}
-                                  <TemplateBlock label="System message sent" content={sd.systemMessage} />
-                                  <TemplateBlock label="User message sent" content={sd.userMessage} />
+                                  <TextBlock label="Content sent" content={sd.content} />
                                 </div>
                               ) : null}
                             </div>
@@ -487,7 +622,16 @@ export function PromptDetailView({
   );
 }
 
-function TemplateBlock({ label, content, accent }: { label: string; content: string | null; accent?: boolean }) {
+function SummaryCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-card border border-border bg-surface px-4 py-3.5">
+      <div className="mb-1.5 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">{label}</div>
+      <div className="font-display text-[18px] font-bold">{value}</div>
+    </div>
+  );
+}
+
+function TextBlock({ label, content, accent }: { label: string; content: string | null; accent?: boolean }) {
   return (
     <div>
       <div className={`mb-2 font-mono text-[10px] tracking-[0.08em] uppercase ${accent ? "text-a" : "text-faint"}`}>
@@ -500,6 +644,54 @@ function TemplateBlock({ label, content, accent }: { label: string; content: str
       >
         {content ?? "—"}
       </pre>
+    </div>
+  );
+}
+
+/** Minimal Markdown block renderer for the Files tab's Preview toggle (headings, list items, paragraphs, blank lines). */
+function MarkdownPreview({ content }: { content: string }) {
+  const lines = content.split("\n");
+  return (
+    <div className="flex max-w-[680px] flex-col gap-0.5">
+      {lines.map((line, i) => {
+        if (line.startsWith("### ")) {
+          return (
+            <div key={i} className="mt-2.5 mb-1 font-display text-[13.5px] font-semibold">
+              {line.slice(4)}
+            </div>
+          );
+        }
+        if (line.startsWith("## ")) {
+          return (
+            <div key={i} className="mt-3.5 mb-1.5 font-display text-[16px] font-bold">
+              {line.slice(3)}
+            </div>
+          );
+        }
+        if (line.startsWith("# ")) {
+          return (
+            <div key={i} className="mt-1.5 mb-2 font-display text-[22px] font-bold tracking-tight">
+              {line.slice(2)}
+            </div>
+          );
+        }
+        if (line.startsWith("- ") || line.startsWith("* ")) {
+          return (
+            <div key={i} className="flex gap-2 pl-1 text-[13px] leading-relaxed text-text">
+              <span className="text-faint">•</span>
+              {line.slice(2)}
+            </div>
+          );
+        }
+        if (line.trim() === "") {
+          return <div key={i} className="h-1.5" />;
+        }
+        return (
+          <div key={i} className="text-[13px] leading-relaxed text-text">
+            {line}
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -47,7 +47,7 @@ describe("/api/chain-runs/[runId]/advance", () => {
         organizationId: seeded.organizationId,
         promptName: stepSkillName,
         version: "1.0.0",
-        userTemplate: "Step output.",
+        mainFile: { content: "Step output." },
       });
       const steps: ChainStep[] = [{ id: "step1", promptName: stepSkillName, dependsOn: [] }];
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name: chainName });

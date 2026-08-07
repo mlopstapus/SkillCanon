@@ -82,14 +82,8 @@ export interface ChainStepResolution {
   stepIndex: number;
   promptName: string;
   promptVersion: string;
-  systemMessage: string | null;
-  userMessage: string;
-}
-
-/** Per-dependency envelope threaded into a step's `expand()` input (research.md). */
-export interface ChainStepDependencyValue {
-  status: "success" | "error";
-  output: string | null;
+  /** The step's resolved expansion content (032-skill-file-format-refactor) — mirrors `ExpansionResult.content`. */
+  content: string;
 }
 
 export type RunStatus = "in_progress" | "completed" | "failed" | "abandoned";
@@ -157,8 +151,8 @@ export interface ChainRunStepRecord {
   promptName: string;
   promptVersion: string;
   resolvedAt: Date;
-  systemMessage: string | null;
-  userMessage: string;
+  /** The step's resolved expansion content (032-skill-file-format-refactor) — mirrors `ExpansionResult.content`. */
+  content: string;
   appliedPolicies: string[];
   objectives: string[];
   reportedStatus: "success" | "error" | null;

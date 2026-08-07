@@ -40,7 +40,7 @@ describe("rollbackPrompt", () => {
             organizationId: fixture.organizationId,
             promptName,
             version: v,
-            userTemplate: "{{input}}",
+            mainFile: { content: "content" },
           }),
         ),
       );

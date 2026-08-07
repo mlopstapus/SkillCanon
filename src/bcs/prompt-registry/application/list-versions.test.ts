@@ -26,7 +26,7 @@ describe("listVersions", () => {
         organizationId: fixture.organizationId,
         promptName: "multi-version",
         version: "v1",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -34,7 +34,7 @@ describe("listVersions", () => {
         organizationId: fixture.organizationId,
         promptName: "multi-version",
         version: "v2",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 
@@ -55,7 +55,7 @@ describe("listVersions", () => {
         organizationId: fixtureB.organizationId,
         promptName: "cross-org-v",
         version: "v1",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 

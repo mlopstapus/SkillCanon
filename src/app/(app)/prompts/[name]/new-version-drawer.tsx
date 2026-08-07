@@ -4,9 +4,12 @@ import { useState, useTransition } from "react";
 import type { PromptActionResult } from "../actions";
 import { ChainStepBuilder, type ChainStepDraft } from "./chain-step-builder";
 
+const MAIN_FILE_NAME = "SKILL.md";
+
 export interface NewVersionValues {
-  systemTemplate?: string;
-  userTemplate?: string;
+  /** Template-kind content (032-skill-file-format-refactor) — mutually exclusive with `steps` (FR-010). */
+  mainFile?: { content: string };
+  supportingFiles?: Array<{ name: string; content: string }>;
   /** Present only when the Chain kind was selected — mutually exclusive with template content (FR-010). */
   steps?: Array<{ id: string; promptName: string; promptVersion?: string; dependsOn: string[] }>;
   tags?: string[];
@@ -16,8 +19,9 @@ export interface NewVersionValues {
 export interface NewVersionDrawerProps {
   promptName: string;
   nextVersionLabel: string;
-  systemTemplate: string;
-  userTemplate: string;
+  /** Active version's main file content, prefilled — empty when there's no active version yet, or it's legacy-shape (no files to prefill from). */
+  mainFileContent: string;
+  supportingFiles: Array<{ name: string; content: string }>;
   tags: string[];
   /** The active version's own kind/steps — prefills the builder when it's already a chain (mirrors template-content prefill). */
   activeVersionKind: "template" | "chain";
@@ -31,8 +35,8 @@ export interface NewVersionDrawerProps {
 export function NewVersionDrawer({
   promptName,
   nextVersionLabel,
-  systemTemplate,
-  userTemplate,
+  mainFileContent,
+  supportingFiles: initialSupportingFiles,
   tags,
   activeVersionKind,
   activeVersionSteps,
@@ -41,13 +45,48 @@ export function NewVersionDrawer({
   onSubmit,
 }: NewVersionDrawerProps) {
   const [kind, setKind] = useState<"template" | "chain">(activeVersionKind);
-  const [system, setSystem] = useState(systemTemplate);
-  const [user, setUser] = useState(userTemplate);
+  const [mainFile, setMainFile] = useState(mainFileContent);
+  const [supportingFiles, setSupportingFiles] = useState<Array<{ name: string; content: string }>>(
+    initialSupportingFiles,
+  );
+  const [selectedFileName, setSelectedFileName] = useState<string>(MAIN_FILE_NAME);
   const [chainSteps, setChainSteps] = useState<ChainStepDraft[]>(activeVersionSteps);
   const [tagsInput, setTagsInput] = useState(tags.join(", "));
   const [setActive, setSetActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const selectedContent =
+    selectedFileName === MAIN_FILE_NAME
+      ? mainFile
+      : (supportingFiles.find((f) => f.name === selectedFileName)?.content ?? "");
+
+  function setSelectedContent(content: string) {
+    if (selectedFileName === MAIN_FILE_NAME) {
+      setMainFile(content);
+    } else {
+      setSupportingFiles((prev) => prev.map((f) => (f.name === selectedFileName ? { ...f, content } : f)));
+    }
+  }
+
+  function addFile() {
+    let n = 1;
+    let name = `file-${n}.md`;
+    const existing = new Set(supportingFiles.map((f) => f.name));
+    while (existing.has(name)) {
+      n += 1;
+      name = `file-${n}.md`;
+    }
+    setSupportingFiles((prev) => [...prev, { name, content: "" }]);
+    setSelectedFileName(name);
+  }
+
+  function removeFile(name: string) {
+    setSupportingFiles((prev) => prev.filter((f) => f.name !== name));
+    if (selectedFileName === name) {
+      setSelectedFileName(MAIN_FILE_NAME);
+    }
+  }
 
   function submit() {
     setError(null);
@@ -71,8 +110,8 @@ export function NewVersionDrawer({
               setActive,
             }
           : {
-              systemTemplate: system || undefined,
-              userTemplate: user || undefined,
+              mainFile: { content: mainFile },
+              supportingFiles: supportingFiles.length > 0 ? supportingFiles : undefined,
               tags: tagList,
               setActive,
             },
@@ -121,26 +160,55 @@ export function NewVersionDrawer({
             </button>
           </div>
           {kind === "template" ? (
-            <>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-semibold text-dim">System template</span>
-                <textarea
-                  value={system}
-                  onChange={(e) => setSystem(e.target.value)}
-                  rows={3}
-                  className="resize-y rounded-control border border-border-2 bg-surface px-3 py-2.5 font-mono text-[12.5px] text-text outline-none focus:border-a"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-semibold text-dim">User template</span>
-                <textarea
-                  value={user}
-                  onChange={(e) => setUser(e.target.value)}
-                  rows={3}
-                  className="resize-y rounded-control border border-border-2 bg-surface px-3 py-2.5 font-mono text-[12.5px] text-text outline-none focus:border-a"
-                />
-              </label>
-            </>
+            <div>
+              <span className="mb-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-dim">Files</span>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setSelectedFileName(MAIN_FILE_NAME)}
+                  className={`rounded-[7px] border border-border-2 px-2.5 py-1.5 font-mono text-[11px] ${
+                    selectedFileName === MAIN_FILE_NAME ? "bg-a-soft text-a" : "text-text"
+                  }`}
+                >
+                  {MAIN_FILE_NAME}
+                </button>
+                {supportingFiles.map((f) => (
+                  <span key={f.name} className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFileName(f.name)}
+                      className={`rounded-[7px] border border-border-2 px-2.5 py-1.5 font-mono text-[11px] ${
+                        selectedFileName === f.name ? "bg-a-soft text-a" : "text-text"
+                      }`}
+                    >
+                      {f.name}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(f.name)}
+                      aria-label={`Remove ${f.name}`}
+                      className="grid size-5 place-items-center rounded-[6px] text-faint"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+                <button
+                  type="button"
+                  onClick={addFile}
+                  className="rounded-[7px] border border-dashed border-border-2 px-2.5 py-1.5 font-mono text-[11px] text-a"
+                >
+                  + file
+                </button>
+              </div>
+              <div className="mb-1.5 font-mono text-[10.5px] text-faint">editing {selectedFileName}</div>
+              <textarea
+                value={selectedContent}
+                onChange={(e) => setSelectedContent(e.target.value)}
+                rows={8}
+                className="w-full resize-y rounded-control border border-border-2 bg-surface px-3 py-2.5 font-mono text-[12.5px] text-text outline-none focus:border-a"
+              />
+            </div>
           ) : (
             <ChainStepBuilder steps={chainSteps} onChange={setChainSteps} accessibleSkillNames={accessibleSkillNames} />
           )}

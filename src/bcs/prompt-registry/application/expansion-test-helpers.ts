@@ -5,6 +5,8 @@ import { withTenantContext } from "@/shared/db/tenant-context";
 import type { TestDb } from "@/shared/db/test-helpers";
 import { createPrompt } from "./create-prompt";
 import { deprecatePrompt } from "./deprecate-prompt";
+import { insertPromptVersion } from "../infrastructure/prompt-versions-repo";
+import { updatePrompt } from "../infrastructure/prompts-repo";
 import { makePromptFixtureOrg, type PromptFixtureOrg } from "./prompt-test-helpers";
 import { publishVersion } from "./publish-version";
 
@@ -15,13 +17,16 @@ export async function makeExpansionFixtureOrg(testDb: TestDb): Promise<Expansion
 }
 
 // ---------------------------------------------------------------------------
-// Skills
+// Skills (new-shape, 032-skill-file-format-refactor — the only shape
+// `publishVersion` can produce going forward; see `publishLegacySkill`
+// below for constructing a pre-existing, legacy-shape fixture).
 // ---------------------------------------------------------------------------
 
 export interface PublishSkillParams {
   name: string;
-  systemTemplate?: string | null;
-  userTemplate?: string | null;
+  /** Main file content. Defaults to a fixed non-empty string when omitted. */
+  content?: string;
+  supportingFiles?: Array<{ name: string; content: string }>;
   version?: string;
 }
 
@@ -33,8 +38,8 @@ export async function publishSkill(testDb: TestDb, fixture: ExpansionFixtureOrg,
       promptName: params.name,
       organizationId: fixture.organizationId,
       version: params.version ?? "1.0.0",
-      systemTemplate: params.systemTemplate ?? null,
-      userTemplate: params.userTemplate ?? null,
+      mainFile: { content: params.content ?? "Default content." },
+      supportingFiles: params.supportingFiles,
     });
   });
 }
@@ -64,10 +69,51 @@ export async function publishAnotherVersion(
       promptName: params.name,
       organizationId: fixture.organizationId,
       version: params.version ?? "2.0.0",
-      systemTemplate: params.systemTemplate ?? null,
-      userTemplate: params.userTemplate ?? null,
+      mainFile: { content: params.content ?? "Default content." },
+      supportingFiles: params.supportingFiles,
     }),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Legacy-shape fixtures (032-skill-file-format-refactor, FR-010/FR-011) —
+// `publishVersion` can no longer produce this shape at all, so a
+// pre-existing (published-before-this-feature) row is constructed via a
+// direct repo insert instead, bypassing the application layer entirely —
+// exactly like a real row already sitting in the database would have been.
+// ---------------------------------------------------------------------------
+
+export interface PublishLegacySkillParams {
+  name: string;
+  systemTemplate?: string | null;
+  userTemplate?: string | null;
+  version?: string;
+}
+
+export async function publishLegacySkill(
+  testDb: TestDb,
+  fixture: ExpansionFixtureOrg,
+  params: PublishLegacySkillParams,
+) {
+  return withTenantContext(testDb.appDb, fixture.organizationId, async (tx) => {
+    const prompt = await createPrompt(tx, fixture.actor, {
+      organizationId: fixture.organizationId,
+      name: params.name,
+    });
+    const versionId = randomUUID();
+    const inserted = await insertPromptVersion(tx, {
+      id: versionId,
+      promptId: prompt.id,
+      version: params.version ?? "1.0.0",
+      kind: "template",
+      systemTemplate: params.systemTemplate ?? null,
+      userTemplate: params.userTemplate ?? null,
+      steps: null,
+      tags: [],
+    });
+    await updatePrompt(tx, prompt.id, { activeVersionId: versionId });
+    return inserted;
+  });
 }
 
 // ---------------------------------------------------------------------------

@@ -137,16 +137,51 @@ export const promptVersions = promptRegistrySchema.table(
       .references(() => prompts.id, { onDelete: "cascade" }),
     version: text("version").notNull(),
     kind: text("kind", { enum: ["template", "chain"] }).notNull().default("template"),
+    /**
+     * Legacy content columns (032-skill-file-format-refactor, PDR-018):
+     * read-only going forward. Every version published before this feature
+     * shipped keeps its content here, resolved unchanged (FR-010/FR-011).
+     * No new version may be published in this shape — new template-kind
+     * versions store their content in `promptVersionFiles` instead. A
+     * version is "new-shape" iff it has a `promptVersionFiles` row with
+     * `isMain: true`; there is no separate discriminant column for this.
+     */
     systemTemplate: text("system_template"),
     userTemplate: text("user_template"),
     steps: jsonb("steps").$type<ChainStep[]>(),
-    inputSchema: jsonb("input_schema").notNull().default({}),
     tags: jsonb("tags").notNull().default([]),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     unique("prompt_versions_prompt_id_version_unique").on(table.promptId, table.version),
     index("prompt_versions_prompt_id_created_at_index").on(table.promptId, table.createdAt),
+  ],
+);
+
+/**
+ * A named file (main or supporting) belonging to one template-kind
+ * `promptVersions` row (032-skill-file-format-refactor, PDR-018). Exactly
+ * one row per version has `isMain: true` (the required `SKILL.md`,
+ * application-enforced, not a DB constraint); zero or more have
+ * `isMain: false` (supporting files, unique name per version). Immutable
+ * once published, same as `promptVersions` itself — no update/delete path
+ * exists for a published version's files.
+ */
+export const promptVersionFiles = promptRegistrySchema.table(
+  "prompt_version_files",
+  {
+    id: id(),
+    promptVersionId: uuid("prompt_version_id")
+      .notNull()
+      .references(() => promptVersions.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    content: text("content").notNull(),
+    isMain: boolean("is_main").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("prompt_version_files_prompt_version_id_name_unique").on(table.promptVersionId, table.name),
+    index("prompt_version_files_prompt_version_id_index").on(table.promptVersionId),
   ],
 );
 
@@ -311,8 +346,13 @@ export const skillChainRunSteps = promptRegistrySchema.table(
     promptName: text("prompt_name").notNull(),
     promptVersion: text("prompt_version").notNull(),
     resolvedAt: timestamp("resolved_at", { withTimezone: true }).notNull().defaultNow(),
-    systemMessage: text("system_message"),
-    userMessage: text("user_message").notNull(),
+    /**
+     * The step's resolved expansion content (032-skill-file-format-refactor)
+     * — replaces the old systemMessage/userMessage pair, mirroring
+     * `ExpansionResult`'s own single-`content` shape, since a chain step's
+     * target skill resolves through the same `expand()`.
+     */
+    content: text("content").notNull(),
     appliedPolicies: jsonb("applied_policies").notNull().default([]),
     objectives: jsonb("objectives").notNull().default([]),
     reportedStatus: text("reported_status", { enum: ["success", "error"] }),

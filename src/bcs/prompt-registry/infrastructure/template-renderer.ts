@@ -17,11 +17,16 @@
 import nunjucks from "nunjucks";
 import { MAX_INCLUDE_DEPTH } from "../domain/expansion";
 
-/** The minimal shape `include_prompt` needs from a referenced skill's version — deliberately not the full `PromptVersionSummary`. */
-export interface IncludableVersion {
-  systemTemplate: string | null;
-  userTemplate: string | null;
-}
+/**
+ * The minimal shape `include_prompt` needs from a referenced skill's
+ * version — deliberately not the full `PromptVersionSummary`. Tagged union
+ * (032-skill-file-format-refactor): a new-shape version contributes its
+ * single resolved main-file content; a legacy-shape version keeps its old
+ * two-part system+user shape, joined the same way it always has been.
+ */
+export type IncludableVersion =
+  | { kind: "content"; content: string }
+  | { kind: "legacy"; systemTemplate: string | null; userTemplate: string | null };
 
 const INCLUDE_PROMPT_PATTERN = /include_prompt\(['"]([a-z0-9-]+)['"]\)/g;
 
@@ -61,7 +66,10 @@ function renderTemplate(
  * Builds the recursive `include_prompt` global, exactly mirroring legacy's
  * `_build_include_prompt`: depth-exceeded and not-found both degrade to a
  * plain placeholder string rendered inline as output — never throw, never
- * abort the rest of expansion (FR-005/FR-006).
+ * abort the rest of expansion (FR-005/FR-006). Branches on the referenced
+ * version's shape (032-skill-file-format-refactor, FR-008): a new-shape
+ * inclusion renders its single content; a legacy-shape inclusion keeps the
+ * existing two-part render-and-join.
  */
 function buildIncludePrompt(
   promptCache: Map<string, IncludableVersion>,
@@ -81,11 +89,17 @@ function buildIncludePrompt(
     const innerInclude = buildIncludePrompt(promptCache, variables, depth + 1);
     innerEnv.addGlobal("include_prompt", innerInclude);
 
+    if (pv.kind === "content") {
+      return renderTemplate(innerEnv, pv.content, variables);
+    }
+
     const parts: string[] = [];
     if (pv.systemTemplate) {
       parts.push(renderTemplate(innerEnv, pv.systemTemplate, variables));
     }
-    const userTpl = pv.userTemplate ?? "{{ input }}";
+    // "" not "{{ input }}" — see expand.ts's identical fix; no `input`
+    // variable exists in scope for any caller anymore (FR-002).
+    const userTpl = pv.userTemplate ?? "";
     parts.push(renderTemplate(innerEnv, userTpl, variables));
     return parts.join("\n\n");
   };
@@ -96,7 +110,9 @@ function buildIncludePrompt(
  * user templates, with `include_prompt` registered as a template global that
  * resolves nested skill references from `promptCache` (prefetched by the
  * caller via `extractIncludeReferences` + a BFS lookup, matching legacy's
- * `_prefetch_included_prompts` loop).
+ * `_prefetch_included_prompts` loop). Legacy-shape versions only
+ * (032-skill-file-format-refactor) — see `renderContentWithIncludes` for
+ * new-shape, single-content versions.
  */
 export function renderWithIncludes(
   systemTemplate: string | null,
@@ -112,4 +128,20 @@ export function renderWithIncludes(
   const userMessage = renderTemplate(env, userTemplate, variables);
 
   return { systemMessage, userMessage };
+}
+
+/**
+ * Renders a new-shape version's single main-file content
+ * (032-skill-file-format-refactor), with the same `include_prompt`
+ * resolution as `renderWithIncludes`.
+ */
+export function renderContentWithIncludes(
+  content: string,
+  variables: Record<string, unknown>,
+  promptCache: Map<string, IncludableVersion>,
+): string {
+  const env = createSandboxedEnvironment();
+  const includeFn = buildIncludePrompt(promptCache, variables, 0);
+  env.addGlobal("include_prompt", includeFn);
+  return renderTemplate(env, content, variables);
 }

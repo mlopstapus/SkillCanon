@@ -26,9 +26,7 @@ describe("getPromptVersion", () => {
         organizationId: fixture.organizationId,
         promptName: "versioned-prompt",
         version: "v1",
-        systemTemplate: "Be helpful.",
-        userTemplate: "{{input}}",
-        inputSchema: {},
+        mainFile: { content: "Be helpful." },
         tags: [],
       }),
     );
@@ -59,8 +57,7 @@ describe("getPromptVersion", () => {
         organizationId: fixture.organizationId,
         promptName: "versioned-prompt-2",
         version: "v1",
-        userTemplate: "{{input}}",
-        inputSchema: {},
+        mainFile: { content: "content" },
         tags: [],
       }),
     );

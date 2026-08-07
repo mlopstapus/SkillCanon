@@ -33,7 +33,7 @@ describe("/api/skills/[name]/expand", () => {
     return withApiRoute(handlePost, { authDb: testDb.authDb, db: testDb.appDb });
   }
 
-  async function publishTemplateSkill(seeded: SeededOrg, name: string, userTemplate = "Topic: {{ topic }}") {
+  async function publishTemplateSkill(seeded: SeededOrg, name: string, content = "Topic: onboarding") {
     const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
     return withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name });
@@ -41,8 +41,7 @@ describe("/api/skills/[name]/expand", () => {
         organizationId: seeded.organizationId,
         promptName: name,
         version: "1.0.0",
-        systemTemplate: "You are a helpful assistant.",
-        userTemplate,
+        mainFile: { content },
       });
     });
   }
@@ -67,7 +66,6 @@ describe("/api/skills/[name]/expand", () => {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
         body: JSON.stringify({
-          input: { topic: "onboarding" },
           gitRemoteUrl: "git@example.com:org/repo.git",
           gitBranch: "main",
           gitCommitSha: "abc123",
@@ -78,7 +76,7 @@ describe("/api/skills/[name]/expand", () => {
 
     expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.userMessage).toContain("onboarding");
+    expect(body.content).toContain("onboarding");
 
     const summary = await usageSummary(seeded.organizationId);
     expect(summary.totalInvocations).toBe(1);
@@ -105,7 +103,7 @@ describe("/api/skills/[name]/expand", () => {
       new Request(`http://x/api/skills/${name}/expand`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ input: {} }),
+        body: JSON.stringify({}),
       }),
       { params: Promise.resolve({ name }) },
     );
@@ -126,7 +124,7 @@ describe("/api/skills/[name]/expand", () => {
       new Request("http://x/api/skills/does-not-exist/expand", {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ input: {} }),
+        body: JSON.stringify({}),
       }),
       { params: Promise.resolve({ name: "does-not-exist" }) },
     );
@@ -144,22 +142,5 @@ describe("/api/skills/[name]/expand", () => {
       { params: Promise.resolve({ name: "x" }) },
     );
     expect(response.status).toBe(401);
-  });
-
-  it("returns 422 VALIDATION_FAILED when input is missing", async () => {
-    const seeded = await seedOrgWithAdmin(testDb.authDb);
-    const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
-    const POST = route();
-
-    const response = await POST(
-      new Request("http://x/api/skills/x/expand", {
-        method: "POST",
-        headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({}),
-      }),
-      { params: Promise.resolve({ name: "x" }) },
-    );
-
-    expect(response.status).toBe(422);
   });
 });

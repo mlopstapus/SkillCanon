@@ -190,6 +190,20 @@
       "when": 1785809589889,
       "tag": "0026_distribution_rls",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1786048495653,
+      "tag": "0027_prompt_registry_skill_files",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1786048600000,
+      "tag": "0028_prompt_registry_skill_chain_step_content",
+      "breakpoints": true
     }
   ]
 }

@@ -29,7 +29,7 @@ async function publishChainStepTarget(testDb: TestDb, fixture: SubscriptionFixtu
       organizationId: fixture.organizationId,
       promptName: "shared-chain-target",
       version: "1.0.0",
-      userTemplate: "target output",
+      mainFile: { content: "target output" },
     });
   });
 }
@@ -122,7 +122,7 @@ describe("skill chains inherit sharing with zero new code (026-skill-chains, US3
         organizationId: fixture.organizationId,
         promptName: fork.name,
         version: "2.0.0",
-        userTemplate: "no longer a chain on the fork",
+        mainFile: { content: "no longer a chain on the fork" },
       }),
     );
 

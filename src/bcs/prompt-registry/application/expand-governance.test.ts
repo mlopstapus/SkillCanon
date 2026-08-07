@@ -29,12 +29,11 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
     );
   }
 
-  it("prepends prepend-type policy content before the system template's own content (AC1)", async () => {
+  it("prepends prepend-type policy content before the main file's own content (AC1)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "governed-prepend",
-      systemTemplate: "Base system.",
-      userTemplate: "Task: {{ input }}.",
+      content: "Base content.",
     });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "safety-rules",
@@ -44,19 +43,18 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const result = await runExpand(fixture, {
       promptName: "governed-prepend",
-      input: { input: "draft the report" },
       userId: fixture.actorUserId,
     });
 
-    expect(result.systemMessage).toBe("Follow safety rules.\n\nBase system.");
+    expect(result.content).toBe("Follow safety rules.\n\nBase content.");
     expect(result.appliedPolicies).toEqual(["safety-rules"]);
   });
 
-  it("appends append-type policy content after the user template's own content (AC2)", async () => {
+  it("appends append-type policy content after the main file's own content (AC2)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "governed-append",
-      userTemplate: "Task: {{ input }}.",
+      content: "Base content.",
     });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "cite-sources",
@@ -66,19 +64,18 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const result = await runExpand(fixture, {
       promptName: "governed-append",
-      input: { input: "draft the report" },
       userId: fixture.actorUserId,
     });
 
-    expect(result.userMessage).toBe("Task: draft the report.\n\nCite your sources.");
+    expect(result.content).toBe("Base content.\n\nCite your sources.");
     expect(result.appliedPolicies).toEqual(["cite-sources"]);
   });
 
-  it("makes inject-type policy content available only where the template references it (AC3)", async () => {
+  it("makes inject-type policy content available only where the main file references it (AC3)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "governed-inject",
-      userTemplate: "Guidance: {{ policies }}\nTask: {{ input }}.",
+      content: "Guidance: {{ policies }}\nTask: draft the report.",
     });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "formal-tone",
@@ -88,11 +85,10 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const result = await runExpand(fixture, {
       promptName: "governed-inject",
-      input: { input: "draft the report" },
       userId: fixture.actorUserId,
     });
 
-    expect(result.userMessage).toBe("Guidance: Use a formal tone.\nTask: draft the report.");
+    expect(result.content).toBe("Guidance: Use a formal tone.\nTask: draft the report.");
     expect(result.appliedPolicies).toEqual(["formal-tone"]);
   });
 
@@ -100,8 +96,7 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "governed-two-policies",
-      systemTemplate: "Base system.",
-      userTemplate: "Task: {{ input }}.",
+      content: "Base content.",
     });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "policy-a",
@@ -116,7 +111,6 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const result = await runExpand(fixture, {
       promptName: "governed-two-policies",
-      input: { input: "x" },
       userId: fixture.actorUserId,
     });
 
@@ -125,17 +119,15 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
   it("produces output identical to an ungoverned expansion for a user with zero effective policies (AC5)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "zero-policy-skill", userTemplate: "Plain: {{ input }}." });
+    await publishSkill(testDb, fixture, { name: "zero-policy-skill", content: "Plain content." });
 
-    const ungoverned = await runExpand(fixture, { promptName: "zero-policy-skill", input: { input: "x" } });
+    const ungoverned = await runExpand(fixture, { promptName: "zero-policy-skill" });
     const governedButEmpty = await runExpand(fixture, {
       promptName: "zero-policy-skill",
-      input: { input: "x" },
       userId: fixture.actorUserId,
     });
 
-    expect(governedButEmpty.systemMessage).toBe(ungoverned.systemMessage);
-    expect(governedButEmpty.userMessage).toBe(ungoverned.userMessage);
+    expect(governedButEmpty.content).toBe(ungoverned.content);
     expect(governedButEmpty.appliedPolicies).toEqual([]);
     expect(ungoverned.appliedPolicies).toEqual([]);
   });
@@ -145,8 +137,7 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
     // The skill is published under the fixture's default actor/team.
     await publishSkill(testDb, fixture, {
       name: "cross-team-skill",
-      systemTemplate: "Base system.",
-      userTemplate: "Task: {{ input }}.",
+      content: "Base content.",
     });
     // The skill-owning team has its own policy — must NEVER apply.
     await grantPolicy(testDb, fixture, fixture.teamId, {
@@ -166,36 +157,34 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const result = await runExpand(fixture, {
       promptName: "cross-team-skill",
-      input: { input: "x" },
       userId: invokerUserId,
     });
 
     expect(result.appliedPolicies).toEqual(["invoker-team-policy"]);
-    expect(result.systemMessage).toBe("Invoker team content.\n\nBase system.");
+    expect(result.content).toBe("Invoker team content.\n\nBase content.");
   });
 
   it("resolves as fully ungoverned when no acting user is given, regardless of the skill's owner (FR-013/AC7)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "no-actor-skill", userTemplate: "Plain: {{ input }}." });
+    await publishSkill(testDb, fixture, { name: "no-actor-skill", content: "Plain content." });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "should-never-apply",
       enforcementType: "prepend",
       content: "Should never apply.",
     });
 
-    const result = await runExpand(fixture, { promptName: "no-actor-skill", input: { input: "x" } });
+    const result = await runExpand(fixture, { promptName: "no-actor-skill" });
 
     expect(result.appliedPolicies).toEqual([]);
     expect(result.objectives).toEqual([]);
-    expect(result.userMessage).toBe("Plain: x.");
+    expect(result.content).toBe("Plain content.");
   });
 
   it("includes project-scoped objectives when projectId is given, without affecting which policies apply (AC8/FR-015)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "project-scoped-skill",
-      systemTemplate: "Base system.",
-      userTemplate: "Goals: {{ objectives }}\nTask: {{ input }}.",
+      content: "Goals: {{ objectives }}\nTask: draft the report.",
     });
     await grantPolicy(testDb, fixture, fixture.teamId, {
       name: "team-policy",
@@ -209,12 +198,10 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
 
     const withoutProject = await runExpand(fixture, {
       promptName: "project-scoped-skill",
-      input: { input: "x" },
       userId: fixture.actorUserId,
     });
     const withProject = await runExpand(fixture, {
       promptName: "project-scoped-skill",
-      input: { input: "x" },
       userId: fixture.actorUserId,
       projectId,
     });
@@ -224,6 +211,7 @@ describe("expand (US2 — caller's governance is automatically applied)", () => 
     // Policies applied are completely unaffected by projectId.
     expect(withoutProject.appliedPolicies).toEqual(["team-policy"]);
     expect(withProject.appliedPolicies).toEqual(["team-policy"]);
-    expect(withoutProject.systemMessage).toBe(withProject.systemMessage);
+    expect(withoutProject.content.startsWith("Team policy content.")).toBe(true);
+    expect(withProject.content.startsWith("Team policy content.")).toBe(true);
   });
 });

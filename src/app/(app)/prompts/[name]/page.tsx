@@ -51,31 +51,25 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
     const kind = activeVersion?.kind ?? "template";
-
-    const inputSchemaRows = Array.isArray(activeVersion?.inputSchema)
-      ? (activeVersion.inputSchema as Array<{ name: string; type: string; required?: boolean }>).map((f) => ({
-          name: f.name,
-          type: f.type,
-          required: !!f.required,
-        }))
-      : [];
-
-    const sampleInput = Object.fromEntries(inputSchemaRows.map((f) => [f.name, `(sample ${f.name})`]));
+    const hasActiveVersion = activeVersion !== null;
+    // A version with zero files is "legacy-shape" — published before
+    // 032-skill-file-format-refactor shipped (FR-010/FR-019); it has no
+    // Files tab, and its Overview shows the old system/user content inline.
+    const isLegacyShape = kind === "template" && hasActiveVersion && (activeVersion?.files.length ?? 0) === 0;
 
     let preview: PromptDetailData["preview"] = null;
     let previewError: string | null = null;
     let resolvedAppliedPolicies: PromptDetailData["appliedPolicies"] = [];
     // A chain version has no template to render — nothing to preview or
     // resolve policies against (FR-001).
-    if (kind === "template") {
+    if (kind === "template" && hasActiveVersion) {
       try {
         const expansion = await expand(tx, {
           organizationId: user.orgId,
           promptName: name,
-          input: sampleInput,
           userId: user.id,
         });
-        preview = { systemMessage: expansion.systemMessage, userMessage: expansion.userMessage };
+        preview = expansion.content;
         const effectivePolicies = await resolveAllPolicies(tx, actor, user.id);
         resolvedAppliedPolicies = effectivePolicies
           .filter((p) => expansion.appliedPolicies.includes(p.name))
@@ -147,13 +141,18 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
         tags: (v.tags as string[] | undefined) ?? [],
         isActive: v.id === prompt.activeVersionId,
         kind: v.kind,
-        systemTemplate: v.systemTemplate,
         stepCount: v.steps?.length ?? 0,
+        contentPreview:
+          v.kind === "chain"
+            ? null
+            : (v.files.find((f) => f.isMain)?.content ?? v.systemTemplate ?? v.userTemplate ?? null),
       })),
       kind,
-      systemTemplate: activeVersion?.systemTemplate ?? null,
-      userTemplate: activeVersion?.userTemplate ?? null,
-      inputSchemaRows,
+      hasActiveVersion,
+      isLegacyShape,
+      files: isLegacyShape ? [] : (activeVersion?.files ?? []),
+      legacySystemTemplate: isLegacyShape ? (activeVersion?.systemTemplate ?? null) : null,
+      legacyUserTemplate: isLegacyShape ? (activeVersion?.userTemplate ?? null) : null,
       preview,
       previewError,
       appliedPolicies: resolvedAppliedPolicies,

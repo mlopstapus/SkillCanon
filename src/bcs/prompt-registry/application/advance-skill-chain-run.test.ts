@@ -14,6 +14,7 @@ import {
   publishChain,
   publishThreeStepChain,
   queryChainRunRows,
+  queryChainRunStepRows,
   type ChainFixtureOrg,
 } from "./skill-chain-test-helpers";
 import { startSkillChainRun } from "./start-skill-chain-run";
@@ -45,13 +46,14 @@ describe("advanceSkillChainRun", () => {
     );
   }
 
-  it("drives a full 3-step chain to completion, threading dependsOn data through non-adjacent steps", async () => {
+  it("drives a full 3-step chain to completion, each step resolving static content independent of prior reports (032-skill-file-format-refactor: no dependsOn auto-substitution)", async () => {
     const fixture = await makeChainFixtureOrg(testDb);
     const chain = await publishThreeStepChain(testDb, fixture, "full-run-chain");
 
     const started = await start(fixture, chain.promptName);
     if (!("step" in started)) throw new Error("expected a step, got done: true");
     expect(started.step.stepId).toBe("step1");
+    expect(started.step.content).toBe("Step A output.");
 
     const afterStep1 = await advance(fixture, started.runId, {
       stepIndex: 0,
@@ -60,7 +62,7 @@ describe("advanceSkillChainRun", () => {
     });
     if (!("step" in afterStep1)) throw new Error("expected a step, got done: true");
     expect(afterStep1.step.stepId).toBe("step2");
-    expect(afterStep1.step.userMessage).toContain("step1=success:OUTPUT_FROM_STEP_1");
+    expect(afterStep1.step.content).toBe("Step B content.");
 
     const afterStep2 = await advance(fixture, started.runId, {
       stepIndex: 1,
@@ -69,9 +71,7 @@ describe("advanceSkillChainRun", () => {
     });
     if (!("step" in afterStep2)) throw new Error("expected a step, got done: true");
     expect(afterStep2.step.stepId).toBe("step3");
-    // step3 depends on both step1 (non-adjacent) and step2 (adjacent).
-    expect(afterStep2.step.userMessage).toContain("step1=success:OUTPUT_FROM_STEP_1");
-    expect(afterStep2.step.userMessage).toContain("step2=success:OUTPUT_FROM_STEP_2");
+    expect(afterStep2.step.content).toBe("Step C content.");
 
     const afterStep3 = await advance(fixture, started.runId, {
       stepIndex: 2,
@@ -82,6 +82,14 @@ describe("advanceSkillChainRun", () => {
 
     const runRows = await queryChainRunRows(testDb, sql`id = ${started.runId}`);
     expect(runRows[0]?.status).toBe("completed");
+
+    // Each prior step's caller-reported output is still recorded and
+    // queryable by the caller — it's just never auto-injected into a later
+    // step's own content anymore.
+    const stepRows = await queryChainRunStepRows(testDb, sql`run_id = ${started.runId}`);
+    const byIndex = new Map(stepRows.map((r) => [r.step_index, r]));
+    expect(byIndex.get(0)?.reported_output).toBe("OUTPUT_FROM_STEP_1");
+    expect(byIndex.get(1)?.reported_output).toBe("OUTPUT_FROM_STEP_2");
   });
 
   it("marks the run failed when any step is reported as error, even after resolving every step", async () => {
@@ -97,10 +105,10 @@ describe("advanceSkillChainRun", () => {
       error: "boom",
     });
     if (!("step" in afterStep1)) throw new Error("expected a step");
-    // step2 depends on step1, which errored — its input must show the
-    // explicit unavailable marker, never fabricated/stale data (SC-002).
-    expect(afterStep1.step.userMessage).toContain("step1=error:");
-    expect(afterStep1.step.userMessage).not.toContain("step1=success:");
+    // step2 still resolves its own static content regardless of step1's
+    // failure — a step's resolution is never gated on a prior step's report.
+    expect(afterStep1.step.stepId).toBe("step2");
+    expect(afterStep1.step.content).toBe("Step B content.");
 
     const afterStep2 = await advance(fixture, started.runId, {
       stepIndex: 1,

@@ -10,7 +10,7 @@ const versions = [
     tags: ["git"],
     isActive: true,
     kind: "template" as const,
-    systemTemplate: "sys v2",
+    contentPreview: "sys v2",
     stepCount: 0,
   },
   {
@@ -20,7 +20,7 @@ const versions = [
     tags: [],
     isActive: false,
     kind: "template" as const,
-    systemTemplate: "sys v1",
+    contentPreview: "sys v1",
     stepCount: 0,
   },
 ];
@@ -46,7 +46,7 @@ describe("VersionHistoryDrawer", () => {
         tags: ["chain"],
         isActive: true,
         kind: "chain" as const,
-        systemTemplate: null,
+        contentPreview: null,
         stepCount: 3,
       },
     ];

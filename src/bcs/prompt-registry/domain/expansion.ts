@@ -20,8 +20,14 @@ export const MAX_INCLUDE_DEPTH = 3;
 export interface ExpandParams {
   organizationId: string;
   promptName: string;
-  input: Record<string, unknown>;
-  /** Optional acting user. Omitted means fully ungoverned (FR-013) — no fallback identity (PDR-016). */
+  /**
+   * Optional acting user. Omitted means fully ungoverned (FR-013) — no
+   * fallback identity (PDR-016).
+   *
+   * No `input` field (032-skill-file-format-refactor, PDR-018): a skill is
+   * invoked, not called with arguments — how the caller's request gets
+   * incorporated is left to the model reading the resolved content.
+   */
   userId?: string;
   /**
    * Optional project context. Forwarded only into objective resolution
@@ -34,10 +40,14 @@ export interface ExpandParams {
 }
 
 export interface ExpansionResult {
-  /** `null` when the resolved version has no system template. */
-  systemMessage: string | null;
-  /** Always present — legacy defaults to `"{{ input }}"` when no user template exists, carried forward. */
-  userMessage: string;
+  /**
+   * The resolved content (032-skill-file-format-refactor): a new-shape
+   * version's governance-modified main file, or — for a version published
+   * before this feature shipped — its legacy system+user template
+   * composed into a single string (research.md §2). Never empty for a
+   * successfully resolved template-kind version.
+   */
+  content: string;
   /** Policy names actually applied; empty when no acting user or no effective policies. */
   appliedPolicies: string[];
   /** Objective titles resolved; empty when no acting user or no effective objectives. */

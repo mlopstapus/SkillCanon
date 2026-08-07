@@ -18,8 +18,8 @@ const baseData: PromptDetailData = {
       tags: ["git"],
       isActive: true,
       kind: "template",
-      systemTemplate: "sys v2",
       stepCount: 0,
+      contentPreview: "You write terse commits.",
     },
     {
       id: "v1",
@@ -28,15 +28,20 @@ const baseData: PromptDetailData = {
       tags: [],
       isActive: false,
       kind: "template",
-      systemTemplate: "sys v1",
       stepCount: 0,
+      contentPreview: "sys v1",
     },
   ],
   kind: "template",
-  systemTemplate: "You write terse commits.",
-  userTemplate: "Diff:\n{{ diff }}",
-  inputSchemaRows: [{ name: "diff", type: "string", required: true }],
-  preview: { systemMessage: "You write terse commits.\n\n— pin the model.", userMessage: "Diff:\nfix bug" },
+  hasActiveVersion: true,
+  isLegacyShape: false,
+  files: [
+    { id: "f-main", name: "SKILL.md", content: "# Commit messages\nYou write terse commits.", isMain: true },
+    { id: "f-example", name: "example.md", content: "An example transcript.", isMain: false },
+  ],
+  legacySystemTemplate: null,
+  legacyUserTemplate: null,
+  preview: "You write terse commits.\n\n— pin the model.",
   previewError: null,
   appliedPolicies: [{ label: "Pin the exact model version", type: "prepend" }],
   steps: null,
@@ -47,7 +52,7 @@ const baseData: PromptDetailData = {
 };
 
 const baseProps = {
-  activeTab: "template" as const,
+  activeTab: "overview" as const,
   onTabChange: vi.fn(),
   onDeprecate: vi.fn(),
   onReactivate: vi.fn(),
@@ -83,20 +88,38 @@ describe("PromptDetailView", () => {
     expect(html).toContain("Reactivate");
   });
 
-  it("renders the Template tab's system/user templates and input schema", () => {
+  it("renders Overview summary cards (file count, active version, applied-policy count, owner) for a new-shape version (FR-013)", () => {
     const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
 
-    expect(html).toContain("You write terse commits.");
-    expect(html).toContain("Diff:");
-    expect(html).toContain("diff");
+    expect(html).toContain("Active version");
+    expect(html).toContain("Files");
+    expect(html).toContain("Applied policies");
+    expect(html).toContain("Owner");
+    expect(html).toContain("alice");
+    expect(html).toContain("SKILL.md");
+    expect(html).toContain("example.md");
     expect(html).toContain("required");
   });
 
-  it("renders the Preview tab's rendered system/user messages when active", () => {
+  it("renders a Files tab listing the main file (marked required) and supporting files, with a Preview/Plain-text toggle (FR-014/FR-015)", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} activeTab="files" />);
+
+    expect(html).toContain("SKILL.md");
+    expect(html).toContain("example.md");
+    expect(html).toContain("Preview");
+    expect(html).toContain("Plain text");
+  });
+
+  it("never renders a control to remove the main file from the Files tab (FR-005)", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} activeTab="files" />);
+
+    expect(html).not.toMatch(/remove.{0,20}SKILL\.md/i);
+  });
+
+  it("renders the Preview tab's resolved content when active", () => {
     const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} activeTab="preview" />);
 
     expect(html).toContain("pin the model");
-    expect(html).toContain("fix bug");
   });
 
   it("renders a preview error instead of crashing when expansion failed", () => {
@@ -118,12 +141,46 @@ describe("PromptDetailView", () => {
     expect(html).toContain("prepend");
   });
 
+  it("shows an empty-state prompting + New version when the skill has no active version yet", () => {
+    const html = renderToStaticMarkup(
+      <PromptDetailView
+        {...baseProps}
+        data={{ ...baseData, hasActiveVersion: false, isLegacyShape: false, files: [], activeVersion: null }}
+      />,
+    );
+
+    expect(html).toContain("No version published yet");
+  });
+
+  describe("legacy-shape version (032-skill-file-format-refactor, FR-019)", () => {
+    const legacyData: PromptDetailData = {
+      ...baseData,
+      isLegacyShape: true,
+      files: [],
+      legacySystemTemplate: "You are helpful.",
+      legacyUserTemplate: "Diff:\n{{ diff }}",
+    };
+
+    it("hides the Files tab entirely for a legacy-shape version", () => {
+      const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={legacyData} />);
+
+      expect(html).not.toContain("Files (");
+    });
+
+    it("shows the legacy system/user content inline on Overview with a note that it predates file-based skills", () => {
+      const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={legacyData} />);
+
+      expect(html).toContain("You are helpful.");
+      expect(html).toContain("Diff:");
+      expect(html).toContain("predates file-based skills");
+    });
+  });
+
   describe("chain-kind skill", () => {
     const chainData: PromptDetailData = {
       ...baseData,
       kind: "chain",
-      systemTemplate: null,
-      userTemplate: null,
+      files: [],
       appliedPolicies: [],
       steps: [
         { id: "step-1", promptName: "summarize", promptVersionLabel: null, dependsOn: [] },
@@ -140,7 +197,7 @@ describe("PromptDetailView", () => {
       },
     };
 
-    it("shows a Steps tab (not Template/Preview/Applied policies) listing every step in order", () => {
+    it("shows a Steps tab (not Overview/Files/Preview/Applied policies) listing every step in order", () => {
       const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={chainData} activeTab="steps" />);
 
       expect(html).toContain("Steps");

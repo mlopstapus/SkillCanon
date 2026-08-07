@@ -45,12 +45,18 @@ export type {
   PromptActor,
   PromptOwnerType,
   PromptSummary,
+  PromptVersionFile,
   PromptVersionSummary,
+  PublishVersionFileInput,
   PublishVersionParams,
 } from "./domain/prompt";
 export {
   DuplicatePromptNameError,
   DuplicatePromptVersionError,
+  InvalidVersionFilesError,
+  MAIN_FILE_NAME,
+  MAX_FILE_SIZE_BYTES,
+  MAX_SUPPORTING_FILES,
   PromptNotFoundError,
   PromptVersionNotFoundError,
 } from "./domain/prompt";
@@ -145,7 +151,6 @@ export type {
   ChainRunStepRecord,
   ChainRunSummary,
   ChainStep,
-  ChainStepDependencyValue,
   ChainStepReport,
   ChainStepResolution,
   RunStatus,

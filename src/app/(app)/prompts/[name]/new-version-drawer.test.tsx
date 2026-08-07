@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from "vitest";
 import { NewVersionDrawer } from "./new-version-drawer";
 
 describe("NewVersionDrawer", () => {
-  it("renders the next-version banner and pre-fills templates/tags from the active version", () => {
+  it("renders the next-version banner, a file-bundle editor pre-filled from the active version, and tags", () => {
     const html = renderToStaticMarkup(
       <NewVersionDrawer
         promptName="commit-message"
         nextVersionLabel="v3"
-        systemTemplate="You write terse commits."
-        userTemplate="Diff:\n{{ diff }}"
+        mainFileContent="You write terse commits."
+        supportingFiles={[{ name: "example.md", content: "An example." }]}
         tags={["git", "conventional"]}
         activeVersionKind="template"
         activeVersionSteps={[]}
@@ -21,20 +21,24 @@ describe("NewVersionDrawer", () => {
 
     expect(html).toContain("New version of commit-message");
     expect(html).toContain("v3");
+    expect(html).toContain("SKILL.md");
     expect(html).toContain("You write terse commits.");
+    expect(html).toContain("example.md");
     expect(html).toContain("git, conventional");
     expect(html).toContain("Set as active version immediately");
     expect(html).toContain("Publish version");
     expect(html).toContain("Chain");
+    expect(html).not.toContain("System template");
+    expect(html).not.toContain("User template");
   });
 
-  it("prefills the step builder and hides template fields when the active version is itself a chain", () => {
+  it("prefills the step builder and hides the file editor when the active version is itself a chain", () => {
     const html = renderToStaticMarkup(
       <NewVersionDrawer
         promptName="incident-response-chain"
         nextVersionLabel="v2"
-        systemTemplate=""
-        userTemplate=""
+        mainFileContent=""
+        supportingFiles={[]}
         tags={["ops"]}
         activeVersionKind="chain"
         activeVersionSteps={[
@@ -49,7 +53,6 @@ describe("NewVersionDrawer", () => {
 
     expect(html).toContain("summarize");
     expect(html).toContain("draft-reply");
-    expect(html).not.toContain("System template");
-    expect(html).not.toContain("User template");
+    expect(html).not.toContain("SKILL.md");
   });
 });

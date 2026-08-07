@@ -17,7 +17,7 @@ export async function makeChainFixtureOrg(testDb: TestDb): Promise<ChainFixtureO
 export async function publishStepSkill(
   testDb: TestDb,
   fixture: ChainFixtureOrg,
-  params: { name: string; userTemplate: string },
+  params: { name: string; content: string },
 ) {
   return withTenantContext(testDb.appDb, fixture.organizationId, async (tx) => {
     await createPrompt(tx, fixture.actor, { organizationId: fixture.organizationId, name: params.name });
@@ -25,7 +25,7 @@ export async function publishStepSkill(
       organizationId: fixture.organizationId,
       promptName: params.name,
       version: "1.0.0",
-      userTemplate: params.userTemplate,
+      mainFile: { content: params.content },
     });
   });
 }
@@ -59,22 +59,15 @@ export async function publishThreeStepChain(
   fixture: ChainFixtureOrg,
   chainName: string = `chain-${randomUUID()}`,
 ) {
-  // Nunjucks' StrictUndefined environment (expand()'s sandboxed renderer)
-  // rejects outputting `null` directly, same as a truly undefined
-  // variable — every dependency reference needs a `default(fallback, true)`
-  // guard (the boolean makes it treat any falsy value, not just
-  // `undefined`, as missing), since a failed dependency's `.output` is
-  // `null` by design (FR-008).
-  await publishStepSkill(testDb, fixture, { name: `${chainName}-a`, userTemplate: "Step A output." });
-  await publishStepSkill(testDb, fixture, {
-    name: `${chainName}-b`,
-    userTemplate: "Step B, given step1={{ step1.status }}:{{ step1.output | default(\"\", true) }}",
-  });
-  await publishStepSkill(testDb, fixture, {
-    name: `${chainName}-c`,
-    userTemplate:
-      "Step C, given step1={{ step1.status }}:{{ step1.output | default(\"\", true) }}, step2={{ step2.status }}:{{ step2.output | default(\"\", true) }}",
-  });
+  // A step is invoked exactly like any other expand() call — no dependency
+  // data is auto-substituted into its content (032-skill-file-format-refactor:
+  // expand() has no `input` parameter for any caller, including chain
+  // steps). Each prior step's caller-reported output stays visible to the
+  // *caller* via the run's step list; relaying it into a later step is the
+  // caller's own responsibility, so these fixtures use plain static content.
+  await publishStepSkill(testDb, fixture, { name: `${chainName}-a`, content: "Step A output." });
+  await publishStepSkill(testDb, fixture, { name: `${chainName}-b`, content: "Step B content." });
+  await publishStepSkill(testDb, fixture, { name: `${chainName}-c`, content: "Step C content." });
 
   const steps: ChainStep[] = [
     { id: "step1", promptName: `${chainName}-a`, dependsOn: [] },

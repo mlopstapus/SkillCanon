@@ -12,11 +12,12 @@ import {
   makeExpansionFixtureOrg,
   publishAnotherVersion,
   publishDeprecatedSkill,
+  publishLegacySkill,
   publishSkill,
   type ExpansionFixtureOrg,
 } from "./expansion-test-helpers";
 
-describe("expand (US1 — plain, ungoverned rendering)", () => {
+describe("expand (US1/US2 — new-shape, ungoverned rendering; US4 — legacy-shape compatibility)", () => {
   let testDb: TestDb;
 
   beforeAll(async () => {
@@ -33,44 +34,25 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     );
   }
 
-  it("renders both system and user messages with input substituted correctly (AC1)", async () => {
+  it("resolves a new-shape version's main file content verbatim, with no caller-supplied data (FR-002/FR-003)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishSkill(testDb, fixture, {
       name: "basic-greet",
-      systemTemplate: "You are a {{ tone }} assistant.",
-      userTemplate: "Say hello to {{ input }}.",
+      content: "You are a helpful assistant. Say hello.",
     });
 
-    const result = await runExpand(fixture, {
-      promptName: "basic-greet",
-      input: { tone: "friendly", input: "world" },
-    });
+    const result = await runExpand(fixture, { promptName: "basic-greet" });
 
-    expect(result.systemMessage).toBe("You are a friendly assistant.");
-    expect(result.userMessage).toBe("Say hello to world.");
+    expect(result.content).toBe("You are a helpful assistant. Say hello.");
     expect(result.appliedPolicies).toEqual([]);
     expect(result.objectives).toEqual([]);
-  });
-
-  it("returns systemMessage: null when the active version has no system template (AC2)", async () => {
-    const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, {
-      name: "system-less",
-      systemTemplate: null,
-      userTemplate: "Only user content: {{ input }}",
-    });
-
-    const result = await runExpand(fixture, { promptName: "system-less", input: { input: "x" } });
-
-    expect(result.systemMessage).toBeNull();
-    expect(result.userMessage).toBe("Only user content: x");
   });
 
   it("rejects a skill with no published version yet, same as a nonexistent skill (AC3)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await createUnpublishedSkill(testDb, fixture, "never-published");
 
-    await expect(runExpand(fixture, { promptName: "never-published", input: {} })).rejects.toThrow(
+    await expect(runExpand(fixture, { promptName: "never-published" })).rejects.toThrow(
       ExpansionSourceNotFoundError,
     );
   });
@@ -89,7 +71,7 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
       }),
     );
 
-    await expect(runExpand(fixture, { promptName: "a-chain-skill", input: {} })).rejects.toThrow(
+    await expect(runExpand(fixture, { promptName: "a-chain-skill" })).rejects.toThrow(
       ExpansionSourceNotFoundError,
     );
   });
@@ -97,7 +79,7 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
   it("rejects a nonexistent skill", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
 
-    await expect(runExpand(fixture, { promptName: "does-not-exist", input: {} })).rejects.toThrow(
+    await expect(runExpand(fixture, { promptName: "does-not-exist" })).rejects.toThrow(
       ExpansionSourceNotFoundError,
     );
   });
@@ -106,10 +88,10 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishDeprecatedSkill(testDb, fixture, {
       name: "deprecated-default",
-      userTemplate: "should not render",
+      content: "should not render",
     });
 
-    await expect(runExpand(fixture, { promptName: "deprecated-default", input: {} })).rejects.toThrow(
+    await expect(runExpand(fixture, { promptName: "deprecated-default" })).rejects.toThrow(
       ExpansionSourceNotFoundError,
     );
   });
@@ -118,20 +100,20 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await publishDeprecatedSkill(testDb, fixture, {
       name: "deprecated-explicit",
-      userTemplate: "should not render",
+      content: "should not render",
       version: "1.0.0",
     });
 
     await expect(
-      runExpand(fixture, { promptName: "deprecated-explicit", input: {}, version: "1.0.0" }),
+      runExpand(fixture, { promptName: "deprecated-explicit", version: "1.0.0" }),
     ).rejects.toThrow(ExpansionSourceNotFoundError);
   });
 
-  it("fails visibly rather than rendering blank when a template references an unsupplied variable (AC5)", async () => {
+  it("fails visibly rather than rendering blank when a main file references an undefined variable — no caller input ever exists to supply one (AC5)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "undefined-var", userTemplate: "Needs {{ not_supplied }}." });
+    await publishSkill(testDb, fixture, { name: "undefined-var", content: "Needs {{ not_supplied }}." });
 
-    await expect(runExpand(fixture, { promptName: "undefined-var", input: {} })).rejects.toThrow();
+    await expect(runExpand(fixture, { promptName: "undefined-var" })).rejects.toThrow();
   });
 
   it("never executes template content attempting arbitrary code — only registered globals are callable (AC6)", async () => {
@@ -141,54 +123,39 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
     // which `throwOnUndefined: true` rejects rather than executing anything.
     await publishSkill(testDb, fixture, {
       name: "code-exec-attempt",
-      userTemplate: "{{ process.env.SECRET }}",
+      content: "{{ process.env.SECRET }}",
     });
 
-    await expect(runExpand(fixture, { promptName: "code-exec-attempt", input: {} })).rejects.toThrow();
-  });
-
-  it("does not validate caller input against the skill's declared input_schema (FR-012)", async () => {
-    const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "unvalidated-input", userTemplate: "Got: {{ anything }}" });
-
-    // Wildly mismatched shape vs. whatever input_schema the version declared
-    // (this fixture leaves it at the default `{}`) — still succeeds.
-    const result = await runExpand(fixture, {
-      promptName: "unvalidated-input",
-      input: { anything: "literally anything", extraUnrelatedKey: 123 },
-    });
-
-    expect(result.userMessage).toBe("Got: literally anything");
+    await expect(runExpand(fixture, { promptName: "code-exec-attempt" })).rejects.toThrow();
   });
 
   it("uses the currently-active version when multiple versions exist and none is pinned", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "multi-version", userTemplate: "v1: {{ input }}" });
-    await publishAnotherVersion(testDb, fixture, { name: "multi-version", userTemplate: "v2: {{ input }}" });
+    await publishSkill(testDb, fixture, { name: "multi-version", content: "v1 content" });
+    await publishAnotherVersion(testDb, fixture, { name: "multi-version", content: "v2 content" });
 
-    const result = await runExpand(fixture, { promptName: "multi-version", input: { input: "x" } });
+    const result = await runExpand(fixture, { promptName: "multi-version" });
 
     // publishVersion advances activeVersionId to the newest publish.
-    expect(result.userMessage).toBe("v2: x");
+    expect(result.content).toBe("v2 content");
   });
 
   it("uses an explicitly requested version rather than the active one", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "pinned-version", userTemplate: "v1: {{ input }}" });
-    await publishAnotherVersion(testDb, fixture, { name: "pinned-version", userTemplate: "v2: {{ input }}" });
+    await publishSkill(testDb, fixture, { name: "pinned-version", content: "v1 content" });
+    await publishAnotherVersion(testDb, fixture, { name: "pinned-version", content: "v2 content" });
 
     const result = await runExpand(fixture, {
       promptName: "pinned-version",
-      input: { input: "x" },
       version: "1.0.0",
     });
 
-    expect(result.userMessage).toBe("v1: x");
+    expect(result.content).toBe("v1 content");
   });
 
   it("never records a distribution.prompt_usage row — a live-preview/test call must never count as usage (spec FR-002a, 024-project-usage-metrics-dashboard)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
-    await publishSkill(testDb, fixture, { name: "no-usage-recorded", userTemplate: "hi {{ input }}" });
+    await publishSkill(testDb, fixture, { name: "no-usage-recorded", content: "hi" });
     const projectId = randomUUID();
 
     const before = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -197,7 +164,6 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
 
     await runExpand(fixture, {
       promptName: "no-usage-recorded",
-      input: { input: "x" },
       userId: fixture.actor.userId,
       projectId,
     });
@@ -208,5 +174,48 @@ describe("expand (US1 — plain, ungoverned rendering)", () => {
 
     expect(after.totalInvocations).toBe(before.totalInvocations);
     expect(after.totalInvocations).toBe(0);
+  });
+
+  // -------------------------------------------------------------------------
+  // Legacy-shape compatibility (User Story 4, FR-010/FR-011)
+  // -------------------------------------------------------------------------
+
+  it("resolves a legacy-shape version (published before this feature shipped) without error, composing its system+user content into the new single-content shape", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await publishLegacySkill(testDb, fixture, {
+      name: "legacy-both",
+      systemTemplate: "Be helpful.",
+      userTemplate: "Static instructions.",
+    });
+
+    const result = await runExpand(fixture, { promptName: "legacy-both" });
+
+    expect(result.content).toBe("Be helpful.\n\nStatic instructions.");
+  });
+
+  it("resolves a legacy-shape version with only a user template (no synthetic '{{ input }}' crash)", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await publishLegacySkill(testDb, fixture, {
+      name: "legacy-user-only",
+      systemTemplate: null,
+      userTemplate: "Just user content.",
+    });
+
+    const result = await runExpand(fixture, { promptName: "legacy-user-only" });
+
+    expect(result.content).toBe("Just user content.");
+  });
+
+  it("resolves a legacy-shape version with no user template at all, using an empty default rather than throwing", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await publishLegacySkill(testDb, fixture, {
+      name: "legacy-system-only",
+      systemTemplate: "System only.",
+      userTemplate: null,
+    });
+
+    const result = await runExpand(fixture, { promptName: "legacy-system-only" });
+
+    expect(result.content).toBe("System only.");
   });
 });

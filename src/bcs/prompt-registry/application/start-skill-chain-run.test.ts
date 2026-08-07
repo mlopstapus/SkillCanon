@@ -51,7 +51,6 @@ describe("startSkillChainRun", () => {
       expand(tx, {
         organizationId: fixture.organizationId,
         promptName: `${chain.promptName}-a`,
-        input: {},
         userId: fixture.actorUserId,
       }),
     );
@@ -59,8 +58,7 @@ describe("startSkillChainRun", () => {
     expect(result.step.stepId).toBe("step1");
     expect(result.step.stepIndex).toBe(0);
     expect(result.step.promptName).toBe(`${chain.promptName}-a`);
-    expect(result.step.userMessage).toBe(directExpansion.userMessage);
-    expect(result.step.systemMessage).toBe(directExpansion.systemMessage);
+    expect(result.step.content).toBe(directExpansion.content);
   });
 
   it("completes a zero-step chain immediately with one audit event and zero run-step rows", async () => {
@@ -90,7 +88,7 @@ describe("startSkillChainRun", () => {
 
   it("throws NotAChainVersionError for a template-kind version", async () => {
     const fixture = await makeChainFixtureOrg(testDb);
-    await publishStepSkill(testDb, fixture, { name: "just-a-template", userTemplate: "hi" });
+    await publishStepSkill(testDb, fixture, { name: "just-a-template", content: "hi" });
 
     await expect(run(fixture, "just-a-template")).rejects.toBeInstanceOf(NotAChainVersionError);
   });
@@ -113,7 +111,7 @@ describe("startSkillChainRun", () => {
 
   it("rejects a chain with an invalid dependency and creates no run row", async () => {
     const fixture = await makeChainFixtureOrg(testDb);
-    await publishStepSkill(testDb, fixture, { name: "invalid-dep-a", userTemplate: "a" });
+    await publishStepSkill(testDb, fixture, { name: "invalid-dep-a", content: "a" });
     await publishChain(testDb, fixture, {
       name: "invalid-dep-chain",
       steps: [

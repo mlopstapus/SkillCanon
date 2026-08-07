@@ -10,7 +10,6 @@ import {
   RunStepConflictError,
   type AdvanceRunResult,
   type ChainStep,
-  type ChainStepDependencyValue,
   type ChainStepReport,
 } from "../domain/skill-chain";
 import { findPromptByOrgAndId } from "../infrastructure/prompts-repo";
@@ -127,12 +126,10 @@ export async function advanceSkillChainRun(
       throw new Error("unreachable: nextIndex < steps.length already checked");
     }
 
-    const input = await buildStepInput(tx, runId, steps, nextStep);
-
     // Any failure here (including ChainStepResolutionFailedError) propagates
     // and rolls back everything recorded in this call so far, including the
     // report just recorded above.
-    const resolved = await resolveChainStep(tx, actor.organizationId, actor.userId, nextStep, input);
+    const resolved = await resolveChainStep(tx, actor.organizationId, actor.userId, nextStep);
 
     const stepRow = await runStepsRepo.insert(tx, {
       id: randomUUID(),
@@ -140,8 +137,7 @@ export async function advanceSkillChainRun(
       stepIndex: nextIndex,
       promptName: nextStep.promptName,
       promptVersion: resolved.resolvedVersion,
-      systemMessage: resolved.expansion.systemMessage,
-      userMessage: resolved.expansion.userMessage,
+      content: resolved.expansion.content,
       appliedPolicies: resolved.expansion.appliedPolicies,
       objectives: resolved.expansion.objectives,
     });
@@ -153,8 +149,7 @@ export async function advanceSkillChainRun(
         stepIndex: nextIndex,
         promptName: nextStep.promptName,
         promptVersion: stepRow.promptVersion,
-        systemMessage: stepRow.systemMessage,
-        userMessage: stepRow.userMessage,
+        content: stepRow.content,
       },
     };
   });
@@ -167,30 +162,4 @@ async function allStepsSucceeded(tx: Db, runId: string, justReported: ChainStepR
   }
   const resolvedSteps = await runStepsRepo.listByRunId(tx, runId);
   return resolvedSteps.every((row) => row.reportedStatus !== "error");
-}
-
-/** Builds the `{ [depId]: { status, output } }` envelope for one step's dependsOn (research.md). */
-async function buildStepInput(
-  tx: Db,
-  runId: string,
-  chainSteps: ChainStep[],
-  step: ChainStep,
-): Promise<Record<string, ChainStepDependencyValue>> {
-  if (step.dependsOn.length === 0) {
-    return {};
-  }
-  const resolvedRows = await runStepsRepo.listByRunId(tx, runId);
-  const rowsByStepIndex = new Map(resolvedRows.map((row) => [row.stepIndex, row]));
-  const idToIndex = new Map(chainSteps.map((s, idx) => [s.id, idx]));
-
-  const input: Record<string, ChainStepDependencyValue> = {};
-  for (const depId of step.dependsOn) {
-    const depIndex = idToIndex.get(depId);
-    const depRow = depIndex !== undefined ? rowsByStepIndex.get(depIndex) : undefined;
-    input[depId] =
-      depRow && depRow.reportedStatus === "success"
-        ? { status: "success", output: depRow.reportedOutput }
-        : { status: "error", output: null };
-  }
-  return input;
 }

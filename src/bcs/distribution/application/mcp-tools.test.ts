@@ -51,7 +51,7 @@ describe("MCP tool behavior", () => {
     };
   }
 
-  async function publishTemplateSkill(seeded: SeededOrg, name: string, userTemplate = "Hello.") {
+  async function publishTemplateSkill(seeded: SeededOrg, name: string, content = "Hello.") {
     const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
     return withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name });
@@ -59,8 +59,7 @@ describe("MCP tool behavior", () => {
         organizationId: seeded.organizationId,
         promptName: name,
         version: "1.0.0",
-        systemTemplate: "You are helpful.",
-        userTemplate,
+        mainFile: { content },
       });
     });
   }
@@ -143,9 +142,9 @@ describe("MCP tool behavior", () => {
   it("shRun expands a prompt and records exactly one prompt.expanded audit event", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const name = `release-notes-${randomUUID()}`;
-    const version = await publishTemplateSkill(seeded, name, "Summarize: {{ input }}");
+    const version = await publishTemplateSkill(seeded, name, "Summarize: Ship the thing");
 
-    const result = await shRun({ name, input: "Ship the thing" }, ctxFor(seeded));
+    const result = await shRun({ name }, ctxFor(seeded));
 
     expect(result).toContain("Ship the thing");
 
@@ -161,7 +160,7 @@ describe("MCP tool behavior", () => {
   it("shRun reports a clear error for a prompt the caller cannot see, without recording an audit event", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
 
-    const result = await shRun({ name: "does-not-exist", input: "anything" }, ctxFor(seeded));
+    const result = await shRun({ name: "does-not-exist" }, ctxFor(seeded));
 
     expect(result).toContain("not found");
     const rows = Array.from(
