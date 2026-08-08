@@ -1,11 +1,22 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { resolveAllObjectives, resolveAllPolicies, type EffectivePolicy } from "@/bcs/governance";
 import { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH, type ExpandParams, type ExpansionResult } from "../domain/expansion";
-import { extractIncludeReferences, renderWithIncludes, type IncludableVersion } from "../infrastructure/template-renderer";
+import type { PromptVersionSummary } from "../domain/prompt";
+import {
+  extractIncludeReferences,
+  renderContentWithIncludes,
+  renderWithIncludes,
+  type IncludableVersion,
+} from "../infrastructure/template-renderer";
 import { findPromptByOrgAndName } from "../infrastructure/prompts-repo";
 import { listVersionsByPrompt } from "../infrastructure/prompt-versions-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
+
+/** True iff this template-kind version was published under the new markdown+files shape (032-skill-file-format-refactor). Legacy-shape versions have zero files. */
+function isNewShape(version: PromptVersionSummary): boolean {
+  return version.files.some((f) => f.isMain);
+}
 
 /**
  * Resolves the version to expand — the explicit `version` if given, else the
@@ -46,17 +57,18 @@ export async function fetchExpandableVersion(db: Db, organizationId: string, nam
 }
 
 /**
- * Applies policy enforcement to the templates, exactly mirroring legacy's
- * `_apply_policies`: prepend content is repeatedly prepended in resolved-list
- * order (so, faithfully carried forward, the *last*-processed prepend policy
- * ends up outermost/first in the final text — a legacy quirk, not something
- * this port "fixes"), append content is repeatedly appended in the same
- * order, and inject content is joined and exposed as `templateVars.policies`
- * for the template to reference (never auto-inserted). A `validate`-type
- * policy is counted as applied but has no effect on output (spec
- * Assumptions — a known, pre-existing gap carried forward deliberately).
+ * Applies policy enforcement to a legacy-shape version's system/user
+ * templates, exactly mirroring legacy's `_apply_policies`: prepend content
+ * is repeatedly prepended in resolved-list order (so, faithfully carried
+ * forward, the *last*-processed prepend policy ends up outermost/first in
+ * the final text — a legacy quirk, not something this port "fixes"),
+ * append content is repeatedly appended in the same order, and inject
+ * content is joined and exposed as `templateVars.policies` for the template
+ * to reference (never auto-inserted). A `validate`-type policy is counted
+ * as applied but has no effect on output (spec Assumptions — a known,
+ * pre-existing gap carried forward deliberately).
  */
-function applyPolicies(
+function applyPoliciesLegacy(
   systemTemplate: string | null,
   userTemplate: string,
   policies: EffectivePolicy[],
@@ -91,11 +103,51 @@ function applyPolicies(
 }
 
 /**
- * Renders a skill's active (or explicitly pinned) version against caller
- * input, weaving in the acting user's own effective Governance policies
- * (content changes) and objectives (template-visible context only), and
- * resolving template-invoked `include_prompt(...)` nested skill references
- * up to `MAX_INCLUDE_DEPTH`. A pure read — no audit write (research.md).
+ * Applies policy enforcement to a new-shape version's single main-file
+ * content (032-skill-file-format-refactor, FR-009): prepend/append/inject
+ * behave the same as the legacy path, collapsed onto one string — prepend
+ * prepends, append appends, inject is exposed via `templateVars.policies`.
+ */
+function applyPoliciesToContent(
+  content: string,
+  policies: EffectivePolicy[],
+  templateVars: Record<string, unknown>,
+): { content: string; appliedNames: string[] } {
+  const applied: string[] = [];
+  const injectParts: string[] = [];
+  let result = content;
+
+  for (const policy of policies) {
+    if (!policy.isActive) {
+      continue;
+    }
+    applied.push(policy.name);
+    if (policy.enforcementType === "prepend") {
+      result = `${policy.content}\n\n${result}`;
+    } else if (policy.enforcementType === "append") {
+      result = `${result}\n\n${policy.content}`;
+    } else if (policy.enforcementType === "inject") {
+      injectParts.push(policy.content);
+    }
+  }
+
+  if (injectParts.length > 0) {
+    templateVars.policies = injectParts.join("\n");
+  }
+
+  return { content: result, appliedNames: applied };
+}
+
+/**
+ * Renders a skill's active (or explicitly pinned) version, weaving in the
+ * acting user's own effective Governance policies (content changes) and
+ * objectives (template-visible context only), and resolving
+ * template-invoked `include_prompt(...)` nested skill references up to
+ * `MAX_INCLUDE_DEPTH`. A pure read — no audit write (research.md).
+ *
+ * No `input` parameter (032-skill-file-format-refactor, PDR-018) — a skill
+ * is invoked, not called with arguments, for every caller including chain
+ * steps (see `resolve-chain-step.ts`).
  *
  * Governance resolution, when an acting user is given, is scoped to that
  * user's own team chain only (PDR-016) — never the expanded skill's owning
@@ -103,7 +155,7 @@ function applyPolicies(
  * fully ungoverned; there is no fallback identity (FR-013).
  */
 export async function expand(db: Db, params: ExpandParams): Promise<ExpansionResult> {
-  const { organizationId, promptName, input, userId, projectId, version } = params;
+  const { organizationId, promptName, userId, projectId, version } = params;
 
   const topVersion = await fetchExpandableVersion(db, organizationId, promptName, version);
   // A chain version is rejected the same way any other unresolvable
@@ -114,57 +166,98 @@ export async function expand(db: Db, params: ExpandParams): Promise<ExpansionRes
     throw new ExpansionSourceNotFoundError(promptName);
   }
 
-  const templateVars: Record<string, unknown> = { ...input };
-
-  let systemTpl: string | null = topVersion.systemTemplate;
-  let userTpl: string = topVersion.userTemplate ?? "{{ input }}";
+  const templateVars: Record<string, unknown> = {};
   let appliedPolicies: string[] = [];
   let objectives: string[] = [];
 
-  if (userId) {
+  async function resolveGovernance() {
+    if (!userId) {
+      return;
+    }
     const actor = { organizationId, userId };
-
     // No projectId — Policy has no project scope at all (PDR-016, FR-010/FR-015).
-    const policies = await resolveAllPolicies(db, actor, userId);
-    const applied = applyPolicies(systemTpl, userTpl, policies, templateVars);
-    systemTpl = applied.systemTemplate;
-    userTpl = applied.userTemplate;
-    appliedPolicies = applied.appliedNames;
-
-    // projectId forwarded here only — Objective kept its project scope (FR-015).
     objectives = await resolveAllObjectives(db, actor, userId, projectId);
     if (objectives.length > 0) {
       templateVars.objectives = objectives.join("\n");
     }
+    return resolveAllPolicies(db, actor, userId);
   }
 
-  const promptCache = await prefetchIncludedVersions(db, organizationId, systemTpl, userTpl);
+  if (isNewShape(topVersion)) {
+    const mainFile = topVersion.files.find((f) => f.isMain);
+    if (!mainFile) {
+      throw new ExpansionSourceNotFoundError(promptName);
+    }
+    let content = mainFile.content;
 
+    const policies = await resolveGovernance();
+    if (policies) {
+      const applied = applyPoliciesToContent(content, policies, templateVars);
+      content = applied.content;
+      appliedPolicies = applied.appliedNames;
+    }
+
+    const promptCache = await prefetchIncludedVersions(db, organizationId, [content]);
+    const resolvedContent = renderContentWithIncludes(content, templateVars, promptCache);
+
+    return { content: resolvedContent, appliedPolicies, objectives };
+  }
+
+  // Legacy-shape (032-skill-file-format-refactor, FR-010): resolve exactly
+  // as before this feature shipped, then compose the two-part result into
+  // the new single-`content` response shape (research.md §2). The old
+  // "{{ input }}" default (rendered when no userTemplate was ever set) is
+  // replaced with a plain "" — that placeholder only ever made sense when
+  // a caller-supplied `input` object existed to substitute into it; since
+  // `input` is gone for every caller (FR-002), rendering that literal
+  // template string would throw (StrictUndefined) for a case this feature
+  // itself created, not the separate, already-accepted PDR-018 risk of a
+  // skill *author's own* `{{ var }}` usage elsewhere in stored content.
+  let systemTpl: string | null = topVersion.systemTemplate;
+  let userTpl: string = topVersion.userTemplate ?? "";
+
+  const policies = await resolveGovernance();
+  if (policies) {
+    const applied = applyPoliciesLegacy(systemTpl, userTpl, policies, templateVars);
+    systemTpl = applied.systemTemplate;
+    userTpl = applied.userTemplate;
+    appliedPolicies = applied.appliedNames;
+  }
+
+  const promptCache = await prefetchIncludedVersions(db, organizationId, [systemTpl, userTpl]);
   const { systemMessage, userMessage } = renderWithIncludes(systemTpl, userTpl, templateVars, promptCache);
+  const content = systemMessage
+    ? userMessage
+      ? `${systemMessage}\n\n${userMessage}`
+      : systemMessage
+    : userMessage;
 
-  return { systemMessage, userMessage, appliedPolicies, objectives };
+  return { content, appliedPolicies, objectives };
 }
 
 /**
  * Breadth-first prefetch of every `include_prompt(...)`-referenced skill's
  * current active version, up to `MAX_INCLUDE_DEPTH` levels — a batching
- * optimization for `renderWithIncludes`, not itself the depth enforcement
- * (that lives in `template-renderer.ts`'s recursive `include_prompt`).
- * Faithful port of legacy's prefetch loop in `expand_prompt`. A referenced
- * name that resolves to nothing (nonexistent or deprecated) is simply
- * omitted from the cache — `include_prompt` then renders its own
- * not-found placeholder for that name.
+ * optimization for `renderWithIncludes`/`renderContentWithIncludes`, not
+ * itself the depth enforcement (that lives in `template-renderer.ts`'s
+ * recursive `include_prompt`). Faithful port of legacy's prefetch loop in
+ * `expand_prompt`. A referenced name that resolves to nothing (nonexistent
+ * or deprecated) is simply omitted from the cache — `include_prompt` then
+ * renders its own not-found placeholder for that name. Builds the correct
+ * `IncludableVersion` variant per referenced skill's own shape
+ * (032-skill-file-format-refactor).
  */
 async function prefetchIncludedVersions(
   db: Db,
   organizationId: string,
-  systemTpl: string | null,
-  userTpl: string,
+  sourceTemplates: Array<string | null>,
 ): Promise<Map<string, IncludableVersion>> {
-  const referencedNames = new Set<string>([
-    ...extractIncludeReferences(systemTpl),
-    ...extractIncludeReferences(userTpl),
-  ]);
+  const referencedNames = new Set<string>();
+  for (const tpl of sourceTemplates) {
+    for (const name of extractIncludeReferences(tpl)) {
+      referencedNames.add(name);
+    }
+  }
 
   const promptCache = new Map<string, IncludableVersion>();
   const seen = new Set<string>();
@@ -179,14 +272,23 @@ async function prefetchIncludedVersions(
       seen.add(refName);
       const refVersion = await fetchExpandableVersion(db, organizationId, refName);
       if (refVersion) {
-        promptCache.set(refName, {
-          systemTemplate: refVersion.systemTemplate,
-          userTemplate: refVersion.userTemplate,
-        });
-        nextQueue.push(
-          ...extractIncludeReferences(refVersion.systemTemplate),
-          ...extractIncludeReferences(refVersion.userTemplate),
-        );
+        let nextTemplates: Array<string | null>;
+        if (isNewShape(refVersion)) {
+          const mainFile = refVersion.files.find((f) => f.isMain);
+          const content = mainFile?.content ?? "";
+          promptCache.set(refName, { kind: "content", content });
+          nextTemplates = [content];
+        } else {
+          promptCache.set(refName, {
+            kind: "legacy",
+            systemTemplate: refVersion.systemTemplate,
+            userTemplate: refVersion.userTemplate,
+          });
+          nextTemplates = [refVersion.systemTemplate, refVersion.userTemplate];
+        }
+        for (const tpl of nextTemplates) {
+          nextQueue.push(...extractIncludeReferences(tpl));
+        }
       }
     }
     fetchQueue = nextQueue;

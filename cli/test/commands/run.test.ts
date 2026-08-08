@@ -3,12 +3,12 @@ import { createServer, type Server, type IncomingMessage, type ServerResponse } 
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { parseInputFlag, runRun } from "../../src/commands/run.js";
+import { runRun } from "../../src/commands/run.js";
 import { AuthError, NetworkError, NotFoundError } from "../../src/http/skillcanon-client.js";
 
 let server: Server;
 let baseUrl: string;
-let expandResponse: { systemMessage: string | null; userMessage: string; appliedPolicies: string[]; objectives: string[] };
+let expandResponse: { content: string; appliedPolicies: string[]; objectives: string[] };
 
 function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.url === "/api/skills/release-notes/expand") {
@@ -58,30 +58,24 @@ describe("runRun", () => {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "skillcanon-run-"));
     setUpLinkedRepo(dir);
-    expandResponse = { systemMessage: "System instructions.", userMessage: "User content.", appliedPolicies: [], objectives: [] };
+    expandResponse = { content: "Resolved skill content.", appliedPolicies: [], objectives: [] };
   });
 
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("prints the resolved system+user message, nothing else", async () => {
+  it("prints the resolved content, nothing else", async () => {
     const text = await runRun(dir, "release-notes");
-    expect(text).toBe("System instructions.\n\nUser content.");
+    expect(text).toBe("Resolved skill content.");
   });
 
   it("reflects a change in the server's response on the very next call (no caching)", async () => {
     const first = await runRun(dir, "release-notes");
-    expandResponse = { ...expandResponse, userMessage: "Updated after a policy change." };
+    expandResponse = { ...expandResponse, content: "Updated after a policy change." };
     const second = await runRun(dir, "release-notes");
     expect(first).not.toBe(second);
     expect(second).toContain("Updated after a policy change.");
-  });
-
-  it("omits a null systemMessage cleanly", async () => {
-    expandResponse = { systemMessage: null, userMessage: "Only user content.", appliedPolicies: [], objectives: [] };
-    const text = await runRun(dir, "release-notes");
-    expect(text).toBe("Only user content.");
   });
 
   it("fails with AuthError on an invalid/expired credential, no stdout content produced", async () => {
@@ -122,24 +116,5 @@ describe("runRun", () => {
     expect(authMessage).not.toBe(notFoundMessage);
     expect(authMessage.length).toBeGreaterThan(0);
     expect(notFoundMessage.length).toBeGreaterThan(0);
-  });
-});
-
-describe("parseInputFlag", () => {
-  it("defaults to {} when omitted", () => {
-    expect(parseInputFlag(undefined)).toEqual({});
-  });
-
-  it("parses a valid JSON object", () => {
-    expect(parseInputFlag('{"topic":"x"}')).toEqual({ topic: "x" });
-  });
-
-  it("rejects malformed JSON before any network call, with a clear message", () => {
-    expect(() => parseInputFlag("{not json")).toThrow(/--input must be valid JSON/);
-  });
-
-  it("rejects a JSON array or scalar (must be an object)", () => {
-    expect(() => parseInputFlag("[1,2,3]")).toThrow(/--input must be a JSON object/);
-    expect(() => parseInputFlag('"just a string"')).toThrow(/--input must be a JSON object/);
   });
 });

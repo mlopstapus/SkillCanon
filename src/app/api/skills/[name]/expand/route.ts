@@ -10,7 +10,6 @@ interface Params {
 }
 
 const expandSchema = z.object({
-  input: z.record(z.string(), z.unknown()),
   version: z.string().optional(),
   projectId: z.string().optional(),
   gitRemoteUrl: z.string().nullable().optional(),
@@ -38,7 +37,6 @@ export async function handlePost(
       expand(tx, {
         organizationId: caller.organizationId,
         promptName: params.name,
-        input: body.input,
         userId: caller.actingUser.id,
         projectId: body.projectId,
         version: body.version,

@@ -248,7 +248,7 @@ describe("prompt registry tenant isolation (022-prompt-registry-tenant-isolation
           organizationId: orgB.organizationId,
           promptName: prompt.name,
           version: "v1",
-          userTemplate: "{{input}}",
+          mainFile: { content: "Instructions." },
         }),
       );
 
@@ -284,6 +284,71 @@ describe("prompt registry tenant isolation (022-prompt-registry-tenant-isolation
               await tx.execute(sql`
                 update prompt_registry.prompt_versions
                 set system_template = 'Cross-org update'
+                where id = ${id}
+                returning id
+              `),
+            ),
+          ),
+      });
+    });
+  });
+
+  describe("prompt_version_files", () => {
+    it("denies cross-organization access by id via app-layer read (through its parent version) and RLS alone (no app-layer write path — immutable by design)", async () => {
+      const orgA = await makePromptFixtureOrg(testDb);
+      const orgB = await makePromptFixtureOrg(testDb);
+      const prompt = await createPromptInOrg(testDb, orgB);
+      const version = await withTenantContext(testDb.appDb, orgB.organizationId, (tx) =>
+        publishVersion(tx, orgB.actor, {
+          organizationId: orgB.organizationId,
+          promptName: prompt.name,
+          version: "v1",
+          mainFile: { content: "Instructions." },
+          supportingFiles: [{ name: "example.md", content: "An example." }],
+        }),
+      );
+      const mainFile = version.files.find((f) => f.isMain);
+      if (!mainFile) {
+        throw new Error("Fixture version has no main file.");
+      }
+
+      // No app-layer accessor is keyed by a file's own id — files are only
+      // ever read as part of their parent version's `files` array (same
+      // "no direct by-id path" shape as `prompt_versions` itself). Proving
+      // `getPromptVersion` denies cross-org access to the parent version
+      // transitively proves its files aren't leaked either.
+      await assertCrossTenantDenied({
+        actingAsOrg: orgA.organizationId,
+        resourceOwnedByOrg: orgB.organizationId,
+        resourceId: version.id,
+        fetchResourceById: (id) =>
+          withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
+            getPromptVersion(tx, orgA.organizationId, id),
+          ),
+      });
+
+      await assertCrossTenantDenied({
+        actingAsOrg: orgA.organizationId,
+        resourceOwnedByOrg: orgB.organizationId,
+        resourceId: mainFile.id,
+        fetchResourceById: (id) =>
+          withTenantContext(testDb.appDb, orgA.organizationId, async (tx) =>
+            Array.from(
+              await tx.execute(sql`select id from prompt_registry.prompt_version_files where id = ${id}`),
+            ),
+          ),
+      });
+
+      await assertCrossTenantDenied({
+        actingAsOrg: orgA.organizationId,
+        resourceOwnedByOrg: orgB.organizationId,
+        resourceId: mainFile.id,
+        fetchResourceById: (id) =>
+          withTenantContext(testDb.appDb, orgA.organizationId, async (tx) =>
+            Array.from(
+              await tx.execute(sql`
+                update prompt_registry.prompt_version_files
+                set content = 'Cross-org update'
                 where id = ${id}
                 returning id
               `),

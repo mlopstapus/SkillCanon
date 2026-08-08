@@ -14,14 +14,14 @@ Per [PDR-018](../../docs/pdr/018-skill-file-format-and-registry-import.md): rewo
 - [ ] `skillcanon sync` writes a real `.claude/skills/<slug>/SKILL.md` per skill — frontmatter `name`/`description` from prompt metadata (unchanged), body is the skill's actual authored markdown content (new — no longer a fixed pointer sentence)
 - [ ] Any template/reference files attached to the skill's active version are synced alongside `SKILL.md` in the same `<slug>/` folder, named as authored
 - [ ] Content-hash drift detection (`sync-manifest.ts`, existing) extended to cover the new per-file set, not just the single stub file — a local hand-edit to any synced file (SKILL.md or a template) is detected and flagged, never silently overwritten
-- [ ] `skillcanon run <slug>` still resolves live via `POST /prompts/expand/{name}` with no `input` argument (per the new `expand()` shape) — the synced local files are for the model/author to read directly, not a cache `run` reads from
+- [x] `skillcanon run <slug>` still resolves live via `POST /prompts/expand/{name}` with no `input` argument (per the new `expand()` shape) — the synced local files are for the model/author to read directly, not a cache `run` reads from (done as part of `006-prompt-registry/011-skill-file-format-refactor.md` landing — `run`'s own REST call would have silently broken otherwise; `--input` flag removed, `cli/src/http/skillcanon-client.ts`/`cli/src/commands/run.ts` updated to the new `{content}` response shape. `sync`/`stub.ts`/`sync-manifest.ts` — this item's actual scope — are untouched.)
 - [ ] `CLAUDE.md`/`AGENTS.md` blurb (existing, from `init`) updated to describe the new file-bundle sync behavior, not the old "opaque pointer" framing
 
 ## Acceptance Criteria
 
 - [ ] After `skillcanon sync`, a skill with two template files produces a `.claude/skills/<slug>/` folder containing `SKILL.md` plus both template files, matching server content exactly
 - [ ] Hand-editing a synced template file and re-running `sync` is detected and flagged, not silently overwritten — same guarantee `archive/005-skill-sync-cli.md` already proved for the single-file stub, now proven for the multi-file case
-- [ ] `skillcanon run` continues to reflect the *current* state of any policy/objective attached to the skill on every invocation — unaffected by this feature, reverified by test since the resolution path changes shape (no `input` argument)
+- [x] `skillcanon run` continues to reflect the *current* state of any policy/objective attached to the skill on every invocation — unaffected by this feature, reverified by test since the resolution path changes shape (no `input` argument) (`cli/test/commands/run.test.ts`'s "reflects a change in the server's response on the very next call (no caching)" case, updated for the new `{content}` shape)
 - [ ] A skill with no template files (markdown only) still syncs and runs correctly — the multi-file case is additive, not mandatory
 
 ## Open Questions

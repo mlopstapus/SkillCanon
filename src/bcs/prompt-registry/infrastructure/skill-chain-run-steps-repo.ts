@@ -10,8 +10,7 @@ export interface InsertSkillChainRunStepParams {
   stepIndex: number;
   promptName: string;
   promptVersion: string;
-  systemMessage: string | null;
-  userMessage: string;
+  content: string;
   appliedPolicies: string[];
   objectives: string[];
 }

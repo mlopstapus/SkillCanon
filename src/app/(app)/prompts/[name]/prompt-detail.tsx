@@ -46,7 +46,7 @@ function nextVersionLabel(versions: PromptDetailData["versions"]): string {
  */
 export function PromptDetail({ data }: PromptDetailProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<PromptDetailTab>(data.kind === "chain" ? "steps" : "template");
+  const [activeTab, setActiveTab] = useState<PromptDetailTab>(data.kind === "chain" ? "steps" : "overview");
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
@@ -90,8 +90,7 @@ export function PromptDetail({ data }: PromptDetailProps) {
                 stepIndex: step.stepIndex,
                 promptName: step.promptName,
                 promptVersion: step.promptVersion,
-                systemMessage: step.systemMessage,
-                userMessage: step.userMessage,
+                content: step.content,
                 reportedStatus: step.reportedStatus,
                 reportedError: step.reportedError,
               })),
@@ -133,8 +132,8 @@ export function PromptDetail({ data }: PromptDetailProps) {
         <NewVersionDrawer
           promptName={data.name}
           nextVersionLabel={nextVersionLabel(data.versions)}
-          systemTemplate={data.systemTemplate ?? ""}
-          userTemplate={data.userTemplate ?? ""}
+          mainFileContent={data.files.find((f) => f.isMain)?.content ?? ""}
+          supportingFiles={data.files.filter((f) => !f.isMain).map(({ name, content }) => ({ name, content }))}
           tags={data.versions.find((v) => v.isActive)?.tags ?? []}
           activeVersionKind={data.kind}
           activeVersionSteps={(data.steps ?? []).map((s) => ({

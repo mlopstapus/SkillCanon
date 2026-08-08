@@ -39,7 +39,6 @@ export const toolInputSchemas = {
   "sh-context": { project_id: z.string().optional().describe("Optional UUID of the project to layer on top.") },
   "sh-run": {
     name: z.string().describe("The prompt name to run."),
-    input: z.string().describe("The input text or JSON object string to pass to the prompt template."),
     project: z.string().optional().describe("Optional project UUID to scope objective resolution."),
   },
   "sh-workflow-list": {},
@@ -263,11 +262,10 @@ export async function shContext(args: { project_id?: string }, ctx: McpToolConte
   return formatWithSessionContext(contextBlock, result);
 }
 
-export async function shRun(args: { name: string; input: string; project?: string }, ctx: McpToolContext): Promise<string> {
+export async function shRun(args: { name: string; project?: string }, ctx: McpToolContext): Promise<string> {
   assertCoreFeaturesEnabled();
   const contextBlock = await maybeInjectSessionContext(ctx);
   const actor = actorFromCaller(ctx.caller);
-  const input = parseLegacyInput(args.input);
   const projectId = parseUuidOrNull(args.project) ?? undefined;
 
   const result = await withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
@@ -288,7 +286,6 @@ export async function shRun(args: { name: string; input: string; project?: strin
           const expanded = await expand(auditTx, {
             organizationId: ctx.caller.user.orgId,
             promptName: args.name,
-            input,
             userId: ctx.caller.user.id,
             projectId,
           });
@@ -316,11 +313,7 @@ export async function shRun(args: { name: string; input: string; project?: strin
           }),
       );
 
-      const parts: string[] = [];
-      if (expansion.systemMessage) {
-        parts.push(`[System]\n${expansion.systemMessage}`);
-      }
-      parts.push(`[User]\n${expansion.userMessage}`);
+      const parts: string[] = [expansion.content];
       if (expansion.appliedPolicies.length > 0) {
         parts.push(`[Policies Applied]\n${expansion.appliedPolicies.join(", ")}`);
       }
@@ -384,10 +377,7 @@ export async function shWorkflowRun(args: { name: string; input: string }, ctx: 
 
     const parts = [`Workflow: ${match.name} (${steps.length} steps)`];
     parts.push(`\n--- ✓ ${run.step.stepId} (${run.step.promptName} v${run.step.promptVersion}) ---`);
-    if (run.step.systemMessage) {
-      parts.push(`[System]\n${run.step.systemMessage}`);
-    }
-    parts.push(`[User]\n${run.step.userMessage}`);
+    parts.push(run.step.content);
     parts.push("\n--- Final Outputs ---");
     parts.push(JSON.stringify({ runId: run.runId, pendingStep: run.step.stepId, input: parseLegacyInput(args.input) }, null, 2));
     return parts.join("\n");

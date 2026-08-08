@@ -44,31 +44,27 @@ function nextVersionLabel(versions: Array<{ version: string }>): string {
   return `v${next}`;
 }
 
+/**
+ * Creates only the skill shell (032-skill-file-format-refactor, FR-018) —
+ * no version is published here. The caller (`new-prompt-drawer.tsx`) hands
+ * off to the same New Version file-bundle flow used for every later
+ * version to author v1, rather than a separate template-entry form.
+ */
 export async function createPromptAction(params: {
   name: string;
   description?: string;
-  systemTemplate?: string;
-  userTemplate?: string;
   tags?: string[];
 }): Promise<PromptActionResult> {
   try {
     const actingUser = await requireActingUser();
     const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
-    await withTenantContext(db, actingUser.orgId, async (tx) => {
-      await createPrompt(tx, actor, {
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      createPrompt(tx, actor, {
         organizationId: actingUser.orgId,
         name: params.name,
         description: params.description ?? null,
-      });
-      await publishVersion(tx, actor, {
-        promptName: params.name,
-        organizationId: actingUser.orgId,
-        version: "v1",
-        systemTemplate: params.systemTemplate ?? null,
-        userTemplate: params.userTemplate ?? null,
-        tags: params.tags ?? [],
-      });
-    });
+      }),
+    );
     revalidatePath("/prompts");
     return { ok: true };
   } catch (err) {
@@ -106,8 +102,8 @@ export async function reactivatePromptAction(promptName: string): Promise<Prompt
 
 export async function publishVersionAction(params: {
   promptName: string;
-  systemTemplate?: string;
-  userTemplate?: string;
+  mainFile?: { content: string };
+  supportingFiles?: Array<{ name: string; content: string }>;
   steps?: ChainStep[];
   tags?: string[];
   setActive?: boolean;
@@ -122,16 +118,16 @@ export async function publishVersionAction(params: {
       ]);
       const previouslyActive = versions.find((v) => v.id === prompt?.activeVersionId);
       const version = nextVersionLabel(versions);
-      // Exactly one of template content or chain steps — never both (FR-001,
-      // PDR-017); publishVersion itself enforces this, this action just
-      // passes through whichever shape the caller provided.
+      // Exactly one of a main file or chain steps — never both (FR-001/
+      // FR-004, PDR-017); publishVersion itself enforces this, this action
+      // just passes through whichever shape the caller provided.
       await publishVersion(tx, actor, {
         promptName: params.promptName,
         organizationId: actingUser.orgId,
         version,
         ...(params.steps
           ? { steps: params.steps }
-          : { systemTemplate: params.systemTemplate ?? null, userTemplate: params.userTemplate ?? null }),
+          : { mainFile: params.mainFile, supportingFiles: params.supportingFiles }),
         tags: params.tags ?? [],
       });
       // publishVersion always advances active_version_id — roll back to

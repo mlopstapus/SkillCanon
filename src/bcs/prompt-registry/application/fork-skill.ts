@@ -8,6 +8,7 @@ import {
 import type { UserSummary } from "@/bcs/identity-access";
 import { withAudit } from "@/shared/db";
 import { CannotForkOwnSkillError, SourceSkillNotFoundError, type ForkSkillParams } from "../domain/subscription";
+import { insertFiles, type InsertPromptVersionFileParams } from "../infrastructure/prompt-version-files-repo";
 import { findPromptByOrgAndId, insertPrompt, updatePrompt } from "../infrastructure/prompts-repo";
 import { findVersionById, insertPromptVersion } from "../infrastructure/prompt-versions-repo";
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
@@ -71,12 +72,25 @@ export async function forkSkill(
         promptId: newPromptId,
         version: "v1",
         kind: sourceVersion.kind,
-        systemTemplate: sourceVersion.systemTemplate,
-        userTemplate: sourceVersion.userTemplate,
+        // New-shape source (has files): copy them verbatim below instead.
+        // Legacy-shape source: copy its system/user template columns
+        // unchanged — forking follows whichever shape the source version
+        // is already in (032-skill-file-format-refactor), no reshaping.
+        systemTemplate: sourceVersion.files.length > 0 ? null : sourceVersion.systemTemplate,
+        userTemplate: sourceVersion.files.length > 0 ? null : sourceVersion.userTemplate,
         steps: sourceVersion.steps,
-        inputSchema: sourceVersion.inputSchema as Record<string, unknown>,
         tags: sourceVersion.tags as string[],
       });
+      if (sourceVersion.files.length > 0) {
+        const fileRows: InsertPromptVersionFileParams[] = sourceVersion.files.map((f) => ({
+          id: randomUUID(),
+          promptVersionId: newVersionId,
+          name: f.name,
+          content: f.content,
+          isMain: f.isMain,
+        }));
+        await insertFiles(tx, fileRows);
+      }
       const updated = await updatePrompt(tx, newPromptId, { activeVersionId: newVersionId });
       return updated ?? inserted;
     },

@@ -15,12 +15,16 @@ const chainStepSchema = z.object({
   dependsOn: z.array(z.string()),
 });
 
+const fileSchema = z.object({
+  name: z.string().min(1),
+  content: z.string(),
+});
+
 const publishVersionSchema = z.object({
   version: z.string().min(1),
-  systemTemplate: z.string().nullable().optional(),
-  userTemplate: z.string().nullable().optional(),
+  mainFile: z.object({ content: z.string() }).optional(),
+  supportingFiles: z.array(fileSchema).optional(),
   steps: z.array(chainStepSchema).optional(),
-  inputSchema: z.record(z.string(), z.unknown()).optional(),
   tags: z.array(z.string()).optional(),
 });
 

@@ -20,8 +20,9 @@ describe("MCP legacy tool contract", () => {
     expect(z.object(toolInputSchemas["sh-search"]).parse({ query: "commit" })).toEqual({ query: "commit" });
     expect(z.object(toolInputSchemas["sh-context"]).parse({})).toEqual({});
     expect(z.object(toolInputSchemas["sh-context"]).parse({ project_id: "p" })).toEqual({ project_id: "p" });
-    expect(() => z.object(toolInputSchemas["sh-run"]).parse({ name: "commit" })).toThrow();
-    expect(z.object(toolInputSchemas["sh-run"]).parse({ name: "commit", input: "x" })).toEqual({ name: "commit", input: "x" });
+    // sh-run's `input` field was removed entirely (032-skill-file-format-refactor,
+    // FR-012/PDR-018) — a skill is invoked, not called with arguments.
+    expect(z.object(toolInputSchemas["sh-run"]).parse({ name: "commit" })).toEqual({ name: "commit" });
     expect(() => z.object(toolInputSchemas["sh-workflow-run"]).parse({ name: "flow" })).toThrow();
     expect(z.object(toolInputSchemas["sh-workflow-run"]).parse({ name: "flow", input: "x" })).toEqual({ name: "flow", input: "x" });
   });

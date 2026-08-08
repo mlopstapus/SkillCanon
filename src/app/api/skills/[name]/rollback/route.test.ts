@@ -45,7 +45,7 @@ describe("/api/skills/[name]/rollback", () => {
         organizationId: seeded.organizationId,
         promptName: name,
         version: "v1",
-        userTemplate: "{{ input }} v1",
+        mainFile: { content: "v1 content" },
       }),
     );
     await withTenantContext(testDb.appDb, seeded.organizationId, (tx) =>
@@ -53,7 +53,7 @@ describe("/api/skills/[name]/rollback", () => {
         organizationId: seeded.organizationId,
         promptName: name,
         version: "v2",
-        userTemplate: "{{ input }} v2",
+        mainFile: { content: "v2 content" },
       }),
     );
     return { v1 };

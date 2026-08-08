@@ -4,8 +4,7 @@ export interface SkillSummary {
 }
 
 export interface ExpansionResult {
-  systemMessage: string | null;
-  userMessage: string;
+  content: string;
   appliedPolicies: string[];
   objectives: string[];
 }
@@ -79,15 +78,19 @@ export async function listSkills(options: SkillCanonClientOptions, projectId: st
   return body.items;
 }
 
+/**
+ * No `input` parameter (032-skill-file-format-refactor, PDR-018) — a skill
+ * is invoked, not called with arguments, matching `expand()`'s own
+ * contract.
+ */
 export async function expandSkill(
   options: SkillCanonClientOptions,
   slug: string,
-  input: Record<string, unknown>,
 ): Promise<ExpansionResult> {
   const response = await request(options, `/api/skills/${encodeURIComponent(slug)}/expand`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ input }),
+    body: JSON.stringify({}),
   });
   if (!response.ok) throwForStatus(response, slug);
   return (await response.json()) as ExpansionResult;

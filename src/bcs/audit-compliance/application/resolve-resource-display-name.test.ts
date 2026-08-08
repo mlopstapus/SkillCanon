@@ -184,8 +184,7 @@ describe("resolveResourceDisplayName", () => {
         organizationId,
         promptName: "code-review-strict",
         version: "v3",
-        userTemplate: "{{input}}",
-        inputSchema: {},
+        mainFile: { content: "content" },
         tags: [],
       }),
     );

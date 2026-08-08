@@ -58,8 +58,7 @@ describe("/api/skills/[name]/versions", () => {
         headers: { cookie, "content-type": "application/json" },
         body: JSON.stringify({
           version: "v1",
-          systemTemplate: "You are a helpful assistant.",
-          userTemplate: "{{ input.topic }}",
+          mainFile: { content: "You are a helpful assistant." },
         }),
       }),
       { params: Promise.resolve({ name }) },
@@ -82,7 +81,7 @@ describe("/api/skills/[name]/versions", () => {
       new Request(`http://x/api/skills/${name}/versions`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ systemTemplate: "hi" }),
+        body: JSON.stringify({ mainFile: { content: "hi" } }),
       }),
       { params: Promise.resolve({ name }) },
     );
@@ -123,7 +122,7 @@ describe("/api/skills/[name]/versions", () => {
       new Request(`http://x/api/skills/${bogusName}/versions`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ version: "v1", userTemplate: "hi" }),
+        body: JSON.stringify({ version: "v1", mainFile: { content: "hi" } }),
       }),
       { params: Promise.resolve({ name: bogusName }) },
     );
@@ -144,7 +143,7 @@ describe("/api/skills/[name]/versions", () => {
       new Request(`http://x/api/skills/${name}/versions`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ version: "v1", userTemplate: "{{ input }}" }),
+        body: JSON.stringify({ version: "v1", mainFile: { content: "content" } }),
       }),
       { params: Promise.resolve({ name }) },
     );

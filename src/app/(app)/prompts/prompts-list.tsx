@@ -71,7 +71,10 @@ export function PromptsList({ rows, projectOptions, filters }: PromptsListProps)
             const result = await createPromptAction(values);
             if (result.ok) {
               setNewPromptOpen(false);
-              router.refresh();
+              // Skill creation no longer publishes v1 (032-skill-file-format-refactor,
+              // FR-018) — send the author to the detail page to continue into
+              // the same New Version file-bundle flow used for every later version.
+              router.push(`/prompts/${values.name}`);
             }
             return result;
           }}

@@ -61,7 +61,7 @@ describe("getSkillChainRun", () => {
     expect(result.run.version).toBe("1.0.0");
     expect(result.steps).toHaveLength(3);
     expect(result.steps.map((s) => s.stepIndex)).toEqual([0, 1, 2]);
-    expect(result.steps[0]?.userMessage).toBe(started.step.userMessage);
+    expect(result.steps[0]?.content).toBe(started.step.content);
     expect(result.steps[0]?.reportedStatus).toBe("success");
     expect(result.steps[0]?.reportedOutput).toBe("s1-out");
     expect(result.steps[2]?.reportedOutput).toBe("s3-out");

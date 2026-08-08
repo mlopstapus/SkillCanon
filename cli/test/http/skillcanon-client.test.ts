@@ -24,7 +24,7 @@ function handler(req: IncomingMessage, res: ServerResponse) {
     }
     if (req.url === "/api/skills/good-slug/expand") {
       res.writeHead(200, { "content-type": "application/json" });
-      res.end(JSON.stringify({ systemMessage: "sys", userMessage: "usr", appliedPolicies: [], objectives: [] }));
+      res.end(JSON.stringify({ content: "resolved", appliedPolicies: [], objectives: [] }));
       return;
     }
     if (req.url === "/api/skills/unauthorized/expand") {
@@ -64,30 +64,30 @@ describe("listSkills", () => {
 });
 
 describe("expandSkill", () => {
-  it("POSTs { input } and returns the expansion result", async () => {
-    const result = await expandSkill({ server: baseUrl, apiKey: "sk-test" }, "good-slug", { topic: "x" });
-    expect(JSON.parse(lastBody ?? "{}")).toEqual({ input: { topic: "x" } });
-    expect(result).toEqual({ systemMessage: "sys", userMessage: "usr", appliedPolicies: [], objectives: [] });
+  it("POSTs no body fields (no `input` — 032-skill-file-format-refactor) and returns the expansion result", async () => {
+    const result = await expandSkill({ server: baseUrl, apiKey: "sk-test" }, "good-slug");
+    expect(JSON.parse(lastBody ?? "{}")).toEqual({});
+    expect(result).toEqual({ content: "resolved", appliedPolicies: [], objectives: [] });
   });
 
   it("throws AuthError on 401, with no mention of the api key", async () => {
-    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "unauthorized", {})).rejects.toThrow(AuthError);
+    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "unauthorized")).rejects.toThrow(AuthError);
     try {
-      await expandSkill({ server: baseUrl, apiKey: "sk-test" }, "unauthorized", {});
+      await expandSkill({ server: baseUrl, apiKey: "sk-test" }, "unauthorized");
     } catch (err) {
       expect((err as Error).message).not.toContain("sk-test");
     }
   });
 
   it("throws NotFoundError on 404", async () => {
-    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "missing", {})).rejects.toThrow(NotFoundError);
+    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "missing")).rejects.toThrow(NotFoundError);
   });
 
   it("throws ApiError on other non-2xx responses", async () => {
-    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "boom", {})).rejects.toThrow(ApiError);
+    await expect(expandSkill({ server: baseUrl, apiKey: "sk-test" }, "boom")).rejects.toThrow(ApiError);
   });
 
   it("throws NetworkError when the server is unreachable", async () => {
-    await expect(expandSkill({ server: "http://127.0.0.1:1", apiKey: "sk-test" }, "x", {})).rejects.toThrow(NetworkError);
+    await expect(expandSkill({ server: "http://127.0.0.1:1", apiKey: "sk-test" }, "x")).rejects.toThrow(NetworkError);
   });
 });

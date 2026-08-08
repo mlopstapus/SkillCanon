@@ -104,11 +104,9 @@ export async function startSkillChainRun(
       currentStepIndex: 0,
     });
 
-    // Step 0 always has an empty dependsOn (validateChainSteps guarantees
-    // nothing can precede it), so its input is always {}. Any failure here
-    // (including ChainStepResolutionFailedError) propagates and rolls back
-    // the run-row insert above.
-    const resolved = await resolveChainStep(tx, actor.organizationId, actor.userId, firstStep, {});
+    // Any failure here (including ChainStepResolutionFailedError)
+    // propagates and rolls back the run-row insert above.
+    const resolved = await resolveChainStep(tx, actor.organizationId, actor.userId, firstStep);
 
     const stepRow = await runStepsRepo.insert(tx, {
       id: randomUUID(),
@@ -116,8 +114,7 @@ export async function startSkillChainRun(
       stepIndex: 0,
       promptName: firstStep.promptName,
       promptVersion: resolved.resolvedVersion,
-      systemMessage: resolved.expansion.systemMessage,
-      userMessage: resolved.expansion.userMessage,
+      content: resolved.expansion.content,
       appliedPolicies: resolved.expansion.appliedPolicies,
       objectives: resolved.expansion.objectives,
     });
@@ -129,8 +126,7 @@ export async function startSkillChainRun(
         stepIndex: 0,
         promptName: firstStep.promptName,
         promptVersion: stepRow.promptVersion,
-        systemMessage: stepRow.systemMessage,
-        userMessage: stepRow.userMessage,
+        content: stepRow.content,
       },
     };
   });

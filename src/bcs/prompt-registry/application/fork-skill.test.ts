@@ -42,7 +42,7 @@ describe("forkSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "fork-source",
         version: "v1",
-        systemTemplate: "Be helpful.",
+        mainFile: { content: "Be helpful." },
         tags: ["a"],
       }),
     );
@@ -149,7 +149,7 @@ describe("forkSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "independence-source",
         version: "v1",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 
@@ -164,7 +164,7 @@ describe("forkSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "independence-source",
         version: "v2",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 
@@ -187,7 +187,7 @@ describe("forkSkill", () => {
         organizationId: fixture.organizationId,
         promptName: "reverse-independence-source",
         version: "v1",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 
@@ -205,7 +205,7 @@ describe("forkSkill", () => {
         organizationId: fixture.organizationId,
         promptName: fork.name,
         version: "v2",
-        userTemplate: "{{input}}",
+        mainFile: { content: "content" },
       }),
     );
 

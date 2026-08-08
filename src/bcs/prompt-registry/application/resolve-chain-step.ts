@@ -1,6 +1,6 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { ExpansionResult } from "../domain/expansion";
-import type { ChainStep, ChainStepDependencyValue } from "../domain/skill-chain";
+import type { ChainStep } from "../domain/skill-chain";
 import { ChainStepResolutionFailedError } from "../domain/skill-chain";
 import { expand, fetchExpandableVersion } from "./expand";
 
@@ -12,6 +12,15 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
  * `expand()` will actually use, resolved once up front so the persisted
  * `skill_chain_run_steps.prompt_version` is always concrete (never left
  * "unspecified" even for a step that didn't pin one — data-model.md).
+ *
+ * A step is invoked exactly like any other `expand()` call — no per-step
+ * dependency data is auto-substituted into its content
+ * (032-skill-file-format-refactor: `expand()` has no `input` parameter at
+ * all, for any caller, including chain steps). A step's own `dependsOn`
+ * metadata and each prior step's caller-reported output remain visible to
+ * the *caller* (via the run's step list) — relaying that into a later
+ * step's context, if needed, is the caller's responsibility, matching how
+ * a top-level skill invocation is never handed structured arguments either.
  *
  * Any failure here — the target not found, deprecated, itself a chain
  * (nested chains are unsupported; a chain-kind target is rejected by
@@ -25,7 +34,6 @@ export async function resolveChainStep(
   organizationId: string,
   actorUserId: string,
   step: ChainStep,
-  input: Record<string, ChainStepDependencyValue>,
 ): Promise<{ resolvedVersion: string; expansion: ExpansionResult }> {
   const versionRow = await fetchExpandableVersion(
     tx,
@@ -45,7 +53,6 @@ export async function resolveChainStep(
     const expansion = await expand(tx, {
       organizationId,
       promptName: step.promptName,
-      input,
       userId: actorUserId,
       version: versionRow.version,
     });
