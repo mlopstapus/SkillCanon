@@ -1,7 +1,7 @@
 # Epic 002: Identity & Access
 
 **Priority:** 2
-**Status:** in-progress
+**Status:** done
 **Goal:** Port tenancy, team hierarchy, users, auth, invitations, and API keys from the current Python backend into the new TS bounded context — establishing the Organization tenant root that every other context depends on.
 
 ## Overview

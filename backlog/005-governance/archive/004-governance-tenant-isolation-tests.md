@@ -1,7 +1,7 @@
 ---
 epic: 005-governance
 feature: 004-governance-tenant-isolation-tests
-status: open
+status: done
 dependencies: ["001-policy-model-and-crud.md", "002-objective-model-and-crud.md", "backlog/002-identity-access/007-tenant-isolation-tests-and-rls.md"]
 ---
 
@@ -11,14 +11,14 @@ Apply the RLS pattern and the shared cross-tenant-denial test helper (both built
 
 ## Requirements
 
-- [ ] RLS policies enabled on `governance.policies` and `governance.objectives`
-- [ ] Every query in this epic's other features filters by `organization_id`, audited against this feature
-- [ ] M3 negative test per resource type: a user in org A cannot read or write org B's policy or objective by ID
+- [x] RLS policies enabled on `governance.policies` and `governance.objectives`
+- [x] Every query in this epic's other features filters by `organization_id`, audited against this feature
+- [x] M3 negative test per resource type: a user in org A cannot read or write org B's policy or objective by ID
 
 ## Acceptance Criteria
 
-- [ ] Cross-org access by ID to a policy or objective is denied, proven by test, for both the read and write paths
-- [ ] RLS independently blocks cross-org access even with the app-layer filter simulated as absent (same proof pattern as epic 002's feature 007)
+- [x] Cross-org access by ID to a policy or objective is denied, proven by test, for both the read and write paths
+- [x] RLS independently blocks cross-org access even with the app-layer filter simulated as absent (same proof pattern as epic 002's feature 007)
 
 ## Open Questions
 

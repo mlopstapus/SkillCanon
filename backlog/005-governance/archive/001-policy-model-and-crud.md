@@ -1,7 +1,7 @@
 ---
 epic: 005-governance
 feature: 001-policy-model-and-crud
-status: open
+status: done
 dependencies: ["backlog/002-identity-access/EPIC.md"]
 ---
 
@@ -11,17 +11,17 @@ Port `Policy` from the current Python `models.py`/`policy_service.py`'s create/g
 
 ## Requirements
 
-- [ ] `governance.policies` table: `id`, `organization_id`, `team_id` (**required, not nullable**), `name`, `description`, `enforcement_type` (`prepend`/`append`/`inject`/`validate`), `content`, `priority`, `is_active`, `created_at` — no `project_id` column
-- [ ] Invariant: `team_id` must belong to the caller's `organization_id`
-- [ ] CRUD operations: `createPolicy`, `getPolicy`, `updatePolicy`, `deletePolicy`, `listTeamPolicies` — no `listProjectPolicies` (removed; Policy has no project scope to list by)
-- [ ] All mutations go through `withAudit()` — `PolicyCreated`/`PolicyUpdated`/`PolicyDeactivated` events per `bcs/governance/CONTRACT.md`
+- [x] `governance.policies` table: `id`, `organization_id`, `team_id` (**required, not nullable**), `name`, `description`, `enforcement_type` (`prepend`/`append`/`inject`/`validate`), `content`, `priority`, `is_active`, `created_at` — no `project_id` column
+- [x] Invariant: `team_id` must belong to the caller's `organization_id`
+- [x] CRUD operations: `createPolicy`, `getPolicy`, `updatePolicy`, `deletePolicy`, `listTeamPolicies` — no `listProjectPolicies` (removed; Policy has no project scope to list by)
+- [x] All mutations go through `withAudit()` — `PolicyCreated`/`PolicyUpdated`/`PolicyDeactivated` events per `bcs/governance/CONTRACT.md`
 
 ## Acceptance Criteria
 
-- [ ] Creating a policy without a `team_id` is rejected
-- [ ] Creating a policy with a `team_id` from a different organization is rejected
-- [ ] `listTeamPolicies` only returns active policies, ordered by priority descending
-- [ ] Every mutation produces a corresponding audit event
+- [x] Creating a policy without a `team_id` is rejected
+- [x] Creating a policy with a `team_id` from a different organization is rejected
+- [x] `listTeamPolicies` only returns active policies, ordered by priority descending
+- [x] Every mutation produces a corresponding audit event
 
 ## Open Questions
 

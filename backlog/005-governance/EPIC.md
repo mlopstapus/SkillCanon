@@ -1,7 +1,7 @@
 # Epic 005: Governance
 
 **Priority:** 5
-**Status:** in-progress (feature 005 done; features 001–004 have real, previously-unreflected implementation code per session notes elsewhere — not re-audited here, out of scope for this change)
+**Status:** in-progress (re-audited 2026-08-08: features 001, 002, 004, 005 confirmed complete and archived; 003 stays open on one genuine gap — see Features below; 006 not started)
 **Goal:** Port Policy, Objective, and the hierarchical resolution engine — the first of SkillCanon's two core-domain contexts — with characterization tests proving the new TS implementation matches the current Python behavior exactly before anything downstream depends on it.
 
 ## Overview
@@ -10,10 +10,10 @@ This is the highest-risk port in the whole refactor. The resolution engine's cor
 
 ## Features
 
-- [ ] [001 - Policy Model & CRUD](001-policy-model-and-crud.md)
-- [ ] [002 - Objective Model & CRUD](002-objective-model-and-crud.md)
-- [ ] [003 - Hierarchical Resolution Engine](003-hierarchical-resolution-engine.md)
-- [ ] [004 - Governance Tenant Isolation Tests](004-governance-tenant-isolation-tests.md)
+- [x] [001 - Policy Model & CRUD](archive/001-policy-model-and-crud.md)
+- [x] [002 - Objective Model & CRUD](archive/002-objective-model-and-crud.md)
+- [ ] [003 - Hierarchical Resolution Engine](003-hierarchical-resolution-engine.md) — 3/4 ACs verified (tie-break, local-override, no-caching all confirmed by test); the characterization-suite AC (TS output vs. legacy Python `resolve_effective`/`resolve_all_policies`, byte-for-byte) is the one genuinely unmet piece — no such harness exists anywhere in this repo, unlike prompt-registry's `expand-characterization.test.ts`
+- [x] [004 - Governance Tenant Isolation Tests](archive/004-governance-tenant-isolation-tests.md)
 - [X] [005 - Governance Views UI](archive/005-governance-views-ui.md)
 - [ ] [006 - Project-Scoped Governance UI](006-project-scoped-governance-ui.md) — deferred out of 005, no project scope in that feature's source mockup
 

@@ -1,7 +1,7 @@
 ---
 epic: 000-foundations
 feature: 011-fix-missing-migration-snapshot-files
-status: open
+status: done
 dependencies: []
 ---
 
@@ -11,14 +11,14 @@ Discovered 2026-07-27 while building `019-account-team-settings-ui`'s schema mig
 
 ## Requirements
 
-- [ ] Identify exactly which past feature/commit generated each missing snapshot without committing it (git blame the `.sql` files' introducing commits)
-- [ ] Regenerate the five missing snapshot files so `drizzle/migrations/meta/` has an unbroken `0000`–`0014` (or later) sequence
-- [ ] Verify `pnpm db:generate` produces a clean, minimal diff against current `schema.ts` afterward — no more phantom "catch-up" DDL bundled into unrelated future migrations
+- [x] Identify exactly which past feature/commit generated each missing snapshot without committing it (git blame the `.sql` files' introducing commits)
+- [x] Regenerate the five missing snapshot files so `drizzle/migrations/meta/` has an unbroken `0000`–`0014` (or later) sequence
+- [x] Verify `pnpm db:generate` produces a clean, minimal diff against current `schema.ts` afterward — no more phantom "catch-up" DDL bundled into unrelated future migrations
 
 ## Acceptance Criteria
 
-- [ ] Every `.sql` file under `drizzle/migrations/` has a matching `meta/NNNN_snapshot.json`
-- [ ] A test schema change (e.g. a throwaway column add/drop on a scratch branch) produces a `pnpm db:generate` diff containing only that change, not any other bounded context's already-applied DDL
+- [x] Every `.sql` file under `drizzle/migrations/` has a matching `meta/NNNN_snapshot.json`
+- [x] A test schema change (e.g. a throwaway column add/drop on a scratch branch) produces a `pnpm db:generate` diff containing only that change, not any other bounded context's already-applied DDL
 
 ## Open Questions
 

@@ -19,10 +19,10 @@ Port `resolve_effective` and `resolve_all_policies` (and the equivalent objectiv
 
 ## Acceptance Criteria
 
-- [ ] **Characterization test suite**: a representative set of team hierarchies + policy/objective fixtures run through both the current Python implementation and the new TS implementation, asserting identical output for every fixture, before this feature is considered done
-- [ ] A policy at the same priority as an inherited policy resolves with the inherited one taking precedence, matching current behavior
-- [ ] A user's own local policy correctly overrides/coexists with inherited ancestor policies per the existing two-layer model
-- [ ] No test or code path introduces caching of resolution results
+- [ ] **Characterization test suite**: a representative set of team hierarchies + policy/objective fixtures run through both the current Python implementation and the new TS implementation, asserting identical output for every fixture, before this feature is considered done — **confirmed still missing (2026-08-08 re-audit)**: no such harness exists anywhere in this repo (checked `src/bcs/governance/` and `legacy/backend/scratch/`), unlike prompt-registry's own `expand-characterization.test.ts` precedent. This is the one requirement keeping this feature `open`.
+- [x] A policy at the same priority as an inherited policy resolves with the inherited one taking precedence, matching current behavior — verified: `resolve-effective-policies.test.ts`'s "matches legacy priority ordering with inherited policies winning ties"
+- [x] A user's own local policy correctly overrides/coexists with inherited ancestor policies per the existing two-layer model — verified: `resolve-effective-policies.test.ts`'s "matches legacy inherited/local policy resolution across the team chain"
+- [x] No test or code path introduces caching of resolution results — verified: no memoization/cache reference anywhere in `resolve-*.ts`
 
 ## Open Questions
 
