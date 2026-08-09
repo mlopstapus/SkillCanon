@@ -168,13 +168,13 @@ describe("createTeam", () => {
       ),
     );
 
-    const rows = await testDb.appDb.execute<{
-      action: string;
-      resource_id: string | null;
-      transport: string;
-      source_ip: string | null;
-    }>(
-      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${result.id}`,
+    const rows = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      tx.execute<{
+        action: string;
+        resource_id: string | null;
+        transport: string;
+        source_ip: string | null;
+      }>(sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${result.id}`),
     );
 
     expect(Array.from(rows)).toEqual([

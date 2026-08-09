@@ -34,6 +34,7 @@ describe("deleteObjective", () => {
     expect(rows).toHaveLength(0);
     const events = await queryObjectiveAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'objective.deleted' and resource_id = ${created.id}`,
     );
     expect(events).toHaveLength(1);
@@ -45,7 +46,7 @@ describe("deleteObjective", () => {
     const orgA = await makeObjectiveFixtureOrg(testDb);
     const orgB = await makeObjectiveFixtureOrg(testDb);
     const created = await createTestObjective(testDb, orgB);
-    const eventsBefore = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.deleted'`);
+    const eventsBefore = await queryObjectiveAuditEvents(testDb, orgB.organizationId, sql`action = 'objective.deleted'`);
 
     await expect(
       withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
@@ -55,7 +56,7 @@ describe("deleteObjective", () => {
 
     const rows = await queryObjectiveRows(testDb, sql`id = ${created.id}`);
     expect(rows).toHaveLength(1);
-    const eventsAfter = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.deleted'`);
+    const eventsAfter = await queryObjectiveAuditEvents(testDb, orgB.organizationId, sql`action = 'objective.deleted'`);
     expect(eventsAfter).toHaveLength(eventsBefore.length);
   });
 });

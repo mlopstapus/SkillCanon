@@ -50,6 +50,7 @@ describe("createPolicy", () => {
     expect(rows).toHaveLength(1);
     const events = await queryPolicyAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'policy.created' and resource_id = ${result.id}`,
     );
     expect(events).toHaveLength(1);

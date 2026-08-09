@@ -1,7 +1,7 @@
 # Epic 003: Audit & Compliance
 
 **Priority:** 3
-**Status:** in-progress (001-003 done and archived; 004 newly filed 2026-08-08 — see Notes)
+**Status:** done (all four features done and archived — 004 closed 2026-08-09)
 **Goal:** Build the immutable audit log and the transactional write path every subsequent bounded context will call into, so audit coverage is complete from the first mutation onward rather than retrofitted later.
 
 ## Overview
@@ -13,7 +13,7 @@ Built deliberately early — right after Identity & Access, before Governance, P
 - [x] [001 - Audit Event Schema & Write Path](archive/001-audit-event-schema-and-write-path.md)
 - [x] [002 - Audit Query & Retention](archive/002-audit-query-and-retention.md)
 - [x] [003 - Audit Log UI](archive/003-audit-log-ui.md)
-- [ ] [004 - Audit Events Row-Level Security](004-audit-events-rls.md) — `audit.audit_events` has never had an RLS policy; gap noted in this epic's own Notes since 2026-07-23 but never filed until the 2026-08-08 backlog audit
+- [x] [004 - Audit Events Row-Level Security](archive/004-audit-events-rls.md) — `audit.audit_events` had never had an RLS policy; gap noted in this epic's own Notes since 2026-07-23, filed 2026-08-08, closed 2026-08-09
 
 *Completed features are moved to `archive/` and checked off here.*
 

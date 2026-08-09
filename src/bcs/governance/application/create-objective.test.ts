@@ -56,6 +56,7 @@ describe("createObjective", () => {
     expect(rows).toHaveLength(1);
     const events = await queryObjectiveAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'objective.created' and resource_id = ${result.id}`,
     );
     expect(events).toHaveLength(1);
@@ -117,7 +118,7 @@ describe("createObjective", () => {
   it("rejects blank titles without persisting or auditing", async () => {
     const fixture = await makeObjectiveFixtureOrg(testDb);
     const before = await countObjectives(testDb);
-    const eventsBefore = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.created'`);
+    const eventsBefore = await queryObjectiveAuditEvents(testDb, fixture.organizationId, sql`action = 'objective.created'`);
 
     await expect(
       withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -126,7 +127,7 @@ describe("createObjective", () => {
     ).rejects.toThrow(InvalidObjectiveInputError);
 
     expect(await countObjectives(testDb)).toBe(before);
-    const eventsAfter = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.created'`);
+    const eventsAfter = await queryObjectiveAuditEvents(testDb, fixture.organizationId, sql`action = 'objective.created'`);
     expect(eventsAfter).toHaveLength(eventsBefore.length);
   });
 

@@ -140,13 +140,15 @@ describe("deactivateUser", () => {
       }),
     );
 
-    const rows = await testDb.appDb.execute<{
-      action: string;
-      resource_id: string | null;
-      transport: string;
-      source_ip: string | null;
-    }>(
-      sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${otherAdmin.id} and action = 'user.updated'`,
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.execute<{
+        action: string;
+        resource_id: string | null;
+        transport: string;
+        source_ip: string | null;
+      }>(
+        sql`select action, resource_id, transport, source_ip from audit.audit_events where resource_id = ${otherAdmin.id} and action = 'user.updated'`,
+      ),
     );
 
     expect(Array.from(rows)).toEqual([

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { auditEvents } from "../infrastructure/schema";
 import { record } from "./record";
 import { eq } from "drizzle-orm";
@@ -20,8 +21,8 @@ describe("record", () => {
     const organizationId = randomUUID();
     const actorUserId = randomUUID();
 
-    await testDb.appDb.transaction(async (tx) => {
-      await record(tx, {
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      record(tx, {
         organizationId,
         actorUserId,
         actorApiKeyId: null,
@@ -30,13 +31,12 @@ describe("record", () => {
         resourceId: actorUserId,
         transport: "web",
         sourceIp: "203.0.113.10",
-      });
-    });
+      }),
+    );
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.actorUserId, actorUserId));
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.select().from(auditEvents).where(eq(auditEvents.actorUserId, actorUserId)),
+    );
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login");
@@ -49,8 +49,8 @@ describe("record", () => {
     const organizationId = randomUUID();
     const resourceId = randomUUID();
 
-    await testDb.appDb.transaction(async (tx) => {
-      await record(tx, {
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      record(tx, {
         organizationId,
         actorUserId: null,
         actorApiKeyId: null,
@@ -64,13 +64,12 @@ describe("record", () => {
           email: "new@example.com",
           nested: { key_hash: "abcdef", token: "raw-token-value" },
         },
-      });
-    });
+      }),
+    );
 
-    const rows = await testDb.appDb
-      .select()
-      .from(auditEvents)
-      .where(eq(auditEvents.resourceId, resourceId));
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.select().from(auditEvents).where(eq(auditEvents.resourceId, resourceId)),
+    );
 
     expect(rows).toHaveLength(1);
     const stored = JSON.stringify(rows[0]);

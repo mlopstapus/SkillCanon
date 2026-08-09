@@ -1,7 +1,7 @@
 ---
 epic: 000-foundations
 feature: 013-fix-non-idempotent-workflow-schema-drop-migration
-status: open
+status: done
 dependencies: []
 ---
 
@@ -17,13 +17,13 @@ with no `IF EXISTS`. On any database whose history never actually created `workf
 
 ## Requirements
 
-- [ ] Add `IF EXISTS` to the `DROP TABLE` (and any sibling `DROP SCHEMA`/`DROP TYPE` statements in the same migration file, if present) so the migration is idempotent regardless of whether `workflow.*` was ever actually created on the target database
-- [ ] Confirm `pnpm db:migrate` succeeds from a clean database (never had `workflow.*`) and also from a database that did have it (the originally-intended case), both ending in the same schema state
+- [x] Add `IF EXISTS` to the `DROP TABLE` (and any sibling `DROP SCHEMA`/`DROP TYPE` statements in the same migration file, if present) so the migration is idempotent regardless of whether `workflow.*` was ever actually created on the target database — both `DROP TABLE` and `DROP SCHEMA` in `0024_drop_workflow_schema.sql` now use `IF EXISTS`
+- [x] Confirm `pnpm db:migrate` succeeds from a clean database (never had `workflow.*`) and also from a database that did have it (the originally-intended case), both ending in the same schema state
 
 ## Acceptance Criteria
 
-- [ ] `pnpm db:migrate` against a fresh, empty database completes without error through the latest migration
-- [ ] `pnpm db:migrate` against a database that still has `workflow.workflows` (simulating an install migrated before `0024`) also completes without error and drops the table as originally intended
+- [x] `pnpm db:migrate` against a fresh, empty database completes without error through the latest migration — verified against a throwaway isolated Postgres container; directly confirmed `DROP TABLE IF EXISTS "workflow"."workflows" CASCADE; DROP SCHEMA IF EXISTS "workflow";` succeeds with no error (`NOTICE: schema "workflow" does not exist, skipping`) on a database that never had it
+- [x] `pnpm db:migrate` against a database that still has `workflow.workflows` (simulating an install migrated before `0024`) also completes without error and drops the table as originally intended — a full fresh-DB migration run creates `workflow.workflows` (via the earlier migration that originally added it) then drops it via `0024` in the same run; confirmed the `workflow` schema is gone afterward
 
 ## Open Questions
 

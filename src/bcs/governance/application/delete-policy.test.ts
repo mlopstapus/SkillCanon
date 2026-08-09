@@ -35,6 +35,7 @@ describe("deletePolicy", () => {
     expect(rows[0]?.is_active).toBe(false);
     const events = await queryPolicyAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'policy.deactivated' and resource_id = ${created.id}`,
     );
     expect(events).toHaveLength(1);
@@ -55,6 +56,7 @@ describe("deletePolicy", () => {
     expect(second).toBe(false);
     const events = await queryPolicyAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'policy.deactivated' and resource_id = ${created.id}`,
     );
     expect(events).toHaveLength(1);

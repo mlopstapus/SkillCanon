@@ -60,6 +60,7 @@ describe("updateObjective", () => {
 
     const events = await queryObjectiveAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'objective.updated' and resource_id = ${created.id}`,
     );
     expect(events).toHaveLength(1);
@@ -69,7 +70,7 @@ describe("updateObjective", () => {
   it("rejects blank title updates without auditing", async () => {
     const fixture = await makeObjectiveFixtureOrg(testDb);
     const created = await createTestObjective(testDb, fixture, { title: "Original" });
-    const eventsBefore = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.updated'`);
+    const eventsBefore = await queryObjectiveAuditEvents(testDb, fixture.organizationId, sql`action = 'objective.updated'`);
 
     await expect(
       withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -79,7 +80,7 @@ describe("updateObjective", () => {
 
     const rows = await queryObjectiveRows(testDb, sql`id = ${created.id}`);
     expect(rows[0]?.title).toBe("Original");
-    const eventsAfter = await queryObjectiveAuditEvents(testDb, sql`action = 'objective.updated'`);
+    const eventsAfter = await queryObjectiveAuditEvents(testDb, fixture.organizationId, sql`action = 'objective.updated'`);
     expect(eventsAfter).toHaveLength(eventsBefore.length);
   });
 

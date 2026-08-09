@@ -223,14 +223,16 @@ describe("createUser", () => {
       ),
     );
 
-    const rows = await testDb.appDb.execute<{
-      action: string;
-      resource_id: string | null;
-      transport: string;
-      source_ip: string | null;
-      after: unknown;
-    }>(
-      sql`select action, resource_id, transport, source_ip, after from audit.audit_events where resource_id = ${result.id}`,
+    const rows = await withTenantContext(testDb.appDb, org.organizationId, (tx) =>
+      tx.execute<{
+        action: string;
+        resource_id: string | null;
+        transport: string;
+        source_ip: string | null;
+        after: unknown;
+      }>(
+        sql`select action, resource_id, transport, source_ip, after from audit.audit_events where resource_id = ${result.id}`,
+      ),
     );
     const materialized = Array.from(rows);
 

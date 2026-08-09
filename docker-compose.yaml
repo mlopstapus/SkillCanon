@@ -31,6 +31,10 @@ services:
       # but unrestricted-by-org within identity_access (011-tenant-isolation-rls).
       AUTH_DATABASE_URL: postgresql://skillcanon_auth:${AUTH_DB_PASSWORD:-changeme_in_production}@database:5432/${POSTGRES_DB:-skillcanon}
       MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-skillcanon}:${POSTGRES_PASSWORD:-skillcanon}@database:5432/${POSTGRES_DB:-skillcanon}
+      # Signs/verifies session JWTs (getJwtSecret rejects anything containing
+      # "REPLACE_ME", so the zero-config default must be a real, if dev-only,
+      # value — same pattern as APP_DB_PASSWORD/AUTH_DB_PASSWORD above).
+      JWT_SECRET: ${JWT_SECRET:-changeme_in_production}
     depends_on:
       database:
         condition: service_healthy

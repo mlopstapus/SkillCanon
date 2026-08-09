@@ -130,8 +130,10 @@ describe("removeTeamMember", () => {
 
     await withTenantContext(testDb.appDb, org.id, (tx) => removeTeamMember(tx, admin, targetId));
 
-    const rows = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
-      sql`select action, resource_id from audit.audit_events where resource_id = ${targetId} and action = 'user.updated'`,
+    const rows = await withTenantContext(testDb.appDb, org.id, (tx) =>
+      tx.execute<{ action: string; resource_id: string | null }>(
+        sql`select action, resource_id from audit.audit_events where resource_id = ${targetId} and action = 'user.updated'`,
+      ),
     );
     expect(Array.from(rows).length).toBeGreaterThanOrEqual(1);
   });

@@ -92,15 +92,19 @@ export async function queryPolicyRows(
 
 export async function queryPolicyAuditEvents(
   testDb: TestDb,
+  organizationId: string,
   whereSql: ReturnType<typeof sql>,
 ): Promise<Array<{ action: string; resource_id: string | null; transport: string; source_ip: string | null }>> {
-  const rows = await testDb.appDb.execute<{
-    action: string;
-    resource_id: string | null;
-    transport: string;
-    source_ip: string | null;
-  }>(
-    sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`,
+  // audit.audit_events is RLS-protected for skillcanon_app
+  // (003-audit-compliance/004-audit-events-rls) — the read must run inside
+  // a tenant-context-scoped connection, same as any other org-scoped table.
+  const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+    tx.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`),
   );
   return Array.from(rows);
 }

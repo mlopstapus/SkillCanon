@@ -15,17 +15,20 @@ import { insert as insertTeam } from "../infrastructure/teams-repo";
 import { insert as insertUser } from "../infrastructure/users-repo";
 import { createApiKey } from "./create-api-key";
 
-async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+async function queryAuditEvents(testDb: TestDb, organizationId: string, whereSql: ReturnType<typeof sql>) {
   // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
   // schema (011-tenant-isolation-rls scopes it to identity_access only);
   // skillcanon_app can already read every schema (0000_create_schemas.sql).
-  const result = await testDb.appDb.execute<{
-    action: string;
-    resource_id: string | null;
-    transport: string;
-    source_ip: string | null;
-  }>(
-    sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`,
+  // audit.audit_events is now RLS-protected for skillcanon_app
+  // (003-audit-compliance/004-audit-events-rls) — the read must run inside
+  // a tenant-context-scoped connection, same as any other org-scoped table.
+  const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+    tx.execute<{
+      action: string;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(sql`select action, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`),
   );
   return Array.from(result);
 }
@@ -197,6 +200,7 @@ describe("createApiKey", () => {
 
     const rows = await queryAuditEvents(
       testDb,
+      admin.orgId,
       sql`action = 'api_key.created' and resource_id = ${result.id}`,
     );
     expect(rows).toHaveLength(1);
