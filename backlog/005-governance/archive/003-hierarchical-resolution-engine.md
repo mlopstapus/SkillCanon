@@ -1,7 +1,7 @@
 ---
 epic: 005-governance
 feature: 003-hierarchical-resolution-engine
-status: open
+status: done
 dependencies: ["001-policy-model-and-crud.md", "002-objective-model-and-crud.md"]
 ---
 
@@ -19,7 +19,7 @@ Port `resolve_effective` and `resolve_all_policies` (and the equivalent objectiv
 
 ## Acceptance Criteria
 
-- [ ] **Characterization test suite**: a representative set of team hierarchies + policy/objective fixtures run through both the current Python implementation and the new TS implementation, asserting identical output for every fixture, before this feature is considered done — **confirmed still missing (2026-08-08 re-audit)**: no such harness exists anywhere in this repo (checked `src/bcs/governance/` and `legacy/backend/scratch/`), unlike prompt-registry's own `expand-characterization.test.ts` precedent. This is the one requirement keeping this feature `open`.
+- [x] **Characterization test suite**: a representative set of team hierarchies + policy/objective fixtures run through both the current Python implementation and the new TS implementation, asserting identical output for every fixture, before this feature is considered done — done 2026-08-09, matching prompt-registry's `expand-characterization.test.ts` precedent exactly: `legacy/backend/scratch/governance_characterization_harness.py` (run once via `uv run`, records `governance_characterization_output.json`) + `src/bcs/governance/application/resolve-characterization.test.ts` (reads the recorded JSON, no live Python at `vitest` time). 7 scenarios, all passing on first run: 3 policy (basic local sort + inactive exclusion, 3-level inherited chain, same-priority tie-break) and 4 objective (3-level inherited chain, team+personal combination, project-scope presence/absence, full combined `resolveAllObjectives` flat ordering). Per PDR-016, the policy scenarios never exercise `project_id` — the new TS `Policy` model dropped project scope entirely, a documented, accepted divergence from the legacy shape this was ported from — `Objective` kept its `projectId` scope and is fully exercised.
 - [x] A policy at the same priority as an inherited policy resolves with the inherited one taking precedence, matching current behavior — verified: `resolve-effective-policies.test.ts`'s "matches legacy priority ordering with inherited policies winning ties"
 - [x] A user's own local policy correctly overrides/coexists with inherited ancestor policies per the existing two-layer model — verified: `resolve-effective-policies.test.ts`'s "matches legacy inherited/local policy resolution across the team chain"
 - [x] No test or code path introduces caching of resolution results — verified: no memoization/cache reference anywhere in `resolve-*.ts`
