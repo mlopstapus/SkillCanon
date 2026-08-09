@@ -7,8 +7,8 @@ const END_MARKER = "<!-- skillcanon:end -->";
 const BLURB = [
   START_MARKER,
   "This repository is connected to [SkillCanon](https://github.com/mlopstapus/SkillCanon), a governed prompt registry. " +
-    "Governed prompts sync down as Claude Code skills automatically (see `.claude/skills/skillcanon-*/`) — " +
-    "run `skillcanon sync` to force a refresh, or `skillcanon run <slug>` to resolve one directly.",
+    "Governed prompts sync down as real Claude Code skill files automatically (a `SKILL.md` plus any supporting files per skill, see `.claude/skills/skillcanon-*/`) — " +
+    "run `skillcanon sync` to force a refresh, or `skillcanon run <slug>` to resolve one live with your current policies/objectives applied.",
   END_MARKER,
 ].join("\n");
 

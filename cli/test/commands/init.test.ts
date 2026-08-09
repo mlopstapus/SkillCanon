@@ -5,9 +5,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { runInit } from "../../src/commands/init.js";
 
+interface MockSkill {
+  name: string;
+  description: string | null;
+  activeVersionId: string | null;
+}
+
 let server: Server;
 let baseUrl: string;
-let roster: Array<{ name: string; description: string | null }> = [];
+let roster: MockSkill[] = [];
+
+/** A legacy-shape (pre-032) template skill — its active version has no file bundle, so `sync` writes the unchanged pointer stub. */
+function legacySkill(name: string, description: string | null): MockSkill {
+  return { name, description, activeVersionId: `${name}-v1` };
+}
 
 function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.url?.startsWith("/api/skills?")) {
@@ -18,6 +29,19 @@ function handler(req: IncomingMessage, res: ServerResponse) {
     }
     res.writeHead(200, { "content-type": "application/json" });
     res.end(JSON.stringify({ items: roster }));
+    return;
+  }
+  const versionsMatch = req.url?.match(/^\/api\/skills\/([^/]+)\/versions$/);
+  if (versionsMatch) {
+    const name = decodeURIComponent(versionsMatch[1] as string);
+    const skill = roster.find((s) => s.name === name);
+    if (!skill) {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
+      return;
+    }
+    res.writeHead(200, { "content-type": "application/json" });
+    res.end(JSON.stringify([{ id: skill.activeVersionId, kind: "template", files: [] }]));
     return;
   }
   res.writeHead(404, { "content-type": "application/json" });
@@ -42,10 +66,7 @@ describe("runInit", () => {
 
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), "skillcanon-init-"));
-    roster = [
-      { name: "Release Notes", description: "Drafts release notes." },
-      { name: "Bug Triage", description: "Triages incoming bugs." },
-    ];
+    roster = [legacySkill("Release Notes", "Drafts release notes."), legacySkill("Bug Triage", "Triages incoming bugs.")];
   });
 
   afterEach(() => {
