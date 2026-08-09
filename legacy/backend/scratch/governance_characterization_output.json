@@ -1,0 +1,121 @@
+{
+  "objectiveCombined_all": [
+    "combined-root-objective",
+    "combined-leaf-objective",
+    "combined-personal-objective",
+    "combined-project-objective"
+  ],
+  "objectiveInheritedChain": {
+    "inherited": [
+      {
+        "isInherited": true,
+        "title": "mid-objective"
+      },
+      {
+        "isInherited": true,
+        "title": "root-objective"
+      }
+    ],
+    "local": [
+      {
+        "isInherited": false,
+        "title": "leaf-objective"
+      }
+    ]
+  },
+  "objectiveProjectScoped_with": {
+    "inherited": [],
+    "local": [
+      {
+        "isInherited": false,
+        "title": "project-objective"
+      }
+    ]
+  },
+  "objectiveProjectScoped_without": {
+    "inherited": [],
+    "local": []
+  },
+  "objectiveUserPersonal": {
+    "inherited": [],
+    "local": [
+      {
+        "isInherited": false,
+        "title": "team-objective"
+      },
+      {
+        "isInherited": false,
+        "title": "personal-objective"
+      }
+    ]
+  },
+  "policyBasicLocal": {
+    "inherited": [],
+    "local": [
+      {
+        "content": "High content.",
+        "enforcementType": "inject",
+        "isInherited": false,
+        "name": "policy-high",
+        "priority": 20
+      },
+      {
+        "content": "Mid content.",
+        "enforcementType": "prepend",
+        "isInherited": false,
+        "name": "policy-mid",
+        "priority": 10
+      },
+      {
+        "content": "Low content.",
+        "enforcementType": "append",
+        "isInherited": false,
+        "name": "policy-low",
+        "priority": 5
+      }
+    ]
+  },
+  "policyInheritedChain": {
+    "inherited": [
+      {
+        "content": "Mid content.",
+        "enforcementType": "append",
+        "isInherited": true,
+        "name": "mid-policy",
+        "priority": 2
+      },
+      {
+        "content": "Root content.",
+        "enforcementType": "prepend",
+        "isInherited": true,
+        "name": "root-policy",
+        "priority": 1
+      }
+    ],
+    "local": [
+      {
+        "content": "Leaf content.",
+        "enforcementType": "inject",
+        "isInherited": false,
+        "name": "leaf-policy",
+        "priority": 3
+      }
+    ]
+  },
+  "policyTieBreak_all": [
+    {
+      "content": "Inherited tie content.",
+      "enforcementType": "prepend",
+      "isInherited": true,
+      "name": "inherited-tie",
+      "priority": 10
+    },
+    {
+      "content": "Local tie content.",
+      "enforcementType": "append",
+      "isInherited": false,
+      "name": "local-tie",
+      "priority": 10
+    }
+  ]
+}
