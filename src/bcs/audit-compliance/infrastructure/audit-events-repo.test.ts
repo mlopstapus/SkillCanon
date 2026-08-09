@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { auditEvents } from "./schema";
 import {
   countByOrganization,
@@ -51,18 +52,20 @@ describe("audit-events-repo", () => {
     const actorUserId = randomUUID();
     const resourceId = randomUUID();
 
-    const row = await insert(testDb.appDb, {
-      organizationId,
-      actorUserId,
-      actorApiKeyId: null,
-      action: "user.login",
-      resourceType: "user",
-      resourceId,
-      before: null,
-      after: null,
-      transport: "web",
-      sourceIp: "203.0.113.10",
-    });
+    const row = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      insert(tx, {
+        organizationId,
+        actorUserId,
+        actorApiKeyId: null,
+        action: "user.login",
+        resourceType: "user",
+        resourceId,
+        before: null,
+        after: null,
+        transport: "web",
+        sourceIp: "203.0.113.10",
+      }),
+    );
 
     expect(row.id).toBeTruthy();
     expect(row.organizationId).toBe(organizationId);
@@ -75,8 +78,8 @@ describe("audit-events-repo", () => {
     expect(row.createdAt).toBeTruthy();
   });
 
-  it("inserts unknown-organization audit events", async () => {
-    const row = await insert(testDb.appDb, {
+  it("inserts unknown-organization audit events (via authDb — the only role permitted to write a null-organization row, matching login()'s pre-auth failed-login path)", async () => {
+    const row = await insert(testDb.authDb, {
       organizationId: null,
       actorUserId: null,
       actorApiKeyId: null,
@@ -117,8 +120,8 @@ describe("audit-events-repo", () => {
     });
 
     const filters = { retentionCutoff: new Date("2026-07-19T00:00:00Z"), limit: 1, offset: 0 };
-    const rows = await queryByOrganization(testDb.appDb, orgA, filters);
-    const count = await countByOrganization(testDb.appDb, orgA, filters);
+    const rows = await withTenantContext(testDb.appDb, orgA, (tx) => queryByOrganization(tx, orgA, filters));
+    const count = await withTenantContext(testDb.appDb, orgA, (tx) => countByOrganization(tx, orgA, filters));
 
     expect(rows.map((row) => row.id)).toEqual([newest.id]);
     expect(count).toBe(2);
@@ -138,9 +141,11 @@ describe("audit-events-repo", () => {
       createdAt: new Date("2026-07-24T00:00:00Z"),
     });
 
-    const rows = await queryByOrganization(testDb.appDb, org, {
-      retentionCutoff: new Date("2026-07-20T00:00:00Z"),
-    });
+    const rows = await withTenantContext(testDb.appDb, org, (tx) =>
+      queryByOrganization(tx, org, {
+        retentionCutoff: new Date("2026-07-20T00:00:00Z"),
+      }),
+    );
 
     expect(rows.map((row) => row.id)).toEqual([retained.id]);
   });
@@ -176,16 +181,18 @@ describe("audit-events-repo", () => {
       createdAt: new Date("2026-07-24T12:00:00Z"),
     });
 
-    const rows = await queryByOrganization(testDb.appDb, org, {
-      retentionCutoff: new Date("2026-07-20T00:00:00Z"),
-      search: "POLICY",
-      resourceType: "policy",
-      actorUserId,
-      actorApiKeyId,
-      transport: "web",
-      createdAtFrom: new Date("2026-07-24T00:00:00Z"),
-      createdAtTo: new Date("2026-07-25T00:00:00Z"),
-    });
+    const rows = await withTenantContext(testDb.appDb, org, (tx) =>
+      queryByOrganization(tx, org, {
+        retentionCutoff: new Date("2026-07-20T00:00:00Z"),
+        search: "POLICY",
+        resourceType: "policy",
+        actorUserId,
+        actorApiKeyId,
+        transport: "web",
+        createdAtFrom: new Date("2026-07-24T00:00:00Z"),
+        createdAtTo: new Date("2026-07-25T00:00:00Z"),
+      }),
+    );
 
     expect(rows.map((row) => row.id)).toEqual([matching.id]);
   });
@@ -196,11 +203,13 @@ describe("audit-events-repo", () => {
     const matching = await insertEvent(testDb, { organizationId: org, actorUserId, action: "team.created" });
     await insertEvent(testDb, { organizationId: org, actorUserId: randomUUID(), action: "team.created" });
 
-    const rows = await queryByOrganization(testDb.appDb, org, {
-      retentionCutoff: new Date("2026-07-20T00:00:00Z"),
-      search: "alice",
-      actorUserIds: [actorUserId],
-    });
+    const rows = await withTenantContext(testDb.appDb, org, (tx) =>
+      queryByOrganization(tx, org, {
+        retentionCutoff: new Date("2026-07-20T00:00:00Z"),
+        search: "alice",
+        actorUserIds: [actorUserId],
+      }),
+    );
 
     expect(rows.map((row) => row.id)).toEqual([matching.id]);
   });
@@ -224,13 +233,13 @@ describe("audit-events-repo", () => {
       createdAt: new Date("2026-07-01T00:00:00Z"),
     });
 
-    const deleted = await deleteOlderThan(testDb.appDb, orgA, new Date("2026-07-20T00:00:00Z"));
-    const remainingA = await queryByOrganization(testDb.appDb, orgA, {
-      retentionCutoff: new Date("2026-01-01T00:00:00Z"),
-    });
-    const remainingB = await queryByOrganization(testDb.appDb, orgB, {
-      retentionCutoff: new Date("2026-01-01T00:00:00Z"),
-    });
+    const deleted = await withTenantContext(testDb.appDb, orgA, (tx) => deleteOlderThan(tx, orgA, new Date("2026-07-20T00:00:00Z")));
+    const remainingA = await withTenantContext(testDb.appDb, orgA, (tx) =>
+      queryByOrganization(tx, orgA, { retentionCutoff: new Date("2026-01-01T00:00:00Z") }),
+    );
+    const remainingB = await withTenantContext(testDb.appDb, orgB, (tx) =>
+      queryByOrganization(tx, orgB, { retentionCutoff: new Date("2026-01-01T00:00:00Z") }),
+    );
 
     expect(deleted).toBe(1);
     expect(remainingA.map((row) => row.id)).toEqual([retained.id]);
@@ -267,7 +276,9 @@ describe("audit-events-repo", () => {
       createdAt: new Date("2020-01-01T00:00:00Z"),
     });
 
-    const actors = await listDistinctActors(testDb.appDb, organizationId, new Date("2026-01-01T00:00:00Z"));
+    const actors = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      listDistinctActors(tx, organizationId, new Date("2026-01-01T00:00:00Z")),
+    );
 
     expect(actors).toHaveLength(3);
     expect(actors).toEqual(
@@ -293,7 +304,9 @@ describe("audit-events-repo", () => {
       createdAt: new Date("2020-01-01T00:00:00Z"),
     });
 
-    const types = await listDistinctResourceTypes(testDb.appDb, organizationId, new Date("2026-01-01T00:00:00Z"));
+    const types = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      listDistinctResourceTypes(tx, organizationId, new Date("2026-01-01T00:00:00Z")),
+    );
 
     expect(types).toEqual(["policy", "team"]);
   });

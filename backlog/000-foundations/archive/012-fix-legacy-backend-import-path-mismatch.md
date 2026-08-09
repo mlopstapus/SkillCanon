@@ -1,7 +1,7 @@
 ---
 epic: 000-foundations
 feature: 012-fix-legacy-backend-import-path-mismatch
-status: open
+status: done
 dependencies: []
 ---
 
@@ -11,14 +11,14 @@ Discovered 2026-07-29 while building `021-expansion-engine`'s characterization t
 
 ## Requirements
 
-- [ ] `git mv legacy/backend/src/spechub_server legacy/backend/src/skillcanon_server` (or the inverse — revert the internal import rewrites back to `spechub_server` — whichever direction matches the rest of this repo's post-rename conventions; the directory itself is the one that's actually out of sync, so renaming it is almost certainly correct, not the imports)
-- [ ] Update any config referencing the old path (`pyproject.toml`, `uv.lock`, import roots in test config, etc.)
-- [ ] Confirm the full legacy test suite (`cd legacy/backend && uv run pytest tests/ -v`) still passes after the rename
+- [x] `git mv legacy/backend/src/spechub_server legacy/backend/src/skillcanon_server` (or the inverse — revert the internal import rewrites back to `spechub_server` — whichever direction matches the rest of this repo's post-rename conventions; the directory itself is the one that's actually out of sync, so renaming it is almost certainly correct, not the imports) — done via a separate commit `e08f897` ("fix(legacy-backend): align canonical package path", 2026-08-02, SKI-70) that landed before this cleanup pass; `pyproject.toml`'s `packages = ["src/skillcanon_server"]` already matches. This item was never archived after that commit shipped.
+- [x] Update any config referencing the old path (`pyproject.toml`, `uv.lock`, import roots in test config, etc.) — confirmed via `e08f897`
+- [x] Confirm the full legacy test suite (`cd legacy/backend && uv run pytest tests/ -v`) still passes after the rename — 176 passed
 
 ## Acceptance Criteria
 
-- [ ] `python -c "from src.skillcanon_server.services import prompt_service"` succeeds with no path shim
-- [ ] No remaining reference to the mismatched name in either direction (directory name matches every internal import consistently)
+- [x] `python -c "from src.skillcanon_server.services import prompt_service"` succeeds with no path shim — verified via `uv run python -c "from src.skillcanon_server.services import prompt_service"`
+- [x] No remaining reference to the mismatched name in either direction (directory name matches every internal import consistently) — a stray untracked `legacy/backend/src/spechub_server/__pycache__/` directory (gitignored build cache, no tracked `.py` files) was found and removed during this pass
 
 ## Open Questions
 

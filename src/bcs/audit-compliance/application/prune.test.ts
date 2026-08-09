@@ -3,6 +3,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import * as recordModule from "./record";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import { auditEvents } from "../infrastructure/schema";
 import { pruneAuditEvents } from "./prune";
 
@@ -28,12 +29,14 @@ async function insertEvent(testDb: TestDb, overrides: Partial<typeof auditEvents
 }
 
 async function eventsFor(testDb: TestDb, organizationId: string) {
-  const result = await testDb.appDb.execute<{
-    id: string;
-    action: string;
-    after: { deleted?: number } | null;
-    transport: string;
-  }>(sql`select id, action, after, transport from audit.audit_events where organization_id = ${organizationId} order by created_at, id`);
+  const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+    tx.execute<{
+      id: string;
+      action: string;
+      after: { deleted?: number } | null;
+      transport: string;
+    }>(sql`select id, action, after, transport from audit.audit_events where organization_id = ${organizationId} order by created_at, id`),
+  );
   return Array.from(result);
 }
 
@@ -55,7 +58,9 @@ describe("pruneAuditEvents", () => {
     const kept = await insertEvent(testDb, { organizationId: orgA, action: "new-a", createdAt: new Date("2026-07-24T00:00:00Z") });
     const otherOld = await insertEvent(testDb, { organizationId: orgB, action: "old-b", createdAt: new Date("2026-07-01T00:00:00Z") });
 
-    const result = await pruneAuditEvents(testDb.appDb, orgA, { now: new Date("2026-07-25T00:00:00Z") });
+    const result = await withTenantContext(testDb.appDb, orgA, (tx) =>
+      pruneAuditEvents(tx, orgA, { now: new Date("2026-07-25T00:00:00Z") }),
+    );
     const orgARows = await eventsFor(testDb, orgA);
     const orgBRows = await eventsFor(testDb, orgB);
 
@@ -72,7 +77,9 @@ describe("pruneAuditEvents", () => {
     const org = randomUUID();
     await insertEvent(testDb, { organizationId: org, action: "new", createdAt: new Date("2026-07-24T00:00:00Z") });
 
-    const result = await pruneAuditEvents(testDb.appDb, org, { now: new Date("2026-07-25T00:00:00Z") });
+    const result = await withTenantContext(testDb.appDb, org, (tx) =>
+      pruneAuditEvents(tx, org, { now: new Date("2026-07-25T00:00:00Z") }),
+    );
     const rows = await eventsFor(testDb, org);
 
     expect(result.deleted).toBe(0);
@@ -86,7 +93,7 @@ describe("pruneAuditEvents", () => {
     vi.spyOn(recordModule, "record").mockRejectedValueOnce(new Error("audit write failed"));
 
     await expect(
-      pruneAuditEvents(testDb.appDb, org, { now: new Date("2026-07-25T00:00:00Z") }),
+      withTenantContext(testDb.appDb, org, (tx) => pruneAuditEvents(tx, org, { now: new Date("2026-07-25T00:00:00Z") })),
     ).rejects.toThrow("audit write failed");
 
     const rows = await eventsFor(testDb, org);

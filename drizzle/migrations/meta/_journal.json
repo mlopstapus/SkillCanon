@@ -204,6 +204,13 @@
       "when": 1786048600000,
       "tag": "0028_prompt_registry_skill_chain_step_content",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1786320000000,
+      "tag": "0029_audit_compliance_rls",
+      "breakpoints": true
     }
   ]
 }

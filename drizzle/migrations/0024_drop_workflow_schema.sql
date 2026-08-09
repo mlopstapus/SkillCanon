@@ -1,2 +1,2 @@
-DROP TABLE "workflow"."workflows" CASCADE;--> statement-breakpoint
-DROP SCHEMA "workflow";
+DROP TABLE IF EXISTS "workflow"."workflows" CASCADE;--> statement-breakpoint
+DROP SCHEMA IF EXISTS "workflow";

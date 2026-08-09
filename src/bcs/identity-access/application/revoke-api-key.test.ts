@@ -13,12 +13,17 @@ import { createApiKey } from "./create-api-key";
 import { authenticateApiKey } from "./authenticate-api-key";
 import { revokeApiKey } from "./revoke-api-key";
 
-async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
+async function queryAuditEvents(testDb: TestDb, organizationId: string, whereSql: ReturnType<typeof sql>) {
   // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
   // schema (011-tenant-isolation-rls scopes it to identity_access only);
   // skillcanon_app can already read every schema (0000_create_schemas.sql).
-  const result = await testDb.appDb.execute<{ action: string; resource_id: string | null }>(
-    sql`select action, resource_id from audit.audit_events where ${whereSql}`,
+  // audit.audit_events is now RLS-protected for skillcanon_app
+  // (003-audit-compliance/004-audit-events-rls) — the read must run inside
+  // a tenant-context-scoped connection, same as any other org-scoped table.
+  const result = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+    tx.execute<{ action: string; resource_id: string | null }>(
+      sql`select action, resource_id from audit.audit_events where ${whereSql}`,
+    ),
   );
   return Array.from(result);
 }
@@ -124,6 +129,7 @@ describe("revokeApiKey", () => {
 
     const rows = await queryAuditEvents(
       testDb,
+      organizationId,
       sql`action = 'api_key.revoked' and resource_id = ${id}`,
     );
     expect(rows).toHaveLength(1);

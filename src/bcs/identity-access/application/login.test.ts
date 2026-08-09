@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { withTenantContext } from "@/shared/db/tenant-context";
 import * as auditCompliance from "@/bcs/audit-compliance";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
@@ -15,18 +16,26 @@ import { login } from "./login";
  * stay off the module-boundary lint's radar entirely this way, instead of
  * reaching into another BC's infrastructure/ directly.
  */
-async function queryAuditEvents(testDb: TestDb, whereSql: ReturnType<typeof sql>) {
-  // Read via appDb, not authDb — skillcanon_auth has no grant on the audit
-  // schema (011-tenant-isolation-rls scopes it to identity_access only);
-  // skillcanon_app can already read every schema (0000_create_schemas.sql).
-  const result = await testDb.appDb.execute<{
-    action: string;
-    actor_user_id: string | null;
-    organization_id: string | null;
-    resource_id: string | null;
-    transport: string;
-    source_ip: string | null;
-  }>(sql`select action, actor_user_id, organization_id, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`);
+/**
+ * `organizationId: null` reads via `authDb` instead of a tenant-scoped
+ * `appDb` connection — audit.audit_events' RLS policy for `skillcanon_app`
+ * (003-audit-compliance/004-audit-events-rls) can never see a
+ * null-organization row (a failed login against an unknown email, before
+ * any org is resolved), by design; `skillcanon_auth`'s permissive policy is
+ * the only role that can read it back, matching login()'s own write path.
+ */
+async function queryAuditEvents(testDb: TestDb, organizationId: string | null, whereSql: ReturnType<typeof sql>) {
+  const query = (tx: TestDb["appDb"]) =>
+    tx.execute<{
+      action: string;
+      actor_user_id: string | null;
+      organization_id: string | null;
+      resource_id: string | null;
+      transport: string;
+      source_ip: string | null;
+    }>(sql`select action, actor_user_id, organization_id, resource_id, transport, source_ip from audit.audit_events where ${whereSql}`);
+  const result =
+    organizationId === null ? await query(testDb.authDb) : await withTenantContext(testDb.appDb, organizationId, query);
   return Array.from(result);
 }
 
@@ -133,7 +142,7 @@ describe("login", () => {
       sourceIp: "203.0.113.66",
     });
 
-    const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
+    const rows = await queryAuditEvents(testDb, organizationId, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login");
     expect(rows[0]?.organization_id).toBe(organizationId);
@@ -146,7 +155,7 @@ describe("login", () => {
 
     await login(testDb.authDb, email, "wrong-password");
 
-    const rows = await queryAuditEvents(testDb, sql`actor_user_id = ${userId}`);
+    const rows = await queryAuditEvents(testDb, organizationId, sql`actor_user_id = ${userId}`);
     expect(rows).toHaveLength(1);
     expect(rows[0]?.action).toBe("user.login_failed");
     expect(rows[0]?.organization_id).toBe(organizationId);
@@ -157,7 +166,7 @@ describe("login", () => {
 
     await login(testDb.authDb, email, "whatever-password");
 
-    const rows = await queryAuditEvents(testDb, sql`action = 'user.login_failed'`);
+    const rows = await queryAuditEvents(testDb, null, sql`action = 'user.login_failed'`);
     const match = rows.find(
       (row) => row.actor_user_id === null && row.organization_id === null,
     );
@@ -165,12 +174,12 @@ describe("login", () => {
   });
 
   it("never writes the submitted password anywhere in an audit row", async () => {
-    const { email } = await makeOrgTeamUser(testDb);
+    const { organizationId, email } = await makeOrgTeamUser(testDb);
     const password = `super-secret-${randomUUID()}`;
 
     await login(testDb.authDb, email, password);
 
-    const rows = await queryAuditEvents(testDb, sql`true`);
+    const rows = await queryAuditEvents(testDb, organizationId, sql`organization_id = ${organizationId}`);
     const serialized = JSON.stringify(rows);
     expect(serialized).not.toContain(password);
   });

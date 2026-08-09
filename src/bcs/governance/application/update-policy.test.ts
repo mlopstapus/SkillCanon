@@ -46,6 +46,7 @@ describe("updatePolicy", () => {
 
     const events = await queryPolicyAuditEvents(
       testDb,
+      fixture.organizationId,
       sql`action = 'policy.updated' and resource_id = ${created.id}`,
     );
     expect(events).toHaveLength(1);

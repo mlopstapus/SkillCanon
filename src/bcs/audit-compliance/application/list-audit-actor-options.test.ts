@@ -39,35 +39,37 @@ describe("listAuditActorOptions", () => {
         (${bobId}, ${organizationId}, ${teamId}, ${`bob-${randomUUID()}`}, 'Bob', ${`${randomUUID()}@example.com`}, 'member', true)
     `);
 
-    await testDb.appDb.insert(auditEvents).values([
-      {
-        organizationId,
-        actorUserId: adminId,
-        actorApiKeyId: null,
-        action: "team.updated",
-        resourceType: "team",
-        resourceId: teamId,
-        transport: "web",
-      },
-      {
-        organizationId,
-        actorUserId: bobId,
-        actorApiKeyId: null,
-        action: "team.updated",
-        resourceType: "team",
-        resourceId: teamId,
-        transport: "web",
-      },
-      {
-        organizationId,
-        actorUserId: null,
-        actorApiKeyId: null,
-        action: "audit.pruned",
-        resourceType: "audit_event",
-        resourceId: null,
-        transport: "system",
-      },
-    ]);
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.insert(auditEvents).values([
+        {
+          organizationId,
+          actorUserId: adminId,
+          actorApiKeyId: null,
+          action: "team.updated",
+          resourceType: "team",
+          resourceId: teamId,
+          transport: "web",
+        },
+        {
+          organizationId,
+          actorUserId: bobId,
+          actorApiKeyId: null,
+          action: "team.updated",
+          resourceType: "team",
+          resourceId: teamId,
+          transport: "web",
+        },
+        {
+          organizationId,
+          actorUserId: null,
+          actorApiKeyId: null,
+          action: "audit.pruned",
+          resourceType: "audit_event",
+          resourceId: null,
+          transport: "system",
+        },
+      ]),
+    );
 
     const options = await withTenantContext(testDb.appDb, organizationId, (tx) =>
       listAuditActorOptions(tx, organizationId, adminId, new Date("2020-01-01T00:00:00Z")),
