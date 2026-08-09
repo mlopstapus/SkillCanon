@@ -1,6 +1,14 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
-import { AuthError, ApiError, NetworkError, NotFoundError, expandSkill, listSkills } from "../../src/http/skillcanon-client.js";
+import {
+  AuthError,
+  ApiError,
+  NetworkError,
+  NotFoundError,
+  expandSkill,
+  getSkillVersions,
+  listSkills,
+} from "../../src/http/skillcanon-client.js";
 
 let server: Server;
 let baseUrl: string;
@@ -33,6 +41,21 @@ function handler(req: IncomingMessage, res: ServerResponse) {
       return;
     }
     if (req.url === "/api/skills/missing/expand") {
+      res.writeHead(404, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "not found" }));
+      return;
+    }
+    if (req.url === "/api/skills/release-notes/versions") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(
+        JSON.stringify([
+          { id: "v1", kind: "template", files: [{ name: "SKILL.md", content: "old body", isMain: true }] },
+          { id: "v2", kind: "template", files: [{ name: "SKILL.md", content: "new body", isMain: true }] },
+        ]),
+      );
+      return;
+    }
+    if (req.url === "/api/skills/missing/versions") {
       res.writeHead(404, { "content-type": "application/json" });
       res.end(JSON.stringify({ error: "not found" }));
       return;
@@ -89,5 +112,18 @@ describe("expandSkill", () => {
 
   it("throws NetworkError when the server is unreachable", async () => {
     await expect(expandSkill({ server: "http://127.0.0.1:1", apiKey: "sk-test" }, "x")).rejects.toThrow(NetworkError);
+  });
+});
+
+describe("getSkillVersions", () => {
+  it("returns every version, letting the caller locate the one matching activeVersionId", async () => {
+    const versions = await getSkillVersions({ server: baseUrl, apiKey: "sk-test" }, "release-notes");
+    expect(versions).toHaveLength(2);
+    const active = versions.find((v) => v.id === "v2");
+    expect(active).toEqual({ id: "v2", kind: "template", files: [{ name: "SKILL.md", content: "new body", isMain: true }] });
+  });
+
+  it("throws NotFoundError on 404", async () => {
+    await expect(getSkillVersions({ server: baseUrl, apiKey: "sk-test" }, "missing")).rejects.toThrow(NotFoundError);
   });
 });

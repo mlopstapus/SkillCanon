@@ -16,7 +16,7 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 - [x] [004 - Usage Telemetry](archive/004-usage-telemetry.md)
 - [ ] [002 - MCP Server & Tools](002-mcp-server-and-tools.md) — deprioritized (see file); test-coverage gap closed 2026-08-05, which also found and fixed a real cross-session auth-bypass bug (see file's own update) — 2 of 4 Acceptance Criteria still unverified (characterization equivalence, restart mid-session), stays `open`
 - [x] [006 - Distribution Tenant Isolation Tests](archive/006-distribution-tenant-isolation-tests.md)
-- [ ] [007 - Skill File Format CLI Support](007-skill-file-format-cli-support.md)
+- [x] [007 - Skill File Format CLI Support](archive/007-skill-file-format-cli-support.md)
 - [ ] [008 - MCP Session Cleanup Scheduling](008-mcp-session-cleanup-scheduling.md) — minor, low-priority resource-hygiene gap found alongside 002's fix
 
 *Completed features are moved to `archive/` and checked off here.*

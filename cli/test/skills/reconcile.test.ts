@@ -1,171 +1,197 @@
 import { describe, expect, it } from "vitest";
-import { planReconciliation } from "../../src/skills/reconcile.js";
+import { planReconciliation, type RosterEntry } from "../../src/skills/reconcile.js";
 import { hashContent } from "../../src/config/sync-manifest.js";
 
-describe("planReconciliation (no conflicts)", () => {
-  it("creates a stub for a prompt not yet tracked", () => {
-    const plan = planReconciliation([{ name: "Release Notes", description: "Drafts release notes." }], []);
+function pointerStubEntry(name: string, description: string | null = null): RosterEntry {
+  return { skill: { name, description, activeVersionId: "v1" }, content: { shape: "pointer-stub" } };
+}
+
+function filesEntry(
+  name: string,
+  mainContent: string,
+  supportingFiles: Array<{ name: string; content: string }> = [],
+  description: string | null = null,
+): RosterEntry {
+  return {
+    skill: { name, description, activeVersionId: "v1" },
+    content: { shape: "files", mainFile: { content: mainContent }, supportingFiles },
+  };
+}
+
+describe("planReconciliation (no conflicts, pointer-stub shape)", () => {
+  it("creates SKILL.md for a prompt not yet tracked", () => {
+    const plan = planReconciliation([pointerStubEntry("Release Notes", "Drafts release notes.")]);
     expect(plan.actions).toEqual([
-      { type: "create", slug: "release-notes", name: "Release Notes", description: "Drafts release notes." },
+      {
+        type: "create",
+        slug: "release-notes",
+        filename: "SKILL.md",
+        content: "Run `skillcanon run release-notes` and follow the output as instructions.",
+        frontmatter: { name: "Release Notes", description: "Drafts release notes." },
+      },
     ]);
   });
 
-  it("updates a stub whose slug is already tracked", () => {
-    const plan = planReconciliation(
-      [{ name: "Release Notes", description: "New description." }],
-      ["release-notes"],
-    );
+  it("updates SKILL.md whose slug is already tracked", () => {
+    const plan = planReconciliation([pointerStubEntry("Release Notes", "New description.")], {
+      lastWrittenHashBySlugAndFile: { "release-notes": { "SKILL.md": "irrelevant-old-hash" } },
+      getCurrentFileContent: () => undefined,
+    });
     expect(plan.actions).toEqual([
-      { type: "update", slug: "release-notes", name: "Release Notes", description: "New description." },
+      {
+        type: "update",
+        slug: "release-notes",
+        filename: "SKILL.md",
+        content: "Run `skillcanon run release-notes` and follow the output as instructions.",
+        frontmatter: { name: "Release Notes", description: "New description." },
+      },
     ]);
   });
 
-  it("removes a tracked stub whose prompt is no longer in the roster", () => {
-    const plan = planReconciliation([], ["release-notes"]);
-    expect(plan.actions).toEqual([{ type: "remove", slug: "release-notes" }]);
+  it("removes every tracked file for a skill no longer in the roster", () => {
+    const plan = planReconciliation([], {
+      lastWrittenHashBySlugAndFile: { "release-notes": { "SKILL.md": "h1" } },
+    });
+    expect(plan.actions).toEqual([{ type: "remove", slug: "release-notes", filename: "SKILL.md" }]);
   });
 
   it("handles a null description as an empty string", () => {
-    const plan = planReconciliation([{ name: "X", description: null }], []);
-    expect(plan.actions[0]).toMatchObject({ description: "" });
-  });
-
-  it("produces a combined create+update+remove plan in one pass", () => {
-    const plan = planReconciliation(
-      [
-        { name: "New Prompt", description: "" },
-        { name: "Existing Prompt", description: "Updated." },
-      ],
-      ["existing-prompt", "gone-prompt"],
-    );
-    expect(plan.actions).toContainEqual({ type: "create", slug: "new-prompt", name: "New Prompt", description: "" });
-    expect(plan.actions).toContainEqual({
-      type: "update",
-      slug: "existing-prompt",
-      name: "Existing Prompt",
-      description: "Updated.",
-    });
-    expect(plan.actions).toContainEqual({ type: "remove", slug: "gone-prompt" });
+    const plan = planReconciliation([pointerStubEntry("X", null)]);
+    expect(plan.actions[0]).toMatchObject({ frontmatter: { description: "" } });
   });
 });
 
-describe("planReconciliation (hand-edit conflicts, FR-010/FR-010a)", () => {
-  it("flags a tracked stub whose on-disk content no longer matches its last-written hash, and does not touch it", () => {
-    const lastHash = hashContent("original content");
-    const plan = planReconciliation(
-      [{ name: "Release Notes", description: "Drafts release notes." }],
-      ["release-notes"],
-      {
-        lastWrittenHashBySlug: { "release-notes": lastHash },
-        currentContentBySlug: new Map([["release-notes", "hand-edited content"]]),
-      },
-    );
-    expect(plan.actions).toEqual([{ type: "conflict", slug: "release-notes", reason: "hand-edited" }]);
-  });
-
-  it("does not flag a tracked stub whose on-disk content still matches its last-written hash", () => {
-    const lastHash = hashContent("unchanged content");
-    const plan = planReconciliation(
-      [{ name: "Release Notes", description: "Drafts release notes." }],
-      ["release-notes"],
-      {
-        lastWrittenHashBySlug: { "release-notes": lastHash },
-        currentContentBySlug: new Map([["release-notes", "unchanged content"]]),
-      },
-    );
-    expect(plan.actions).toEqual([
-      { type: "update", slug: "release-notes", name: "Release Notes", description: "Drafts release notes." },
-    ]);
-  });
-
-  it("treats a deleted (not hand-edited) stub as needing recreation, not a conflict", () => {
-    const lastHash = hashContent("original content");
-    const plan = planReconciliation(
-      [{ name: "Release Notes", description: "Drafts release notes." }],
-      ["release-notes"],
-      { lastWrittenHashBySlug: { "release-notes": lastHash }, currentContentBySlug: new Map([["release-notes", undefined]]) },
-    );
-    expect(plan.actions).toEqual([
-      { type: "update", slug: "release-notes", name: "Release Notes", description: "Drafts release notes." },
-    ]);
-  });
-
-  it("a hand-edit conflict on one prompt does not block other prompts from reconciling normally in the same run", () => {
-    const lastHash = hashContent("original content");
-    const plan = planReconciliation(
-      [
-        { name: "Release Notes", description: "Drafts release notes." },
-        { name: "Other Prompt", description: "Something else." },
-      ],
-      ["release-notes"],
-      {
-        lastWrittenHashBySlug: { "release-notes": lastHash },
-        currentContentBySlug: new Map([["release-notes", "hand-edited content"]]),
-      },
-    );
-    expect(plan.actions).toContainEqual({ type: "conflict", slug: "release-notes", reason: "hand-edited" });
+describe("planReconciliation (files shape, US1)", () => {
+  it("creates one action per file: main file (with frontmatter) plus each supporting file (without)", () => {
+    const plan = planReconciliation([filesEntry("Release Notes", "Body.", [{ name: "example.md", content: "Ex." }], "Desc.")]);
     expect(plan.actions).toContainEqual({
       type: "create",
-      slug: "other-prompt",
-      name: "Other Prompt",
-      description: "Something else.",
+      slug: "release-notes",
+      filename: "SKILL.md",
+      content: "Body.",
+      frontmatter: { name: "Release Notes", description: "Desc." },
+    });
+    expect(plan.actions).toContainEqual({
+      type: "create",
+      slug: "release-notes",
+      filename: "example.md",
+      content: "Ex.",
     });
   });
 
-  it("--force (force: true) bypasses a hand-edit conflict", () => {
-    const lastHash = hashContent("original content");
-    const plan = planReconciliation(
-      [{ name: "Release Notes", description: "Drafts release notes." }],
-      ["release-notes"],
-      {
-        lastWrittenHashBySlug: { "release-notes": lastHash },
-        currentContentBySlug: new Map([["release-notes", "hand-edited content"]]),
-        force: true,
+  it("removes a previously-tracked supporting file no longer in the desired file set (FR-006)", () => {
+    const plan = planReconciliation([filesEntry("Release Notes", "Body.")], {
+      lastWrittenHashBySlugAndFile: {
+        "release-notes": { "SKILL.md": hashContent("Body."), "example.md": hashContent("Ex.") },
       },
-    );
-    expect(plan.actions).toEqual([
-      { type: "update", slug: "release-notes", name: "Release Notes", description: "Drafts release notes." },
-    ]);
+      getCurrentFileContent: (_slug, filename) => (filename === "example.md" ? "Ex." : "Body."),
+    });
+    expect(plan.actions).toContainEqual({ type: "remove", slug: "release-notes", filename: "example.md" });
   });
 });
 
-describe("planReconciliation (slug-collision conflicts, FR-010a)", () => {
-  it("flags both prompts that derive the same slug, and writes neither", () => {
+describe("planReconciliation (hand-edit conflicts, FR-010/FR-010a, US2)", () => {
+  it("T015: flags a hand-edited supporting file as a conflict while an unedited SKILL.md in the same folder still updates normally", () => {
+    const trackedMainContent = "Body.";
+    const trackedExampleContent = "original example content";
     const plan = planReconciliation(
-      [
-        { name: "Release Notes", description: "First." },
-        { name: "release notes", description: "Second." },
-      ],
-      [],
+      [filesEntry("Release Notes", trackedMainContent, [{ name: "example.md", content: "new example content" }], "Desc.")],
+      {
+        lastWrittenHashBySlugAndFile: {
+          "release-notes": { "SKILL.md": hashContent(trackedMainContent), "example.md": hashContent(trackedExampleContent) },
+        },
+        getCurrentFileContent: (_slug, filename) =>
+          filename === "example.md" ? "hand-edited example content" : trackedMainContent,
+      },
     );
+
+    expect(plan.actions).toContainEqual({ type: "conflict", slug: "release-notes", filename: "example.md", reason: "hand-edited" });
+    expect(plan.actions).toContainEqual({
+      type: "update",
+      slug: "release-notes",
+      filename: "SKILL.md",
+      content: trackedMainContent,
+      frontmatter: { name: "Release Notes", description: "Desc." },
+    });
+  });
+
+  it("T016: --force (force: true) bypasses a hand-edit conflict", () => {
+    const lastHash = hashContent("original content");
+    const plan = planReconciliation([pointerStubEntry("Release Notes", "Drafts release notes.")], {
+      lastWrittenHashBySlugAndFile: { "release-notes": { "SKILL.md": lastHash } },
+      getCurrentFileContent: () => "hand-edited content",
+      force: true,
+    });
+    expect(plan.actions).toEqual([
+      {
+        type: "update",
+        slug: "release-notes",
+        filename: "SKILL.md",
+        content: "Run `skillcanon run release-notes` and follow the output as instructions.",
+        frontmatter: { name: "Release Notes", description: "Drafts release notes." },
+      },
+    ]);
+  });
+
+  it("T017: treats a deleted (not hand-edited) tracked file as needing recreation, not a conflict", () => {
+    const lastHash = hashContent("original content");
+    const plan = planReconciliation([pointerStubEntry("Release Notes", "Drafts release notes.")], {
+      lastWrittenHashBySlugAndFile: { "release-notes": { "SKILL.md": lastHash } },
+      getCurrentFileContent: () => undefined,
+    });
+    expect(plan.actions).toEqual([
+      {
+        type: "update",
+        slug: "release-notes",
+        filename: "SKILL.md",
+        content: "Run `skillcanon run release-notes` and follow the output as instructions.",
+        frontmatter: { name: "Release Notes", description: "Drafts release notes." },
+      },
+    ]);
+  });
+
+  it("a hand-edit conflict on one skill does not block another skill from reconciling normally in the same run", () => {
+    const lastHash = hashContent("original content");
+    const plan = planReconciliation([pointerStubEntry("Release Notes"), pointerStubEntry("Other Prompt")], {
+      lastWrittenHashBySlugAndFile: { "release-notes": { "SKILL.md": lastHash } },
+      getCurrentFileContent: (slug) => (slug === "release-notes" ? "hand-edited content" : undefined),
+    });
+    expect(plan.actions).toContainEqual({ type: "conflict", slug: "release-notes", filename: "SKILL.md", reason: "hand-edited" });
+    expect(plan.actions).toContainEqual(expect.objectContaining({ type: "create", slug: "other-prompt" }));
+  });
+
+  it("a hand-edited orphaned file is left in place and reported as a conflict instead of being removed (research.md §5)", () => {
+    const trackedExampleContent = "original example content";
+    const plan = planReconciliation([filesEntry("Release Notes", "Body.")], {
+      lastWrittenHashBySlugAndFile: {
+        "release-notes": { "SKILL.md": hashContent("Body."), "example.md": hashContent(trackedExampleContent) },
+      },
+      getCurrentFileContent: (_slug, filename) => (filename === "example.md" ? "hand-edited orphan content" : "Body."),
+    });
+    expect(plan.actions).toContainEqual({ type: "conflict", slug: "release-notes", filename: "example.md", reason: "hand-edited" });
+    expect(plan.actions).not.toContainEqual(expect.objectContaining({ type: "remove", filename: "example.md" }));
+  });
+});
+
+describe("planReconciliation (slug-collision conflicts, FR-010a, FR-009)", () => {
+  it("flags both prompts that derive the same slug, and writes neither", () => {
+    const plan = planReconciliation([pointerStubEntry("Release Notes", "First."), pointerStubEntry("release notes", "Second.")]);
     expect(plan.actions).toEqual([{ type: "conflict", slug: "release-notes", reason: "slug-collision" }]);
   });
 
   it("a slug collision does not block an unrelated prompt from reconciling normally in the same run", () => {
-    const plan = planReconciliation(
-      [
-        { name: "Release Notes", description: "First." },
-        { name: "release notes", description: "Second." },
-        { name: "Unrelated Prompt", description: "Fine." },
-      ],
-      [],
-    );
+    const plan = planReconciliation([
+      pointerStubEntry("Release Notes", "First."),
+      pointerStubEntry("release notes", "Second."),
+      pointerStubEntry("Unrelated Prompt", "Fine."),
+    ]);
     expect(plan.actions).toContainEqual({ type: "conflict", slug: "release-notes", reason: "slug-collision" });
-    expect(plan.actions).toContainEqual({
-      type: "create",
-      slug: "unrelated-prompt",
-      name: "Unrelated Prompt",
-      description: "Fine.",
-    });
+    expect(plan.actions).toContainEqual(expect.objectContaining({ type: "create", slug: "unrelated-prompt" }));
   });
 
   it("--force does NOT bypass a slug-collision conflict", () => {
     const plan = planReconciliation(
-      [
-        { name: "Release Notes", description: "First." },
-        { name: "release notes", description: "Second." },
-      ],
-      [],
+      [pointerStubEntry("Release Notes", "First."), pointerStubEntry("release notes", "Second.")],
       { force: true },
     );
     expect(plan.actions).toEqual([{ type: "conflict", slug: "release-notes", reason: "slug-collision" }]);

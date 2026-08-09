@@ -1,6 +1,29 @@
+/**
+ * `kind` is deliberately not a field here: it lives per-version
+ * (`prompt_versions.kind`), not on the prompt/skill row itself — a skill's
+ * different versions can have different kinds. Resolve it from the active
+ * version's own entry in `getSkillVersions()`'s response instead
+ * (033-skill-file-format-cli-support).
+ */
 export interface SkillSummary {
   name: string;
   description: string | null;
+  /** Null for a skill with no published version yet — never synced (033-skill-file-format-cli-support). */
+  activeVersionId: string | null;
+}
+
+/** A named file (main or supporting) belonging to a template-kind version (032-skill-file-format-refactor). */
+export interface SkillVersionFile {
+  name: string;
+  content: string;
+  isMain: boolean;
+}
+
+export interface SkillVersion {
+  id: string;
+  kind: "template" | "chain";
+  /** Empty for a chain-kind version, or a template-kind version published before 032-skill-file-format-refactor (legacy-shape). */
+  files: SkillVersionFile[];
 }
 
 export interface ExpansionResult {
@@ -76,6 +99,21 @@ export async function listSkills(options: SkillCanonClientOptions, projectId: st
   if (!response.ok) throwForStatus(response);
   const body = (await response.json()) as { items: SkillSummary[] };
   return body.items;
+}
+
+/**
+ * Every version for one skill, including each one's file bundle
+ * (033-skill-file-format-cli-support) — the caller picks out the entry
+ * matching the skill's own `activeVersionId`. No dedicated "active version
+ * only" endpoint exists; this reuses the existing list route rather than
+ * adding backend surface for a CLI-only need (research.md §1).
+ */
+export async function getSkillVersions(options: SkillCanonClientOptions, slug: string): Promise<SkillVersion[]> {
+  const response = await request(options, `/api/skills/${encodeURIComponent(slug)}/versions`, {
+    method: "GET",
+  });
+  if (!response.ok) throwForStatus(response, slug);
+  return (await response.json()) as SkillVersion[];
 }
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hashContent, readSyncManifest, writeSyncManifest } from "../../src/config/sync-manifest.js";
@@ -33,14 +33,22 @@ describe("readSyncManifest / writeSyncManifest", () => {
     expect(readSyncManifest(dir)).toEqual({ stubs: {} });
   });
 
-  it("round-trips a written manifest", () => {
-    writeSyncManifest(dir, { stubs: { "a/SKILL.md": hashContent("x") } });
-    expect(readSyncManifest(dir)).toEqual({ stubs: { "a/SKILL.md": hashContent("x") } });
+  it("round-trips a written manifest (per-file hashes, one skill with two files)", () => {
+    writeSyncManifest(dir, { stubs: { a: { "SKILL.md": hashContent("x"), "example.md": hashContent("y") } } });
+    expect(readSyncManifest(dir)).toEqual({ stubs: { a: { "SKILL.md": hashContent("x"), "example.md": hashContent("y") } } });
   });
 
   it("overwrites the manifest on re-write", () => {
-    writeSyncManifest(dir, { stubs: { "a/SKILL.md": "1".repeat(64) } });
-    writeSyncManifest(dir, { stubs: { "b/SKILL.md": "2".repeat(64) } });
-    expect(readSyncManifest(dir)).toEqual({ stubs: { "b/SKILL.md": "2".repeat(64) } });
+    writeSyncManifest(dir, { stubs: { a: { "SKILL.md": "1".repeat(64) } } });
+    writeSyncManifest(dir, { stubs: { b: { "SKILL.md": "2".repeat(64) } } });
+    expect(readSyncManifest(dir)).toEqual({ stubs: { b: { "SKILL.md": "2".repeat(64) } } });
+  });
+
+  it("treats an old-format entry (bare string, one hash per skill) as absent (research.md §2)", () => {
+    const path = join(dir, ".skillcanon", "sync-manifest.json");
+    writeSyncManifest(dir, { stubs: { a: { "SKILL.md": "1".repeat(64) } } });
+    // Overwrite on disk directly with a pre-033 flat entry, bypassing the type-safe writer.
+    writeFileSync(path, JSON.stringify({ stubs: { a: "1".repeat(64), b: { "SKILL.md": "2".repeat(64) } } }), "utf8");
+    expect(readSyncManifest(dir)).toEqual({ stubs: { b: { "SKILL.md": "2".repeat(64) } } });
   });
 });
