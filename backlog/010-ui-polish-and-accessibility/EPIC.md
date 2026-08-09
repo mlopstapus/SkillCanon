@@ -1,7 +1,7 @@
 # Epic 010: UI Polish & Accessibility
 
 **Priority:** 11
-**Status:** in-progress (unblocked 2026-08-05 — remaining work is manual audit, not a build blocker; see Notes)
+**Status:** done (2026-08-09)
 **Goal:** A final consistency and accessibility pass across every page in the product, once every page already has its own real, finished design — the last thing that happens before go-live.
 
 ## Overview
@@ -25,7 +25,7 @@ What's left in this epic is exactly that last row: a final cross-page pass, once
 
 ## Features
 
-- [ ] [001 - Cross-Page Polish & Accessibility](001-cross-page-polish-and-accessibility.md)
+- [X] [001 - Cross-Page Polish & Accessibility](archive/001-cross-page-polish-and-accessibility.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -55,3 +55,5 @@ If a future page redesign surfaces a real UX gap (missing empty state, confusing
 **Update (2026-08-05, route-inventory audit extended):** the remaining route inventory (teams, metrics, project/prompt detail, auth pages, governance's two pages) now has real empty-state/accessibility coverage — see `001-cross-page-polish-and-accessibility.md`'s latest status update for specifics. Two genuinely new, real gaps surfaced during that pass: `/dashboard` had never had real content, and the shared app shell's nav never collapsed at mobile widths, failing this epic's responsive-layout requirement on every single page at once.
 
 **Update (2026-08-05, both blockers resolved):** both gaps above are now done and archived (`backlog/004-app-shell-and-landing/archive/004-dashboard-overview-content.md`, `backlog/004-app-shell-and-landing/archive/005-mobile-responsive-nav.md`). This epic's sole feature (`001-cross-page-polish-and-accessibility.md`) is still not done, though — manual screen-reader spot-check, an exhaustive per-route keyboard tab-through, and the full end-to-end smoke path (invite/workflow-run/audit-log portions) remain unrun. See that item's own latest status for specifics.
+
+**Update (2026-08-09, epic done):** the sole remaining feature's three outstanding blockers are all closed — see `archive/001-cross-page-polish-and-accessibility.md`'s final status update for the full account. Headline outcome: the manual screen-reader-equivalent spot-check found a real, repo-wide gap (all 15 app drawers had no `role="dialog"`/`aria-modal`/focus-trap/Escape-to-close, undetected by automated axe scanning since it only ran against static structural test renders) — fixed by extracting a shared `src/shared/ui/drawer.tsx` primitive and migrating every drawer to it, verified live post-fix. The full end-to-end smoke test (register → invite → team → project → policy → prompt → expand → workflow → run → audit log) is now live-verified across two sessions with no regressions. UI/design-system tenets were also formalized (`specs/tenets.md` U1–U7, `.specify/memory/constitution.md` Principle VIII) so future work is checked against these same standards going forward. This epic has no further open features.

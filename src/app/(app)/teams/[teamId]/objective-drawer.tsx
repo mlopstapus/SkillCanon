@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
+import { Drawer } from "@/shared/ui";
 import type { GovernanceActionResult } from "./actions";
 
 export interface ObjectiveFormValues {
@@ -18,6 +19,7 @@ export interface ObjectiveDrawerProps {
 }
 
 export function ObjectiveDrawer({ scopeLabel, scopeKind, mode, initialValues, onClose, onSubmit }: ObjectiveDrawerProps) {
+  const titleId = useId();
   const [title, setTitle] = useState(initialValues?.title ?? "");
   const [description, setDescription] = useState(initialValues?.description ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -34,12 +36,10 @@ export function ObjectiveDrawer({ scopeLabel, scopeKind, mode, initialValues, on
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
           <div className="flex items-center gap-2.5">
-            <span className="font-display text-[15px] font-semibold">
+            <span id={titleId} className="font-display text-[15px] font-semibold">
               {mode === "create" ? "New objective" : "Edit objective"}
             </span>
             <span className="rounded-control border border-border-2 px-2 py-0.5 font-mono text-[10.5px] text-dim">
@@ -103,7 +103,6 @@ export function ObjectiveDrawer({ scopeLabel, scopeKind, mode, initialValues, on
             {isPending ? "Saving…" : mode === "create" ? "Create objective" : "Save changes"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

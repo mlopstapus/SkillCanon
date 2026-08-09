@@ -1,6 +1,6 @@
 # Project Tenets
 
-*Last updated: 2026-07-20*
+*Last updated: 2026-08-09*
 
 These are the governing principles for SkillCanon. Each tenet encodes a constraint the project actually faces — not a style preference, but an invariant that must hold. SkillCanon is moving toward a multi-tenant deployment model with SOC2 compliance in scope, built test-first (red-green-iterate) and organized around domain-driven design.
 
@@ -62,3 +62,33 @@ TLS everywhere outside local dev; startup fails loudly if `jwt_secret`/`auth_tok
 **G1 — Every feature ships behind an entitlement gate**
 Every new feature — a UI surface, a REST route, an MCP tool — is gated by a checked entitlement flag before it does real work. Free vs. Paid (and future custom-override) availability is controlled by flipping an entitlement value via `resolveEntitlements()`, never by a separate code branch, a separate deploy, or a fork. A feature merged without a corresponding entitlement key is incomplete, not just under-configured.
 *Why:* PDR-004 already established entitlements as per-org data specifically so tier boundaries can move without a redeploy. A feature that ships without a gate defeats that design and creates a retrofit debt — and a real risk of a Paid-only feature quietly being available to Free (or vice versa) — the moment product wants to change packaging, which is expected to happen often before pricing stabilizes.
+
+## UI / Design System
+
+**U1 — The authenticated app is dark-only; no light-theme context in the `(app)` route group**
+The `(app)` route group never reads or applies the marketing-only `[data-theme="light"]` override — every authenticated surface renders against the dark token set unconditionally.
+*Why:* Documented as an established, deliberate decision (only the marketing landing page has a light/dark toggle) — a page accidentally inheriting the light override has already been a real regression risk this project tracked and fixed.
+
+**U2 — Color, spacing, and type values come from the shared design tokens, never a hardcoded literal**
+Every UI surface reads color/spacing/radius/font values from the CSS custom properties in `src/app/globals.css` (per `docs/context/design-system.md`) via Tailwind's `@theme inline` mapping, never a raw hex/px value duplicated inline.
+*Why:* The token system exists so an accent-color or spacing-scale change propagates everywhere at once; a hardcoded literal silently drifts the moment the token changes, and this project's polish passes have repeatedly had to hunt that drift down page by page.
+
+**U3 — Empty, loading, and error states use the shared `AppState` primitive, never a hand-rolled per-page variant**
+Every page-level empty/loading/error state renders through `AppState` from `@/shared/ui` (per `docs/context/design-system.md` §7), with the correct `role`/`aria-live` per variant. In-page-section (not whole-page) empties still get a real `role="status"` wrapper without adopting `AppState`'s full layout.
+*Why:* This project shipped three separately drifted hand-rolled empty states (teams, metrics, governance) in a single session before consolidating — the shared primitive is what keeps future pages consistent without a dedicated audit pass to catch drift.
+
+**U4 — Every interactive element has a visible, non-suppressed focus-visible state**
+Buttons, links, inputs, and custom controls all show a visible focus ring on keyboard focus; `outline: none` is never applied without a replacement focus treatment.
+*Why:* Focus-visible tokens were added repo-wide after this project already caught missing/suppressed focus states once during an accessibility pass — the tenet exists so that gap isn't rediscovered page by page.
+
+**U5 — Reusable interaction patterns (drawers, dialogs, tables, badges) live once in `src/shared/ui`, never copy-pasted per feature**
+A new drawer, modal, table, or other cross-page interaction pattern is built — or extended — as a shared primitive in `src/shared/ui`, not hand-rolled inline in a feature file. The shared primitive owns the accessibility contract (ARIA roles, focus management, keyboard handling) so every consumer gets it automatically.
+*Why:* Confirmed the hard way — this repo had 15 independently hand-rolled drawer components, none with `role="dialog"`, `aria-modal`, a focus trap, or Escape-to-close, because no shared primitive forced consistency. A shared component is the only way "fix it once" actually reaches every current and future usage.
+
+**U6 — The app shell stays usable down to mobile; primary navigation never becomes unreachable below a breakpoint**
+Layout collapses gracefully below the `md:` breakpoint — the sidebar nav becomes a hamburger-triggered off-canvas drawer rather than disappearing or overlapping content.
+*Why:* This was a real, previously-shipped gap blocking this project's own go-live checklist (`004-app-shell-and-landing`'s mobile-responsive-nav item); the fix is now the baseline every new page must not regress.
+
+**U7 — Automated accessibility scanning (axe) with zero critical/serious violations gates every page**
+Every new page or drawer gets a Vitest + `axe-core` check (via `src/shared/testing/accessibility.ts`) asserting no critical/serious violations, alongside structural render tests.
+*Why:* Automated axe coverage is the only accessibility signal that runs on every change — manual spot-checks (keyboard tab-through, screen-reader) catch what axe can't (focus order, dialog semantics, announcement quality) but don't run automatically, so the automated gate is what prevents silent regression between manual passes.

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import type { UserRole } from "@/bcs/identity-access";
+import { Drawer } from "@/shared/ui";
 import { createApiKeyAction } from "./actions";
 
 export type IssueKeyDrawerProps = {
@@ -34,6 +35,7 @@ const EXPIRY_OPTIONS = [
 ];
 
 export function IssueKeyDrawer({ role, onClose, onIssued }: IssueKeyDrawerProps) {
+  const titleId = useId();
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<Set<string>>(new Set());
   const [expiry, setExpiry] = useState("");
@@ -75,11 +77,9 @@ export function IssueKeyDrawer({ role, onClose, onIssued }: IssueKeyDrawerProps)
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">Issue API key</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">Issue API key</span>
           <button
             type="button"
             onClick={onClose}
@@ -164,7 +164,6 @@ export function IssueKeyDrawer({ role, onClose, onIssued }: IssueKeyDrawerProps)
             {isPending ? "Generating…" : "Generate key"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

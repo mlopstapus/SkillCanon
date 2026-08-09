@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
+import { Drawer } from "@/shared/ui";
 import type { ProjectActionResult } from "../actions";
 
 export interface AddRepoValues {
@@ -15,6 +16,7 @@ export interface AddRepoDrawerProps {
 }
 
 export function AddRepoDrawer({ onClose, onSubmit }: AddRepoDrawerProps) {
+  const titleId = useId();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [branch, setBranch] = useState("");
@@ -32,11 +34,9 @@ export function AddRepoDrawer({ onClose, onSubmit }: AddRepoDrawerProps) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">Add repository</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">Add repository</span>
           <button type="button" onClick={onClose} className="grid size-7.5 place-items-center rounded-control border border-border text-dim" aria-label="Close">
             ×
           </button>
@@ -86,7 +86,6 @@ export function AddRepoDrawer({ onClose, onSubmit }: AddRepoDrawerProps) {
             {isPending ? "Adding…" : "Add repository"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

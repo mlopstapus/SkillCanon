@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import type { PolicyEnforcementType } from "@/bcs/governance";
+import { Drawer } from "@/shared/ui";
 import type { GovernanceActionResult } from "./actions";
 
 export interface PolicyFormValues {
@@ -36,6 +37,7 @@ const MODE_DESCRIPTIONS: Record<PolicyEnforcementType, string> = {
 };
 
 export function PolicyDrawer({ scopeLabel, mode, initialValues, onClose, onSubmit }: PolicyDrawerProps) {
+  const titleId = useId();
   const [name, setName] = useState(initialValues?.name ?? "");
   const [enforcementType, setEnforcementType] = useState<PolicyEnforcementType>(
     initialValues?.enforcementType ?? "append",
@@ -56,12 +58,10 @@ export function PolicyDrawer({ scopeLabel, mode, initialValues, onClose, onSubmi
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
           <div className="flex items-center gap-2.5">
-            <span className="font-display text-[15px] font-semibold">
+            <span id={titleId} className="font-display text-[15px] font-semibold">
               {mode === "create" ? "New policy" : "Edit policy"}
             </span>
             <span className="rounded-control border border-border-2 px-2 py-0.5 font-mono text-[10.5px] text-dim">
@@ -144,7 +144,6 @@ export function PolicyDrawer({ scopeLabel, mode, initialValues, onClose, onSubmi
             {isPending ? "Saving…" : mode === "create" ? "Create policy" : "Save changes"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }
