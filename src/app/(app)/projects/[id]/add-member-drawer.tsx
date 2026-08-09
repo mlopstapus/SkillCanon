@@ -1,5 +1,8 @@
 "use client";
 
+import { useId } from "react";
+import { Drawer } from "@/shared/ui";
+
 export interface AddMemberDrawerProps {
   addableUsers: Array<{ id: string; name: string }>;
   onAdd: (userId: string) => void;
@@ -7,12 +10,11 @@ export interface AddMemberDrawerProps {
 }
 
 export function AddMemberDrawer({ addableUsers, onAdd, onClose }: AddMemberDrawerProps) {
+  const titleId = useId();
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[400px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[400px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">Add member</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">Add member</span>
           <button type="button" onClick={onClose} className="grid size-7.5 place-items-center rounded-control border border-border text-dim" aria-label="Close">
             ×
           </button>
@@ -35,7 +37,6 @@ export function AddMemberDrawer({ addableUsers, onAdd, onClose }: AddMemberDrawe
             ))
           )}
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

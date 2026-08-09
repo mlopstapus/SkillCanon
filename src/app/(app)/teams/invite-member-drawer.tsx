@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
+import { Drawer } from "@/shared/ui";
 import { inviteMemberAction } from "./actions";
 
 export type InviteMemberDrawerProps = {
@@ -16,6 +17,7 @@ export function InviteMemberDrawer({
   onClose,
   onSuccess,
 }: InviteMemberDrawerProps) {
+  const titleId = useId();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
   const [error, setError] = useState<string | null>(null);
@@ -34,11 +36,9 @@ export function InviteMemberDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[452px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">Invite member</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">Invite member</span>
           <button
             type="button"
             onClick={onClose}
@@ -96,7 +96,6 @@ export function InviteMemberDrawer({
             {isPending ? "Sending…" : "Send invite"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
+import { Drawer } from "@/shared/ui";
 import type { PromptActionResult } from "../actions";
 import { ChainStepBuilder, type ChainStepDraft } from "./chain-step-builder";
 
@@ -44,6 +45,7 @@ export function NewVersionDrawer({
   onClose,
   onSubmit,
 }: NewVersionDrawerProps) {
+  const titleId = useId();
   const [kind, setKind] = useState<"template" | "chain">(activeVersionKind);
   const [mainFile, setMainFile] = useState(mainFileContent);
   const [supportingFiles, setSupportingFiles] = useState<Array<{ name: string; content: string }>>(
@@ -123,11 +125,9 @@ export function NewVersionDrawer({
   }
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[480px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[480px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">New version of {promptName}</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">New version of {promptName}</span>
           <button type="button" onClick={onClose} className="grid size-7.5 place-items-center rounded-control border border-border text-dim" aria-label="Close">
             ×
           </button>
@@ -238,7 +238,6 @@ export function NewVersionDrawer({
             {isPending ? "Publishing…" : "Publish version"}
           </button>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { Badge } from "@/shared/ui";
+import { useId } from "react";
+import { Badge, Drawer } from "@/shared/ui";
 import type { PromptDetailData } from "./prompt-detail-view";
 
 export interface VersionHistoryDrawerProps {
@@ -10,12 +11,11 @@ export interface VersionHistoryDrawerProps {
 }
 
 export function VersionHistoryDrawer({ versions, onClose, onSetActive }: VersionHistoryDrawerProps) {
+  const titleId = useId();
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
-      <div className="absolute inset-y-0 right-0 flex w-[480px] max-w-[92vw] flex-col border-l border-border-2 bg-panel shadow-drawer">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[480px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
-          <span className="font-display text-[15px] font-semibold">Version history</span>
+          <span id={titleId} className="font-display text-[15px] font-semibold">Version history</span>
           <button type="button" onClick={onClose} className="grid size-7.5 place-items-center rounded-control border border-border text-dim" aria-label="Close">
             ×
           </button>
@@ -49,7 +49,6 @@ export function VersionHistoryDrawer({ versions, onClose, onSetActive }: Version
             </div>
           ))}
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

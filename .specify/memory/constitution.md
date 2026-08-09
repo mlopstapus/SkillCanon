@@ -1,10 +1,10 @@
 <!--
 Sync Impact Report
 ==================
-Version change: 1.0.0 → 1.1.0 (new principle added)
+Version change: 1.1.0 → 1.2.0 (new principle added)
 Modified principles: n/a
 Added sections:
-  - VII. Feature-Gated by Entitlement (new principle, tenet G1)
+  - VIII. Consistent, Accessible UI (new principle, tenets U1-U7)
 Removed sections: none
 Templates requiring updates:
   - ✅ .specify/templates/plan-template.md — Constitution Check gate is generic
@@ -16,8 +16,12 @@ Templates requiring updates:
     references found; no edit needed.
   - ✅ README.md / CLAUDE.md / docs/ — no outdated constitution references
     found.
-Follow-up TODOs: none. Principle IDs (P1, D1, D2, M1-M3, S1-S3, C1-C2, G1) map
-1:1 to spec/tenets.md; keep both files in sync on amendment.
+Follow-up TODOs: this file's prior revisions used the path `spec/tenets.md`
+(singular) in several places below — the real file is `specs/tenets.md`
+(plural, matches the repo's actual `specs/` directory). Corrected in this
+revision; if a future amendment reintroduces the singular form, fix it back.
+Principle IDs (P1, D1, D2, M1-M3, S1-S3, C1-C2, G1, U1-U7) map 1:1 to
+specs/tenets.md; keep both files in sync on amendment.
 -->
 
 # SkillCanon Constitution
@@ -132,6 +136,37 @@ Paid-only feature quietly being available to Free, or vice versa — the
 moment product changes packaging, which is expected to happen often before
 pricing stabilizes.
 
+### VIII. Consistent, Accessible UI `[U1-U7]`
+The authenticated `(app)` route group MUST render dark-only and MUST NOT
+apply the marketing-only light-theme override. Color, spacing, and type
+values MUST come from the shared design tokens (`src/app/globals.css`,
+`docs/context/design-system.md`) rather than a hardcoded literal.
+Page-level empty/loading/error states MUST use the shared `AppState`
+primitive from `@/shared/ui`, with in-page-section (not whole-page) empties
+still getting a real `role="status"` wrapper. Every interactive element
+MUST show a visible, non-suppressed focus-visible state on keyboard focus.
+A new drawer, modal, table, or other reusable cross-page interaction
+pattern MUST be built — or extended — as a shared primitive in
+`src/shared/ui`, owning its own accessibility contract (ARIA roles, focus
+management, keyboard handling), rather than hand-rolled per feature. The
+app shell MUST stay usable down to mobile, with primary navigation
+collapsing into a reachable off-canvas pattern below the `md:` breakpoint
+rather than disappearing. Every new page or drawer MUST have a Vitest +
+`axe-core` check asserting zero critical/serious accessibility violations.
+
+Rationale: every clause above encodes a gap this project actually shipped
+and had to retrofit — a light-theme leak into the authenticated app, three
+independently drifted hand-rolled empty states in one session, missing
+focus-visible styling caught only during a dedicated accessibility pass,
+15 separately hand-rolled drawers with no `role="dialog"`/`aria-modal`/
+focus trap/Escape-to-close between them (found during a manual
+screen-reader-equivalent spot-check, not by any automated test), and a
+mobile-nav gap that blocked go-live. None of these were style
+preferences — each was a real, user-facing defect discovered late because
+no shared primitive or automated gate caught it earlier. This principle
+exists so the next occurrence of each pattern is caught by a gate, not by
+another manual audit pass.
+
 ## Technology & Compliance Constraints
 
 - **Stack**: Python/FastAPI backend (SQLAlchemy async + asyncpg, Alembic
@@ -151,7 +186,7 @@ pricing stabilizes.
   approach.
 - The authoritative, example-grounded version of these principles — with
   file/line references into the current codebase — lives at
-  `spec/tenets.md`. That file and this constitution MUST be amended
+  `specs/tenets.md`. That file and this constitution MUST be amended
   together.
 
 ## Development Workflow & Quality Gates
@@ -175,6 +210,12 @@ pricing stabilizes.
   defines the gate primitive and where it lives on the Billing &
   Entitlements contract; `context/entitlements.md` is the source of truth
   for which keys exist.
+- **UI review**: a PR that adds or changes a page or drawer MUST be checked
+  against Principle VIII before merge — design tokens used (not hardcoded
+  literals), `AppState` used for page-level empty/loading/error states,
+  visible focus states preserved, a shared `src/shared/ui` primitive reused
+  (or extended) rather than a new hand-rolled interaction pattern
+  introduced, mobile layout not broken, and an `axe-core` check added.
 
 ## Governance
 
@@ -182,7 +223,7 @@ This constitution supersedes ad-hoc practice where the two conflict. All
 PRs and reviews MUST verify compliance with the principles above;
 complexity or deviation from a principle MUST be explicitly justified in
 the PR description, not silently merged. Amendments to this constitution
-MUST update `spec/tenets.md` in the same change, and MUST state which
+MUST update `specs/tenets.md` in the same change, and MUST state which
 principle(s) changed and why. Versioning follows semantic versioning:
 MAJOR for backward-incompatible principle removals or redefinitions,
 MINOR for new principles or materially expanded guidance, PATCH for
@@ -192,4 +233,4 @@ until a dedicated automated check exists — treat that as a standing gap
 this constitution's principles are meant to close over time, not a reason
 to skip review.
 
-**Version**: 1.1.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-07-21
+**Version**: 1.2.0 | **Ratified**: 2026-07-20 | **Last Amended**: 2026-08-09

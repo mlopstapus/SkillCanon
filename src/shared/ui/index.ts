@@ -12,3 +12,4 @@ export {
   TableCaption,
 } from "./table";
 export { AppState, type AppStateProps, type AppStateVariant } from "./app-state";
+export { Drawer, type DrawerProps } from "./drawer";

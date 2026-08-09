@@ -1,6 +1,8 @@
 "use client";
 
+import { useId } from "react";
 import type { ResolvedAuditRow } from "@/bcs/audit-compliance";
+import { Drawer } from "@/shared/ui";
 import { diffOf } from "./diff";
 
 export interface EventDetailDrawerProps {
@@ -23,6 +25,7 @@ function isAuthEvent(action: string): boolean {
 }
 
 export function EventDetailDrawer({ row, onClose }: EventDetailDrawerProps) {
+  const titleId = useId();
   const { event, resourceDisplayName, actor } = row;
   const diff = diffOf(event.before, event.after);
   const hasDiff = diff.length > 0;
@@ -31,13 +34,11 @@ export function EventDetailDrawer({ row, onClose }: EventDetailDrawerProps) {
     : "No field-level changes recorded for this event.";
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60" aria-hidden />
-      <div className="absolute inset-y-0 right-0 flex w-[520px] max-w-[94vw] flex-col border-l border-border-2 bg-panel">
+    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[520px]">
         <div className="flex h-14 items-center justify-between border-b border-border px-5">
           <div className="flex items-center gap-2.5">
             <span className="font-mono text-[12px] font-semibold text-text">{event.action}</span>
-            <span className="font-display text-[15px] font-semibold">{resourceDisplayName}</span>
+            <span id={titleId} className="font-display text-[15px] font-semibold">{resourceDisplayName}</span>
           </div>
           <button
             type="button"
@@ -119,7 +120,6 @@ export function EventDetailDrawer({ row, onClose }: EventDetailDrawerProps) {
             <span className="font-mono text-[10.5px] text-faint">immutable</span>
           </div>
         </div>
-      </div>
-    </div>
+    </Drawer>
   );
 }

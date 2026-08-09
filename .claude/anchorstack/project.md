@@ -31,6 +31,8 @@ pnpm build
 ## Rebuild (self-hosted stack — runs the new unified `app` + `database` services)
 docker compose up -d
 
+Note: bare `docker compose up -d` does not rebuild the `app` image — it only starts/recreates containers from whatever image already exists, so source (`src/**`) changes are invisible to the running container until you rebuild. `docker compose up -d app` (no `--build`) is enough to pick up a `docker-compose.yaml` env-var default change (confirmed 2026-08-09, fixing a stale `JWT_SECRET`), but any change to `src/`/`Dockerfile` needs `docker compose up -d --build app` — confirmed safe on this shared long-lived dev stack (only rebuilds/recreates the `app` service; the `database` service and its volume/data are untouched even though `docker compose ps` may show it "Recreated" too — verify data survived via a row count query if in doubt, don't assume loss).
+
 ## Type check
 pnpm typecheck
 
