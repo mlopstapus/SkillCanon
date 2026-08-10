@@ -1,7 +1,7 @@
 # Epic 008: Distribution
 
 **Priority:** 8
-**Status:** in-progress
+**Status:** done
 **Goal:** Compose all six prior bounded contexts into the actual external surface — REST API, a Skill Sync CLI for Claude Code, and web UI — so the self-hosted Free tier is fully usable end-to-end. An MCP protocol server remains speced but deprioritized (see Feature 002).
 
 ## Overview
@@ -12,7 +12,7 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 
 - [x] [001 - REST API Core Routes](archive/001-rest-api-core-routes.md)
 - [x] [005 - Skill Sync CLI](archive/005-skill-sync-cli.md)
-- [ ] [003 - Web UI Shell & Core Pages](003-web-ui-shell-and-core-pages.md) — policy/objective UI gap closed 2026-08-05, remaining smoke-test steps not yet verified, see file
+- [x] [003 - Web UI Shell & Core Pages](archive/003-web-ui-shell-and-core-pages.md) — re-verified and closed 2026-08-10 via `specs/035-web-ui-final-audit/`; also found and fixed a stale-migration environment issue on the shared dev stack, see file
 - [x] [004 - Usage Telemetry](archive/004-usage-telemetry.md)
 - [x] [002 - MCP Server & Tools](archive/002-mcp-server-and-tools.md) — deprioritized as the primary distribution path (see file), but fully built and verified; test-coverage gap closed 2026-08-05 (also found and fixed a real cross-session auth-bypass bug), remaining 2 Acceptance Criteria (characterization equivalence, restart mid-session) closed 2026-08-09
 - [x] [006 - Distribution Tenant Isolation Tests](archive/006-distribution-tenant-isolation-tests.md)
@@ -40,3 +40,5 @@ Feature 002 is deprioritized in favor of Feature 005 (Skill Sync CLI) — the pr
 **Status check (2026-08-09):** feature 002's two remaining Acceptance Criteria (characterization equivalence, restart mid-session) closed and verified by test — see `archive/002-mcp-server-and-tools.md`'s own update. Feature 008 (session cleanup scheduling) also closed the same day — see `archive/008-mcp-session-cleanup-scheduling.md`. This epic is still not fully done: feature 003's full legacy-parity audit remains open.
 
 **Reopened (PDR-018):** new feature 007 — the CLI's skill-stub content model (built by archived feature 005) is being reworked from a fixed one-line pointer stub into a real markdown-plus-templates sync, matching prompt-registry's new skill file format (`backlog/006-prompt-registry/011-skill-file-format-refactor.md`). See [PDR-018](../../docs/pdr/018-skill-file-format-and-registry-import.md).
+
+**Closed (2026-08-10):** feature 003 (the epic's last open item) re-verified and closed via `specs/035-web-ui-final-audit/` — all 8 features now archived. This epic is fully done.
