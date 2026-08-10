@@ -33,6 +33,8 @@ docker compose up -d
 
 Note: bare `docker compose up -d` does not rebuild the `app` image — it only starts/recreates containers from whatever image already exists, so source (`src/**`) changes are invisible to the running container until you rebuild. `docker compose up -d app` (no `--build`) is enough to pick up a `docker-compose.yaml` env-var default change (confirmed 2026-08-09, fixing a stale `JWT_SECRET`), but any change to `src/`/`Dockerfile` needs `docker compose up -d --build app` — confirmed safe on this shared long-lived dev stack (only rebuilds/recreates the `app` service; the `database` service and its volume/data are untouched even though `docker compose ps` may show it "Recreated" too — verify data survived via a row count query if in doubt, don't assume loss).
 
+Note: before assuming a live-tested page/route is broken (500, "relation does not exist"), check whether the shared dev DB has fallen behind the committed migration set: `docker exec spechub-database-1 psql -U skillcanon -d skillcanon -c "select count(*) from drizzle.__drizzle_migrations;"` vs. the number of entries in `drizzle/migrations/meta/_journal.json` — if lower, run `MIGRATION_DATABASE_URL="postgresql://skillcanon:skillcanon@localhost:5432/skillcanon" pnpm db:migrate` (idempotent, no data loss) before debugging further. Confirmed 2026-08-10: the shared stack was 3 migrations behind, which alone made every prompt detail page 500 (`prompt_registry.prompt_version_files does not exist`) and the Projects list silently return 0.
+
 ## Type check
 pnpm typecheck
 
