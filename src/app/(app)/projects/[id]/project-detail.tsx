@@ -3,18 +3,22 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { assignSkillToProjectAction, unassignSkillFromProjectAction } from "../../prompts/actions";
+import { ObjectiveDrawer, type ObjectiveFormValues } from "../../teams/[teamId]/objective-drawer";
 import {
   addCollaboratorTeamAction,
   addProjectMemberAction,
   addProjectRepoAction,
+  createProjectObjectiveAction,
+  deleteProjectObjectiveAction,
   removeCollaboratorTeamAction,
   removeProjectMemberAction,
   removeProjectRepoAction,
+  updateProjectObjectiveAction,
 } from "../actions";
 import { AddMemberDrawer } from "./add-member-drawer";
 import { AddRepoDrawer } from "./add-repo-drawer";
 import { AddTeamDrawer } from "./add-team-drawer";
-import { ProjectDetailView, type ProjectDetailData, type ProjectDetailTab } from "./project-detail-view";
+import { ProjectDetailView, type ProjectDetailData, type ProjectDetailTab, type ProjectObjectiveRow } from "./project-detail-view";
 
 export interface ProjectDetailProps {
   data: ProjectDetailData;
@@ -31,6 +35,9 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
   const [addTeamOpen, setAddTeamOpen] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [addRepoOpen, setAddRepoOpen] = useState(false);
+  const [objectiveDrawer, setObjectiveDrawer] = useState<
+    { mode: "create" } | { mode: "edit"; objective: ProjectObjectiveRow } | null
+  >(null);
 
   return (
     <>
@@ -61,6 +68,12 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
         onOpenAddTeam={() => setAddTeamOpen(true)}
         onOpenAddMember={() => setAddMemberOpen(true)}
         onOpenAddRepo={() => setAddRepoOpen(true)}
+        onOpenAddObjective={() => setObjectiveDrawer({ mode: "create" })}
+        onEditObjective={(objective) => setObjectiveDrawer({ mode: "edit", objective })}
+        onRemoveObjective={async (objectiveId) => {
+          await deleteProjectObjectiveAction(data.id, objectiveId);
+          router.refresh();
+        }}
       />
       {addTeamOpen ? (
         <AddTeamDrawer
@@ -91,6 +104,30 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
             const result = await addProjectRepoAction(data.id, values);
             if (result.ok) {
               setAddRepoOpen(false);
+              router.refresh();
+            }
+            return result;
+          }}
+        />
+      ) : null}
+      {objectiveDrawer ? (
+        <ObjectiveDrawer
+          scopeLabel={data.name}
+          scopeKind="project"
+          mode={objectiveDrawer.mode}
+          initialValues={
+            objectiveDrawer.mode === "edit"
+              ? { title: objectiveDrawer.objective.title, description: objectiveDrawer.objective.description ?? "" }
+              : undefined
+          }
+          onClose={() => setObjectiveDrawer(null)}
+          onSubmit={async (values: ObjectiveFormValues) => {
+            const result =
+              objectiveDrawer.mode === "create"
+                ? await createProjectObjectiveAction(data.id, values)
+                : await updateProjectObjectiveAction(data.id, objectiveDrawer.objective.id, values);
+            if (result.ok) {
+              setObjectiveDrawer(null);
               router.refresh();
             }
             return result;

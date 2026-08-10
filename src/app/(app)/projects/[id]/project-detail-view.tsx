@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Badge } from "@/shared/ui";
+import { AppState, Badge } from "@/shared/ui";
 import { ProjectMetricsTrendChart, type ProjectMetricsTrendDay, type ProjectMetricsTrendSkill } from "./project-metrics-trend-chart";
 
 export interface ProjectSkillRow {
@@ -26,6 +26,12 @@ export interface ProjectMetricsTileData {
   byMember: Array<{ userId: string | null; name: string; runCount: number; lastActiveAt: string }>;
 }
 
+export interface ProjectObjectiveRow {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
 export interface ProjectDetailData {
   id: string;
   name: string;
@@ -45,9 +51,10 @@ export interface ProjectDetailData {
   optionalPrompts: ProjectSkillRow[];
   availablePrompts: ProjectSkillRow[];
   metrics: ProjectMetricsTileData;
+  objectives: ProjectObjectiveRow[];
 }
 
-export type ProjectDetailTab = "members" | "prompts" | "repos" | "teams" | "metrics";
+export type ProjectDetailTab = "members" | "prompts" | "repos" | "teams" | "metrics" | "governance";
 
 export interface ProjectDetailViewProps {
   data: ProjectDetailData;
@@ -60,6 +67,9 @@ export interface ProjectDetailViewProps {
   onOpenAddTeam: () => void;
   onOpenAddMember: () => void;
   onOpenAddRepo: () => void;
+  onOpenAddObjective: () => void;
+  onEditObjective: (objective: ProjectObjectiveRow) => void;
+  onRemoveObjective: (objectiveId: string) => void;
 }
 
 export function ProjectDetailView({
@@ -73,6 +83,9 @@ export function ProjectDetailView({
   onOpenAddTeam,
   onOpenAddMember,
   onOpenAddRepo,
+  onOpenAddObjective,
+  onEditObjective,
+  onRemoveObjective,
 }: ProjectDetailViewProps) {
   return (
     <div className="flex h-full flex-col">
@@ -101,6 +114,7 @@ export function ProjectDetailView({
                 ["prompts", `Prompts (${data.promptCount})`],
                 ["repos", `Repositories (${data.repoCount})`],
                 ["teams", `Teams (${data.teamCount})`],
+                ["governance", `Governance (${data.objectives.length})`],
                 ["metrics", "Metrics"],
               ] as const
             ).map(([key, label]) => (
@@ -130,6 +144,11 @@ export function ProjectDetailView({
             {activeTab === "repos" ? (
               <button type="button" onClick={onOpenAddRepo} className="rounded-control border border-border-2 px-2.5 py-1.5 font-mono text-[11px] text-dim">
                 + add repository
+              </button>
+            ) : null}
+            {activeTab === "governance" ? (
+              <button type="button" onClick={onOpenAddObjective} className="rounded-control border border-border-2 px-2.5 py-1.5 font-mono text-[11px] text-dim">
+                + objective
               </button>
             ) : null}
           </div>
@@ -192,6 +211,51 @@ export function ProjectDetailView({
                 </button>
               </div>
             ))}
+          </div>
+        ) : null}
+
+        {activeTab === "governance" ? (
+          <div className="flex flex-col gap-2.5">
+            {data.objectives.length === 0 ? (
+              <AppState
+                variant="empty"
+                title="No objectives yet"
+                description="This project has no objectives of its own yet. Add one to steer skill authors and reviewers on work scoped to this project."
+                action={
+                  <button
+                    type="button"
+                    onClick={onOpenAddObjective}
+                    className="rounded-control bg-a px-4 py-2 text-[12.5px] font-semibold text-a-fg"
+                  >
+                    New objective
+                  </button>
+                }
+              />
+            ) : (
+              data.objectives.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-start gap-3 rounded-card border border-border bg-surface px-3.5 py-3"
+                >
+                  <button
+                    type="button"
+                    onClick={() => onEditObjective(o)}
+                    className="min-w-0 flex-1 text-left"
+                  >
+                    <div className="text-[13.5px] font-semibold">{o.title}</div>
+                    {o.description ? <div className="mt-1 text-[12px] text-dim">{o.description}</div> : null}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onRemoveObjective(o.id)}
+                    aria-label={`Remove ${o.title}`}
+                    className="rounded-control border border-border px-2 py-1 text-dim"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
           </div>
         ) : null}
 

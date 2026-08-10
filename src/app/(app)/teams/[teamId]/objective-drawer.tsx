@@ -11,7 +11,7 @@ export interface ObjectiveFormValues {
 
 export interface ObjectiveDrawerProps {
   scopeLabel: string;
-  scopeKind: "team" | "person";
+  scopeKind: "team" | "person" | "project";
   mode: "create" | "edit";
   initialValues?: ObjectiveFormValues;
   onClose: () => void;

@@ -1,7 +1,7 @@
 # Epic 005: Governance
 
 **Priority:** 5
-**Status:** in-progress (003 closed 2026-08-09 — characterization suite done; 006 not started)
+**Status:** done (006 closed 2026-08-09)
 **Goal:** Port Policy, Objective, and the hierarchical resolution engine — the first of SkillCanon's two core-domain contexts — with characterization tests proving the new TS implementation matches the current Python behavior exactly before anything downstream depends on it.
 
 ## Overview
@@ -15,7 +15,7 @@ This is the highest-risk port in the whole refactor. The resolution engine's cor
 - [x] [003 - Hierarchical Resolution Engine](archive/003-hierarchical-resolution-engine.md) — closed 2026-08-09: the characterization-suite AC (TS output vs. legacy Python `resolve_effective`/`resolve_all_policies`/`resolve_all_objectives`, matching prompt-registry's `expand-characterization.test.ts` precedent) is done, 7 scenarios all passing on first run
 - [x] [004 - Governance Tenant Isolation Tests](archive/004-governance-tenant-isolation-tests.md)
 - [X] [005 - Governance Views UI](archive/005-governance-views-ui.md)
-- [ ] [006 - Project-Scoped Governance UI](006-project-scoped-governance-ui.md) — deferred out of 005, no project scope in that feature's source mockup
+- [X] [006 - Project-Scoped Governance UI](archive/006-project-scoped-governance-ui.md) — a new "Governance" tab on the project detail page (local objectives only, per a user-directed scope narrowing during spec — no team-inherited display, no policy content)
 
 *Completed features are moved to `archive/` and checked off here.*
 

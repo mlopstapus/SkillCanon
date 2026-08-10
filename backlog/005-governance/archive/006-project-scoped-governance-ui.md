@@ -1,9 +1,13 @@
 ---
 epic: 005-governance
 feature: 006-project-scoped-governance-ui
-status: open
+status: done
 dependencies: ["005-governance-views-ui.md"]
 ---
+
+## Resolved (2026-08-09)
+
+Implemented via `specs/034-project-scoped-governance-ui/` (full speckit loop: specify → clarify → plan → tasks → analyze → implement). Ownership decided by the Claude Design mockup (`SkillCanon Skills.dc.html`): a new "Governance" tab on the project detail page (`/projects/[id]`), not an extension of the team-scoped governance pages. Scope narrowed by the user during `/speckit-specify`: no team-inherited-objectives display and no policy content on the tab — governance resolution at skill-invocation time already follows the invoking user's own team context, independent of project, so the tab is a pure local-objectives authoring surface (view/create/edit/delete), not an "effective governance" preview. Reused 100% of the existing backend — `listProjectObjectives`, `createObjective`/`updateObjective`/`deleteObjective` were all already project-scope-capable (including project-scope authorization, already org-admin-only). Non-admins can view but a mutation attempt is rejected server-side with an error, matching the existing team-scoped page's own behavior (controls aren't hidden client-side anywhere in this app). See `specs/034-project-scoped-governance-ui/spec.md` for full requirements and the resolved clarifications.
 
 # Project-Scoped Governance UI
 
