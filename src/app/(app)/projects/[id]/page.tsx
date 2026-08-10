@@ -11,6 +11,7 @@ import {
   listVersions,
 } from "@/bcs/prompt-registry";
 import { authenticateSession, listTeams, listUsers } from "@/bcs/identity-access";
+import { listProjectObjectives } from "@/bcs/governance";
 import { authDb, db, withTenantContext } from "@/shared/db";
 import { ProjectDetail } from "./project-detail";
 import type { ProjectDetailData } from "./project-detail-view";
@@ -31,16 +32,18 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     }
 
     const actor = { organizationId: user.orgId, userId: user.id };
-    const [members, collaboratorTeams, repos, allTeams, allUsers, assignments, allSkills, metrics] = await Promise.all([
-      listProjectMembers(tx, user.orgId, id),
-      listProjectTeams(tx, user.orgId, id),
-      listProjectRepos(tx, user.orgId, id),
-      listTeams(tx, user.orgId),
-      listUsers(tx, user),
-      listProjectSkillAssignmentsForOrganization(tx, user.orgId),
-      listSkillsByOrganization(tx, user.orgId),
-      getProjectMetrics(tx, user.orgId, id),
-    ]);
+    const [members, collaboratorTeams, repos, allTeams, allUsers, assignments, allSkills, metrics, objectives] =
+      await Promise.all([
+        listProjectMembers(tx, user.orgId, id),
+        listProjectTeams(tx, user.orgId, id),
+        listProjectRepos(tx, user.orgId, id),
+        listTeams(tx, user.orgId),
+        listUsers(tx, user),
+        listProjectSkillAssignmentsForOrganization(tx, user.orgId),
+        listSkillsByOrganization(tx, user.orgId),
+        getProjectMetrics(tx, user.orgId, id),
+        listProjectObjectives(tx, actor, id),
+      ]);
 
     const teamNameById = new Map(allTeams.map((t) => [t.id, t.name]));
     const userNameById = new Map(allUsers.map((u) => [u.id, u.displayName]));
@@ -124,6 +127,7 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
           lastActiveAt: m.lastActiveAt.toISOString().slice(0, 10),
         })),
       },
+      objectives: objectives.map((o) => ({ id: o.id, title: o.title, description: o.description })),
     };
     return result;
   });

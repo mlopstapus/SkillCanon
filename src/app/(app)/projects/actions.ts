@@ -3,19 +3,38 @@
 import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import {
   addCollaboratorTeam,
   addProjectMember,
   addProjectRepo,
   createProject,
+  getProject,
   removeCollaboratorTeam,
   removeProjectMember,
   removeProjectRepo,
   updateProject,
 } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
+import { createObjective, deleteObjective, updateObjective, type ObjectiveScopeVerifier } from "@/bcs/governance";
 import { authDb, db, withTenantContext } from "@/shared/db";
 import { makeProjectIdentityVerifier } from "./project-identity-verifier";
+
+type Tx = PostgresJsDatabase<Record<string, never>>;
+
+/**
+ * Only `projectBelongsToOrganization` is implemented — this page only ever
+ * sets `projectId` on an objective, never `teamId`/`userId`. Mirrors the
+ * REST-layer twin at `src/app/api/projects/[projectId]/objectives/route.ts`
+ * verbatim (034-project-scoped-governance-ui) — each layer gets its own
+ * small copy of this adapter rather than a shared cross-route-group import,
+ * per the same pattern `makeProjectIdentityVerifier` already established.
+ */
+function makeObjectiveScopeVerifier(tx: Tx): ObjectiveScopeVerifier {
+  return {
+    projectBelongsToOrganization: async (organizationId, projectId) => Boolean(await getProject(tx, organizationId, projectId)),
+  };
+}
 
 export type ProjectActionResult = { ok: true } | { ok: false; error: string };
 
@@ -159,6 +178,67 @@ export async function removeProjectRepoAction(projectId: string, repoId: string)
   try {
     const actingUser = await requireActingUser();
     await withTenantContext(db, actingUser.orgId, (tx) => removeProjectRepo(tx, actingUser, projectId, repoId));
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function createProjectObjectiveAction(
+  projectId: string,
+  values: { title: string; description: string },
+): Promise<ProjectActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      createObjective(
+        tx,
+        actor,
+        { projectId, title: values.title, description: values.description || null },
+        makeObjectiveScopeVerifier(tx),
+      ),
+    );
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function updateProjectObjectiveAction(
+  projectId: string,
+  objectiveId: string,
+  values: { title: string; description: string },
+): Promise<ProjectActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      updateObjective(
+        tx,
+        actor,
+        objectiveId,
+        { title: values.title, description: values.description || null },
+        makeObjectiveScopeVerifier(tx),
+      ),
+    );
+    revalidatePath(`/projects/${projectId}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function deleteProjectObjectiveAction(
+  projectId: string,
+  objectiveId: string,
+): Promise<ProjectActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
+    await withTenantContext(db, actingUser.orgId, (tx) => deleteObjective(tx, actor, objectiveId));
     revalidatePath(`/projects/${projectId}`);
     return { ok: true };
   } catch (err) {

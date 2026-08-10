@@ -65,4 +65,19 @@ describe("ObjectiveDrawer", () => {
     expect(html).toContain("bob");
     expect(html).toContain("does not cascade");
   });
+
+  it("works at a project scope, describing non-cascading guidance for just that project", () => {
+    const html = renderToStaticMarkup(
+      <ObjectiveDrawer
+        scopeLabel="Eval Harness"
+        scopeKind="project"
+        mode="create"
+        onClose={() => {}}
+        onSubmit={async () => ({ ok: true })}
+      />,
+    );
+    expect(html).toContain("at Eval Harness");
+    expect(html).toContain("Eval Harness");
+    expect(html).toContain("does not cascade");
+  });
 });

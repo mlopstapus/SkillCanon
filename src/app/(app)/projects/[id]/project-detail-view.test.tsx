@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { ProjectDetailView, type ProjectDetailData } from "./project-detail-view";
 
 const baseData: ProjectDetailData = {
@@ -33,6 +34,7 @@ const baseData: ProjectDetailData = {
     bySkill: [{ promptId: "p1", name: "code-review-strict", requirement: "required", runCount: 12, lastUsedAt: "2026-08-01" }],
     byMember: [{ userId: "u1", name: "alice", runCount: 12, lastActiveAt: "2026-08-01" }],
   },
+  objectives: [{ id: "o1", title: "Prefer opus for customer-facing output", description: "Use the strongest model for anything a customer sees." }],
 };
 
 const baseProps = {
@@ -44,6 +46,9 @@ const baseProps = {
   onOpenAddTeam: vi.fn(),
   onOpenAddMember: vi.fn(),
   onOpenAddRepo: vi.fn(),
+  onOpenAddObjective: vi.fn(),
+  onEditObjective: vi.fn(),
+  onRemoveObjective: vi.fn(),
 };
 
 describe("ProjectDetailView", () => {
@@ -171,5 +176,37 @@ describe("ProjectDetailView", () => {
     );
     expect(html).toContain("No skills curated for this project yet.");
     expect(html).toContain("No usage recorded for this project yet.");
+  });
+
+  it("renders the Governance tab label with a count badge", () => {
+    const html = renderToStaticMarkup(<ProjectDetailView {...baseProps} data={baseData} activeTab="governance" />);
+    expect(html).toContain("Governance (1)");
+  });
+
+  it("renders each local objective's title and description on the Governance tab", () => {
+    const html = renderToStaticMarkup(<ProjectDetailView {...baseProps} data={baseData} activeTab="governance" />);
+    expect(html).toContain("Prefer opus for customer-facing output");
+    expect(html).toContain("Use the strongest model for anything a customer sees.");
+  });
+
+  it("shows the empty state on the Governance tab when the project has no local objectives", () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView {...baseProps} data={{ ...baseData, objectives: [] }} activeTab="governance" />,
+    );
+    expect(html).toContain("No objectives yet");
+    expect(html).toContain("New objective");
+    expect(html).toContain("Governance (0)");
+  });
+
+  it("has no critical or serious axe violations on the Governance tab, populated", async () => {
+    const html = renderToStaticMarkup(<ProjectDetailView {...baseProps} data={baseData} activeTab="governance" />);
+    await expectNoCriticalOrSeriousAxeViolations(html);
+  });
+
+  it("has no critical or serious axe violations on the Governance tab, empty", async () => {
+    const html = renderToStaticMarkup(
+      <ProjectDetailView {...baseProps} data={{ ...baseData, objectives: [] }} activeTab="governance" />,
+    );
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 });
