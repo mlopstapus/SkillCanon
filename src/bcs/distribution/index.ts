@@ -9,8 +9,16 @@ export type {
   RecordPromptUsageParams,
 } from "./domain/prompt-usage";
 
-export { mcpSessionManager, McpSessionManager, extractBearerApiKey, resolveMcpCaller } from "./application/mcp-session";
-export type { McpCaller } from "./application/mcp-session";
+export {
+  mcpSessionManager,
+  McpSessionManager,
+  extractBearerApiKey,
+  resolveMcpCaller,
+  startMcpSessionCleanup,
+  DEFAULT_MCP_SESSION_MAX_AGE_MS,
+  DEFAULT_MCP_SESSION_CLEANUP_INTERVAL_MS,
+} from "./application/mcp-session";
+export type { McpCaller, McpSessionCleanupOptions } from "./application/mcp-session";
 
 export { MCP_TOOL_NAMES, invokeMcpTool, parseLegacyInput, textResult, toolDescriptions, toolInputSchemas } from "./application/mcp-tools";
 export type { Db, McpToolContext, McpToolName } from "./application/mcp-tools";

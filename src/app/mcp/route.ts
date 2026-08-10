@@ -19,10 +19,18 @@ import {
   extractBearerApiKey,
   mcpSessionManager,
   resolveMcpCaller,
+  startMcpSessionCleanup,
   type McpCaller,
 } from "@/bcs/distribution";
 
 const log = getLogger("distribution");
+
+// Started once per module load (this route file, not a type-only import) —
+// the simplest option per this feature's own Open Questions, since nothing
+// in this codebase imports route.ts for types alone. The interval is
+// unref()'d internally, so it never keeps a graceful shutdown or a test
+// process from exiting cleanly.
+startMcpSessionCleanup(mcpSessionManager);
 
 interface McpAuthExtra {
   caller: McpCaller;

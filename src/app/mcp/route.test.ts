@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApiKey } from "@/bcs/identity-access";
+import { mcpSessionManager } from "@/bcs/distribution";
 import { seedOrgWithAdmin, type SeededOrg } from "@/shared/api/test-helpers";
 import { withTenantContext } from "@/shared/db";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
@@ -144,6 +145,50 @@ describe("/mcp route", () => {
         // fallback bucket.
         const wrongKeyResponse = await _test.handleMcpRequest(initializeRequest(first.rawKey.slice(0, -4) + "0000"), deps);
         expect(wrongKeyResponse.status).toBe(401);
+      });
+    });
+
+    describe("process restart mid-session (PDR-008 ephemeral state)", () => {
+      // Session state (transports Map, McpSessionManager) is entirely
+      // in-memory per PDR-008 — a real process restart clears both. The
+      // guarantee this covers: a session id that predates the restart is
+      // cleanly rejected (not silently misrouted or hung), and the same
+      // client can recover with exactly one further request — a fresh
+      // initialize call reusing its existing bearer key — not a broken
+      // session requiring new credentials or manual reconfiguration.
+      it("rejects a pre-restart session id, then recovers in a single re-initialize round trip", async () => {
+        const { rawKey } = await seedWithApiKey("mcp-restart-key");
+        const deps = { authDb: testDb.authDb, db: testDb.appDb };
+
+        const initResponse = await _test.handleMcpRequest(initializeRequest(rawKey), deps);
+        expect(initResponse.status).toBeLessThan(300);
+        const staleSessionId = initResponse.headers.get("mcp-session-id");
+        expect(staleSessionId).toBeTruthy();
+
+        // Simulate a process restart: both in-memory stores are cleared,
+        // exactly as they would be on a fresh process boot.
+        _test.transports.clear();
+        mcpSessionManager.reset();
+
+        const staleRequest = new Request("http://x/mcp", {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${rawKey}`,
+            "content-type": "application/json",
+            accept: "application/json, text/event-stream",
+            "mcp-session-id": staleSessionId!,
+          },
+          body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list" }),
+        });
+        const staleResponse = await _test.handleMcpRequest(staleRequest, deps);
+        expect(staleResponse.status).toBe(404);
+
+        // Exactly one further request — a normal re-initialize with the
+        // same bearer key, no different from a first-ever connection —
+        // is enough to recover a fully working session.
+        const recoveredResponse = await _test.handleMcpRequest(initializeRequest(rawKey), deps);
+        expect(recoveredResponse.status).toBeLessThan(300);
+        expect(recoveredResponse.headers.get("mcp-session-id")).toBeTruthy();
       });
     });
   });

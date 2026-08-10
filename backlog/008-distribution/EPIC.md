@@ -14,10 +14,10 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 - [x] [005 - Skill Sync CLI](archive/005-skill-sync-cli.md)
 - [ ] [003 - Web UI Shell & Core Pages](003-web-ui-shell-and-core-pages.md) — policy/objective UI gap closed 2026-08-05, remaining smoke-test steps not yet verified, see file
 - [x] [004 - Usage Telemetry](archive/004-usage-telemetry.md)
-- [ ] [002 - MCP Server & Tools](002-mcp-server-and-tools.md) — deprioritized (see file); test-coverage gap closed 2026-08-05, which also found and fixed a real cross-session auth-bypass bug (see file's own update) — 2 of 4 Acceptance Criteria still unverified (characterization equivalence, restart mid-session), stays `open`
+- [x] [002 - MCP Server & Tools](archive/002-mcp-server-and-tools.md) — deprioritized as the primary distribution path (see file), but fully built and verified; test-coverage gap closed 2026-08-05 (also found and fixed a real cross-session auth-bypass bug), remaining 2 Acceptance Criteria (characterization equivalence, restart mid-session) closed 2026-08-09
 - [x] [006 - Distribution Tenant Isolation Tests](archive/006-distribution-tenant-isolation-tests.md)
 - [x] [007 - Skill File Format CLI Support](archive/007-skill-file-format-cli-support.md)
-- [ ] [008 - MCP Session Cleanup Scheduling](008-mcp-session-cleanup-scheduling.md) — minor, low-priority resource-hygiene gap found alongside 002's fix
+- [x] [008 - MCP Session Cleanup Scheduling](archive/008-mcp-session-cleanup-scheduling.md) — minor, low-priority resource-hygiene gap found alongside 002's fix, closed 2026-08-09
 
 *Completed features are moved to `archive/` and checked off here.*
 
@@ -33,8 +33,10 @@ Distribution has no domain rules of its own; this epic is entirely about correct
 
 Feature 002 (MCP) carries the highest external-compatibility risk in this epic — any change to tool names or argument shapes breaks every already-configured IDE. Treat it as a strict compatibility port, not a redesign opportunity, if/when it's picked back up.
 
-Feature 002 is deprioritized in favor of Feature 005 (Skill Sync CLI) — the preferred distribution path for Claude Code is now a synced-skill/REST model rather than an MCP-configured IDE. See `archive/005-skill-sync-cli.md` and `002-mcp-server-and-tools.md`'s Technical Notes for the full reasoning.
+Feature 002 is deprioritized in favor of Feature 005 (Skill Sync CLI) — the preferred distribution path for Claude Code is now a synced-skill/REST model rather than an MCP-configured IDE. See `archive/005-skill-sync-cli.md` and `archive/002-mcp-server-and-tools.md`'s Technical Notes for the full reasoning.
 
 **Status check (2026-08-05):** 001, 004, 005, 006 verified genuinely complete and archived. This epic is **not** fully done: feature 003's policy/objective UI gap closed the same day (`backlog/005-governance/archive/005-governance-views-ui.md` shipped), but its own Acceptance Criteria's full end-to-end smoke test still hasn't been run — left `open`; feature 002 is real code but has an unverified-by-test gap (a spec claims coverage from a test file that doesn't exist), also left `open` with the gap documented in its own file rather than force-completed.
+
+**Status check (2026-08-09):** feature 002's two remaining Acceptance Criteria (characterization equivalence, restart mid-session) closed and verified by test — see `archive/002-mcp-server-and-tools.md`'s own update. Feature 008 (session cleanup scheduling) also closed the same day — see `archive/008-mcp-session-cleanup-scheduling.md`. This epic is still not fully done: feature 003's full legacy-parity audit remains open.
 
 **Reopened (PDR-018):** new feature 007 — the CLI's skill-stub content model (built by archived feature 005) is being reworked from a fixed one-line pointer stub into a real markdown-plus-templates sync, matching prompt-registry's new skill file format (`backlog/006-prompt-registry/011-skill-file-format-refactor.md`). See [PDR-018](../../docs/pdr/018-skill-file-format-and-registry-import.md).

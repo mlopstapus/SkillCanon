@@ -71,6 +71,44 @@ export class McpSessionManager {
 
 export const mcpSessionManager = new McpSessionManager();
 
+// A stale MCP session (no activity for this long) is reclaimed regardless of
+// whether its transport ever sent an explicit close — covers a crashed
+// client, a dropped connection, or the fresh-random-id fallback bucket
+// created for a brand-new session's first request. 24 hours comfortably
+// exceeds any realistic reconnect/continuation window for a self-hosted,
+// interactive dev tool (no MCP client documents a specific session-timeout
+// assumption to confirm against), while still bounding worst-case growth to
+// roughly one day of unclosed sessions rather than the lifetime of the
+// process.
+export const DEFAULT_MCP_SESSION_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+export const DEFAULT_MCP_SESSION_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
+
+export interface McpSessionCleanupOptions {
+  maxAgeMs?: number;
+  intervalMs?: number;
+}
+
+/**
+ * Starts a recurring sweep that reclaims stale sessions from `sessionManager`.
+ * Returns a `stop()` function to cancel it. The timer is `unref()`'d so it
+ * never keeps the Node process alive on its own (a graceful shutdown or a
+ * test process can still exit cleanly with the interval pending).
+ */
+export function startMcpSessionCleanup(
+  sessionManager: McpSessionManager = mcpSessionManager,
+  options: McpSessionCleanupOptions = {},
+): () => void {
+  const maxAgeMs = options.maxAgeMs ?? DEFAULT_MCP_SESSION_MAX_AGE_MS;
+  const intervalMs = options.intervalMs ?? DEFAULT_MCP_SESSION_CLEANUP_INTERVAL_MS;
+
+  const timer = setInterval(() => {
+    sessionManager.cleanupStale(maxAgeMs);
+  }, intervalMs);
+  timer.unref();
+
+  return () => clearInterval(timer);
+}
+
 export function extractBearerApiKey(request: Request): string | null {
   const authHeader = request.headers.get("authorization");
   const match = authHeader?.match(/^Bearer\s+(.+)$/i);
