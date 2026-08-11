@@ -62,7 +62,7 @@ describe("PromptsListView", () => {
       <PromptsListView {...baseProps} rows={[]} filters={{ q: "", project: "all", owner: "all" }} />,
     );
 
-    expect(html).toContain("No prompts yet");
+    expect(html).toContain("No skills yet");
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-live="polite"');
     expect(html).not.toContain("Clear filters");
@@ -74,7 +74,7 @@ describe("PromptsListView", () => {
       <PromptsListView {...baseProps} rows={[]} filters={{ q: "xyz", project: "all", owner: "all" }} />,
     );
 
-    expect(html).toContain("No prompts match these filters");
+    expect(html).toContain("No skills match these filters");
     expect(html).toContain("Clear filters");
     await expectNoCriticalOrSeriousAxeViolations(html);
   });

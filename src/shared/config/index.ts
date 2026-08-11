@@ -100,3 +100,16 @@ export function getSmtpConfig(
     from: env.SMTP_FROM || "no-reply@example.com",
   };
 }
+
+/**
+ * Optional GitHub API token (013-skill-import-and-external-registries) —
+ * unauthenticated requests to `api.github.com` work fine for public repos
+ * but are capped at 60/hour per IP; setting this raises that limit. Returns
+ * `null` when unset, which the caller treats as "call unauthenticated," not
+ * a startup failure.
+ */
+export function getGithubToken(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
+  return env.GITHUB_TOKEN || null;
+}

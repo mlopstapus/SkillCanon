@@ -59,7 +59,7 @@ describe("ProjectDetailView", () => {
     expect(html).toContain("MLOps");
     expect(html).toContain("lead alice");
     expect(html).toContain("Members (1)");
-    expect(html).toContain("Prompts (1)");
+    expect(html).toContain("Skills (1)");
   });
 
   it("renders members with a remove action", () => {

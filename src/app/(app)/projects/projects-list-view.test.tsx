@@ -23,7 +23,7 @@ describe("ProjectsListView", () => {
     expect(html).toContain("MLOps");
     expect(html).toContain("alice");
     expect(html).toContain("2 members");
-    expect(html).toContain("3 prompts");
+    expect(html).toContain("3 skills");
   });
 
   it("shows an empty state when there are no projects", async () => {

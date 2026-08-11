@@ -132,6 +132,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       description: prompt.description ?? "",
       isDeprecated: prompt.isDeprecated,
       ownerLabel,
+      sourceUrl: prompt.sourceUrl,
       projectLabels,
       activeVersion: activeVersion?.version ?? null,
       versions: sortedVersions.map((v) => ({

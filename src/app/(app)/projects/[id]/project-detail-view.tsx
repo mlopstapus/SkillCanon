@@ -111,7 +111,7 @@ export function ProjectDetailView({
             {(
               [
                 ["members", `Members (${data.memberCount})`],
-                ["prompts", `Prompts (${data.promptCount})`],
+                ["prompts", `Skills (${data.promptCount})`],
                 ["repos", `Repositories (${data.repoCount})`],
                 ["teams", `Teams (${data.teamCount})`],
                 ["governance", `Governance (${data.objectives.length})`],
@@ -402,7 +402,7 @@ function PromptGroup({
         <span className="h-px flex-1 bg-border" />
       </div>
       {rows.length === 0 ? (
-        <div role="status" className="py-1 text-[12px] text-faint">No {label.toLowerCase()} prompts yet.</div>
+        <div role="status" className="py-1 text-[12px] text-faint">No {label.toLowerCase()} skills yet.</div>
       ) : (
         <div className="flex flex-col gap-2">
           {rows.map((row) => (

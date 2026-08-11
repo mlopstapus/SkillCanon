@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getAppBaseUrl,
+  getGithubToken,
   getInvitationExpiryHours,
   getJwtExpiryHours,
   getJwtSecret,
@@ -106,5 +107,19 @@ describe("getSmtpConfig", () => {
       pass: undefined,
       from: "no-reply@example.com",
     });
+  });
+});
+
+describe("getGithubToken", () => {
+  it("returns null when GITHUB_TOKEN is unset (013-skill-import-and-external-registries)", () => {
+    expect(getGithubToken({})).toBeNull();
+  });
+
+  it("returns null when GITHUB_TOKEN is an empty string", () => {
+    expect(getGithubToken({ GITHUB_TOKEN: "" })).toBeNull();
+  });
+
+  it("returns the token when set", () => {
+    expect(getGithubToken({ GITHUB_TOKEN: "ghp_example" })).toBe("ghp_example");
   });
 });

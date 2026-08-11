@@ -38,7 +38,7 @@ export function getNavigation(teamId: string): NavSection[] {
       label: "Workspace",
       items: [
         { key: "overview", label: "Overview", href: "/dashboard" },
-        { key: "prompts", label: "Prompts", href: "/prompts" },
+        { key: "prompts", label: "Skills", href: "/prompts" },
         {
           key: "governance",
           label: "Governance",

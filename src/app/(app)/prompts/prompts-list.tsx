@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createPromptAction } from "./actions";
+import { createPromptAction, fetchExternalSkillSourceAction, importExternalSkillsAction } from "./actions";
 import { NewPromptDrawer } from "./new-prompt-drawer";
 import { PromptsListView, type PromptListFilters, type PromptListRow, type ProjectOption } from "./prompts-list-view";
 
@@ -12,6 +12,8 @@ export interface PromptsListProps {
   rows: PromptListRow[];
   projectOptions: ProjectOption[];
   filters: PromptListFilters;
+  /** Every skill name in the org, unfiltered — powers the New Skill drawer's import collision check. */
+  existingNames: string[];
 }
 
 /**
@@ -23,7 +25,7 @@ export interface PromptsListProps {
  * per-keystroke navigation drops characters typed faster than the server
  * round trip completes (per this repo's documented audit-log-ui gotcha).
  */
-export function PromptsList({ rows, projectOptions, filters }: PromptsListProps) {
+export function PromptsList({ rows, projectOptions, filters, existingNames }: PromptsListProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [searchValue, setSearchValue] = useState(filters.q);
@@ -78,6 +80,10 @@ export function PromptsList({ rows, projectOptions, filters }: PromptsListProps)
             }
             return result;
           }}
+          existingNames={existingNames}
+          onFetchImportSource={fetchExternalSkillSourceAction}
+          onImportSkills={importExternalSkillsAction}
+          onImported={() => router.refresh()}
         />
       ) : null}
     </>

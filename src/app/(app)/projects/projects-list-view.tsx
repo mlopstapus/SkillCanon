@@ -23,11 +23,11 @@ export function ProjectsListView({ rows, onNewProject }: ProjectsListViewProps) 
         <div className="flex items-start justify-between gap-5">
           <div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.12em] text-faint uppercase">
-              Prompt registry
+              Skill registry
             </div>
             <h1 className="font-display text-[22px] font-bold tracking-tight">Projects</h1>
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-relaxed text-dim">
-              Team-owned workspaces that group prompts and cross-team members.
+              Team-owned workspaces that group skills and cross-team members.
             </p>
           </div>
           <button
@@ -62,7 +62,7 @@ export function ProjectsListView({ rows, onNewProject }: ProjectsListViewProps) 
                   {row.memberCount} members
                 </span>
                 <span className="rounded-[6px] border border-border bg-surface-2 px-2 py-0.5">
-                  {row.promptCount} prompts
+                  {row.promptCount} skills
                 </span>
               </div>
             </Link>
@@ -71,7 +71,7 @@ export function ProjectsListView({ rows, onNewProject }: ProjectsListViewProps) 
             <AppState
               variant="empty"
               title="No projects yet"
-              description="Create a project to group prompts, repos, collaborators, and usage history under one team-owned workspace."
+              description="Create a project to group skills, repos, collaborators, and usage history under one team-owned workspace."
               action={
                 <button
                   type="button"

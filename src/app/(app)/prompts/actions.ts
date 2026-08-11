@@ -6,6 +6,7 @@ import {
   assignSkillToProject,
   createPrompt,
   deprecatePrompt,
+  fetchExternalSkillSource,
   forkSkill,
   getPrompt,
   getSkillChainRun,
@@ -18,6 +19,7 @@ import {
   unassignSkillFromProject,
   unsubscribeSkill,
   type ChainStep,
+  type ExternalSkillCandidate,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
@@ -50,6 +52,85 @@ function nextVersionLabel(versions: Array<{ version: string }>): string {
  * off to the same New Version file-bundle flow used for every later
  * version to author v1, rather than a separate template-entry form.
  */
+export type FetchExternalSkillSourceResult =
+  | { ok: true; source: string; skills: ExternalSkillCandidate[] }
+  | { ok: false; error: string };
+
+/**
+ * Pure external read (013-skill-import-and-external-registries) — no DB
+ * call, so no `withTenantContext` wrapper is needed. Still requires a
+ * signed-in caller, same as every other action here.
+ */
+export async function fetchExternalSkillSourceAction(source: string): Promise<FetchExternalSkillSourceResult> {
+  try {
+    await requireActingUser();
+    const result = await fetchExternalSkillSource(source);
+    return { ok: true, ...result };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export interface ImportExternalSkillsResult {
+  imported: string[];
+  failed: Array<{ name: string; error: string }>;
+}
+
+export type ImportExternalSkillsActionResult =
+  | ({ ok: true } & ImportExternalSkillsResult)
+  | { ok: false; error: string };
+
+/**
+ * Imports each selected external skill as its own independent
+ * create-plus-publish operation (its own `withTenantContext` call, not one
+ * shared transaction for the whole batch) so a single collision or
+ * validation failure can't poison the Postgres transaction for every other
+ * skill in the same import — see this repo's own notes on why a caught
+ * unique-violation still aborts a shared tx. Ownership matches
+ * `createPrompt`'s existing "always creates a user-owned skill" behavior
+ * (FR-005) — no special-cased ownership path for imported skills.
+ */
+export async function importExternalSkillsAction(
+  source: string,
+  skills: ExternalSkillCandidate[],
+): Promise<ImportExternalSkillsActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
+    const imported: string[] = [];
+    const failed: Array<{ name: string; error: string }> = [];
+    for (const skill of skills) {
+      try {
+        await withTenantContext(db, actingUser.orgId, async (tx) => {
+          await createPrompt(tx, actor, {
+            organizationId: actingUser.orgId,
+            name: skill.name,
+            description: skill.description || null,
+            sourceUrl: source,
+          });
+          await publishVersion(tx, actor, {
+            promptName: skill.name,
+            organizationId: actingUser.orgId,
+            version: "v1",
+            mainFile: { content: skill.mainFile.content },
+            supportingFiles: skill.supportingFiles,
+            tags: [],
+          });
+        });
+        imported.push(skill.name);
+      } catch (err) {
+        failed.push({ name: skill.name, error: err instanceof Error ? err.message : "Something went wrong." });
+      }
+    }
+    if (imported.length > 0) {
+      revalidatePath("/prompts");
+    }
+    return { ok: true, imported, failed };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
 export async function createPromptAction(params: {
   name: string;
   description?: string;

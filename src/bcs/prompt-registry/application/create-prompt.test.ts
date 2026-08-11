@@ -92,4 +92,33 @@ describe("createPrompt", () => {
     expect(result.ownerId).toBe(fixture.actorUserId);
     expect(result.forkedFromSkillId).toBeNull();
   });
+
+  it("defaults sourceUrl to null when not given", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+
+    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      createPrompt(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        name: `authored-${randomUUID()}`,
+      }),
+    );
+
+    expect(result.sourceUrl).toBeNull();
+  });
+
+  it("persists sourceUrl for a skill created via external import (013-skill-import-and-external-registries)", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+
+    const result = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      createPrompt(tx, fixture.actor, {
+        organizationId: fixture.organizationId,
+        name: `imported-${randomUUID()}`,
+        sourceUrl: "anthropics/skills/pdf-table-extract",
+      }),
+    );
+
+    expect(result.sourceUrl).toBe("anthropics/skills/pdf-table-extract");
+    const rows = await queryPromptRows(testDb, sql`id = ${result.id}`);
+    expect(rows[0]?.source_url).toBe("anthropics/skills/pdf-table-extract");
+  });
 });

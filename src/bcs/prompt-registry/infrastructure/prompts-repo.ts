@@ -15,12 +15,13 @@ export interface InsertPromptParams {
   ownerType: PromptOwnerType;
   ownerId: string;
   forkedFromSkillId?: string | null;
+  sourceUrl?: string | null;
 }
 
 export async function insertPrompt(tx: Tx, params: InsertPromptParams) {
   const [row] = await tx
     .insert(prompts)
-    .values({ forkedFromSkillId: null, ...params })
+    .values({ forkedFromSkillId: null, sourceUrl: null, ...params })
     .returning();
   if (!row) {
     throw new Error("Prompt insert returned no row.");
