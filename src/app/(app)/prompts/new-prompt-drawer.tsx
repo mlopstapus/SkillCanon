@@ -1,13 +1,28 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState, useTransition } from "react";
 import { Drawer } from "@/shared/ui";
-import type { ExternalSkillCandidate } from "@/bcs/prompt-registry";
+import type { ExternalSkillCandidate, LocalSkillCandidate, LocalSkillFileEntry } from "@/bcs/prompt-registry";
 import type {
   FetchExternalSkillSourceResult,
   ImportExternalSkillsActionResult,
+  ImportLocalSkillsActionResult,
   PromptActionResult,
+  ScanLocalSkillFoldersActionResult,
 } from "./actions";
+import {
+  readLocalSkillFolderEntriesFromDataTransfer,
+  readLocalSkillFolderEntriesFromFileList,
+  supportsFolderSelection,
+} from "./local-folder-reader";
+
+// `webkitdirectory` is a real, widely-supported (if non-standard) HTML
+// attribute React's own DOM typings don't include.
+declare module "react" {
+  interface InputHTMLAttributes<T> {
+    webkitdirectory?: string;
+  }
+}
 
 export interface NewPromptValues {
   name: string;
@@ -22,11 +37,13 @@ export interface NewPromptDrawerProps {
   existingNames: string[];
   onFetchImportSource: (source: string) => Promise<FetchExternalSkillSourceResult>;
   onImportSkills: (source: string, skills: ExternalSkillCandidate[]) => Promise<ImportExternalSkillsActionResult>;
+  onScanLocalFolder: (entries: LocalSkillFileEntry[]) => Promise<ScanLocalSkillFoldersActionResult>;
+  onImportLocalSkills: (skills: LocalSkillCandidate[]) => Promise<ImportLocalSkillsActionResult>;
   /** Called after at least one skill imports successfully, so the caller can refresh the list. */
   onImported: () => void;
 }
 
-type NewSkillMode = "blank" | "import";
+type NewSkillMode = "blank" | "import" | "upload";
 
 /**
  * Collects only name/description/tags (032-skill-file-format-refactor,
@@ -36,11 +53,18 @@ type NewSkillMode = "blank" | "import";
  * here. `onSubmit` is expected to create the skill shell and then hand off
  * to that flow (e.g. by navigating to the new skill's detail page).
  *
- * The Import mode (013-skill-import-and-external-registries) is a fully
- * separate path: it fetches an external GitHub source, lets the caller pick
- * which of the skills found there to bring in, and hands the selected ones
- * straight to `onImportSkills` — no intermediate New Version step, since
- * the fetched content already has everything `publishVersion` needs.
+ * The Import mode (013-skill-import-and-external-registries/001) fetches an
+ * external GitHub source. The Upload mode (013-skill-import-and-external-
+ * registries/002, spec 037-local-folder-skill-upload) reads a *local*
+ * folder instead — a fully separate code path (no source-URL/provenance
+ * concept, no fixed batch-size cap), but sharing the same detect → preview/
+ * select → confirm shape and visual language as the Import mode.
+ *
+ * Unlike Import mode's confirm button (disabled by ANY selected candidate
+ * colliding with an existing org skill), Upload mode's confirm button stays
+ * enabled through such a collision — the per-skill server-side isolation
+ * (037's User Story 3) needs to be reachable through normal confirm, not
+ * blocked by a client-side pre-check.
  */
 export function NewPromptDrawer({
   onClose,
@@ -48,6 +72,8 @@ export function NewPromptDrawer({
   existingNames,
   onFetchImportSource,
   onImportSkills,
+  onScanLocalFolder,
+  onImportLocalSkills,
   onImported,
 }: NewPromptDrawerProps) {
   const titleId = useId();
@@ -69,7 +95,27 @@ export function NewPromptDrawer({
   const [isImporting, startImportTransition] = useTransition();
   const [importFailures, setImportFailures] = useState<Array<{ name: string; error: string }>>([]);
 
+  // Import-from-folder (upload) state.
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const [folderSupported, setFolderSupported] = useState(true);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [localScanState, setLocalScanState] = useState<"idle" | "scanning" | "scanned">("idle");
+  const [localScanError, setLocalScanError] = useState<string | null>(null);
+  const [localCandidates, setLocalCandidates] = useState<LocalSkillCandidate[]>([]);
+  const [localDuplicateNames, setLocalDuplicateNames] = useState<string[]>([]);
+  const [localInvalidFolders, setLocalInvalidFolders] = useState<Array<{ folderPath: string; reason: string }>>([]);
+  const [localChecked, setLocalChecked] = useState<Set<number>>(new Set());
+  const [isUploading, startUploadTransition] = useTransition();
+  const [localImportFailures, setLocalImportFailures] = useState<Array<{ name: string; error: string }>>([]);
+
+  useEffect(() => {
+    // One-time feature-detection sync from the browser (FR-015), not a subscribable event source.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- see comment above
+    setFolderSupported(supportsFolderSelection());
+  }, []);
+
   const existingNameSet = new Set(existingNames);
+  const localDuplicateNameSet = new Set(localDuplicateNames);
 
   function submitBlank() {
     setBlankError(null);
@@ -145,6 +191,112 @@ export function NewPromptDrawer({
     });
   }
 
+  async function scanLocalEntries(entries: LocalSkillFileEntry[]) {
+    setLocalScanState("scanning");
+    setLocalScanError(null);
+    setLocalImportFailures([]);
+    const result = await onScanLocalFolder(entries);
+    if (!result.ok) {
+      setLocalScanError(result.error);
+      setLocalCandidates([]);
+      setLocalInvalidFolders([]);
+      setLocalDuplicateNames([]);
+      setLocalChecked(new Set());
+      setLocalScanState("idle");
+      return;
+    }
+    const seenNames = new Set<string>();
+    const duplicateSet = new Set(result.duplicateNames);
+    const defaultChecked = new Set<number>();
+    result.candidates.forEach((candidate, i) => {
+      // Default all candidates checked, except only the first of any set of
+      // intra-batch duplicate names — keeps "at most one selected per
+      // conflicting name" true from the very first render (FR-013).
+      if (duplicateSet.has(candidate.name)) {
+        if (seenNames.has(candidate.name)) return;
+        seenNames.add(candidate.name);
+      }
+      defaultChecked.add(i);
+    });
+    setLocalCandidates(result.candidates);
+    setLocalDuplicateNames(result.duplicateNames);
+    setLocalInvalidFolders(result.invalidFolders);
+    setLocalChecked(defaultChecked);
+    setLocalScanState("scanned");
+  }
+
+  async function handleFolderInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const fileList = e.target.files;
+    e.target.value = "";
+    if (!fileList || fileList.length === 0) return;
+    const entries = await readLocalSkillFolderEntriesFromFileList(fileList);
+    await scanLocalEntries(entries);
+  }
+
+  async function handleFolderDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragActive(false);
+    const items = e.dataTransfer.items;
+    if (!items || items.length === 0) return;
+    const entries = await readLocalSkillFolderEntriesFromDataTransfer(items);
+    await scanLocalEntries(entries);
+  }
+
+  function toggleLocalChecked(index: number) {
+    const candidate = localCandidates[index];
+    if (!candidate) return;
+    setLocalChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) {
+        next.delete(index);
+        return next;
+      }
+      if (localDuplicateNameSet.has(candidate.name)) {
+        // Enforce "at most one selected per conflicting name" (FR-013).
+        for (const otherIndex of next) {
+          if (localCandidates[otherIndex]?.name === candidate.name) {
+            next.delete(otherIndex);
+          }
+        }
+      }
+      next.add(index);
+      return next;
+    });
+  }
+
+  const selectedLocalSkills = localCandidates.filter((_, i) => localChecked.has(i));
+  // Deliberately no `collidingNames.length > 0` disable here — see the
+  // component doc comment above and contracts/server-actions.md.
+  const localImportDisabled = selectedLocalSkills.length === 0 || isUploading;
+
+  function runLocalImport() {
+    if (localImportDisabled) return;
+    startUploadTransition(async () => {
+      const result = await onImportLocalSkills(selectedLocalSkills);
+      if (!result.ok) {
+        setLocalScanError(result.error);
+        return;
+      }
+      if (result.failed.length > 0) {
+        setLocalImportFailures(result.failed);
+        const stillPresent = new Set(result.failed.map((f) => f.name));
+        setLocalCandidates((prev) => prev.filter((s) => stillPresent.has(s.name)));
+        // Drop any duplicate-name flag whose conflicting candidates aren't
+        // both still present after filtering — a name that failed alone
+        // (its former conflicting sibling either succeeded or was never
+        // selected) is no longer a live intra-batch conflict.
+        setLocalDuplicateNames((prev) => prev.filter((name) => stillPresent.has(name)));
+        setLocalChecked(new Set());
+      }
+      if (result.imported.length > 0) {
+        onImported();
+      }
+      if (result.failed.length === 0) {
+        onClose();
+      }
+    });
+  }
+
   return (
     <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[480px]">
       <div className="flex h-14 items-center justify-between border-b border-border px-5">
@@ -179,6 +331,15 @@ export function NewPromptDrawer({
           }`}
         >
           Import from link
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("upload")}
+          className={`flex-1 rounded-[7px] py-2 text-[12.5px] font-semibold ${
+            mode === "upload" ? "bg-panel text-text" : "text-faint"
+          }`}
+        >
+          Import from folder
         </button>
       </div>
 
@@ -220,7 +381,7 @@ export function NewPromptDrawer({
             any supporting files) on its detail page.
           </div>
         </div>
-      ) : (
+      ) : mode === "import" ? (
         <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto px-5.5 py-5">
           <div>
             <label className="mb-1.5 block text-[12px] font-semibold text-dim">Source</label>
@@ -341,6 +502,167 @@ export function NewPromptDrawer({
             </div>
           ) : null}
         </div>
+      ) : (
+        <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto px-5.5 py-5">
+          {!folderSupported ? (
+            <div className="rounded-card border border-red/30 bg-red-soft p-3 text-[12px] text-red">
+              Folder selection isn&apos;t available in this browser. Try a recent version of Chrome, Firefox,
+              Safari, or Edge.
+            </div>
+          ) : (
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragActive(true);
+              }}
+              onDragLeave={() => setIsDragActive(false)}
+              onDrop={handleFolderDrop}
+              className={`flex flex-col items-center justify-center gap-2 rounded-card border-2 border-dashed p-6 text-center transition-colors ${
+                isDragActive ? "border-a bg-a-soft" : "border-border-2 bg-surface"
+              }`}
+            >
+              <span className="text-[12.5px] font-semibold text-text">Drag a folder here, or</span>
+              <button
+                type="button"
+                onClick={() => folderInputRef.current?.click()}
+                className="rounded-control border border-border-2 bg-panel px-3.5 py-2 text-[12.5px] font-semibold text-text"
+              >
+                Choose folder
+              </button>
+              <span className="text-[11px] text-faint">
+                Scans for SKILL.md files inside — nothing else is read or sent.
+              </span>
+              <input
+                ref={folderInputRef}
+                type="file"
+                webkitdirectory=""
+                multiple
+                className="hidden"
+                onChange={handleFolderInputChange}
+              />
+            </div>
+          )}
+
+          {localScanState === "scanning" ? <div className="text-[12px] text-dim">Scanning…</div> : null}
+
+          {localScanError ? (
+            <div className="rounded-card border border-red/30 bg-red-soft p-3 text-[12px] text-red">{localScanError}</div>
+          ) : null}
+
+          {localImportFailures.length > 0 ? (
+            <div className="rounded-card border border-red/30 bg-red-soft p-3 text-[11.5px] leading-relaxed text-red">
+              {localImportFailures.map((f) => (
+                <div key={f.name}>
+                  <span className="font-semibold">{f.name}</span>: {f.error}
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {localScanState === "scanned" && localCandidates.length === 0 && localInvalidFolders.length === 0 ? (
+            <div className="rounded-card border border-border bg-surface p-3 text-[12px] text-dim">
+              No skills found in the selected folder.
+            </div>
+          ) : null}
+
+          {localScanState === "scanned" && (localCandidates.length > 0 || localInvalidFolders.length > 0) ? (
+            <div>
+              <div className="mb-2.5 flex items-center gap-2">
+                <span className="font-mono text-[10.5px] tracking-[0.08em] text-faint uppercase">
+                  Found {localCandidates.length} skill{localCandidates.length === 1 ? "" : "s"}
+                </span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <div className="flex flex-col gap-2">
+                {localCandidates.map((c, i) => {
+                  const isChecked = localChecked.has(i);
+                  const isDuplicate = localDuplicateNameSet.has(c.name);
+                  const collidesExisting = existingNameSet.has(c.name);
+                  return (
+                    <div
+                      key={c.folderPath + i}
+                      role="checkbox"
+                      aria-checked={isChecked}
+                      tabIndex={0}
+                      onClick={() => toggleLocalChecked(i)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          toggleLocalChecked(i);
+                        }
+                      }}
+                      className={`flex cursor-pointer items-start gap-3 rounded-card border p-3.5 transition-colors ${
+                        isDuplicate || collidesExisting
+                          ? "border-red/40"
+                          : isChecked
+                            ? "border-a/40 bg-a-soft"
+                            : "border-border bg-surface"
+                      }`}
+                    >
+                      <span
+                        className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-[6px] border-[1.5px] ${
+                          isChecked ? "border-a bg-a" : "border-border-2 bg-transparent"
+                        }`}
+                      >
+                        {isChecked ? (
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--afg)" strokeWidth="3">
+                            <path d="M5 13l4 4L19 7" />
+                          </svg>
+                        ) : null}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-mono text-[13px] font-semibold text-text">{c.name}</div>
+                        <div className="mt-0.5 font-mono text-[10.5px] text-faint">{c.folderPath || "/"}</div>
+                        <div className="mt-1 text-[12px] leading-relaxed text-dim">{c.description}</div>
+                        <div className="mt-2 flex gap-1.5">
+                          <span className="rounded-[5px] border border-border bg-bg px-1.5 py-0.5 font-mono text-[10px] text-faint">
+                            {c.mainFile.name}
+                          </span>
+                          {c.supportingFiles.map((f) => (
+                            <span
+                              key={f.name}
+                              className="rounded-[5px] border border-border bg-bg px-1.5 py-0.5 font-mono text-[10px] text-faint"
+                            >
+                              {f.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {localInvalidFolders.length > 0 ? (
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  {localInvalidFolders.map((inv) => (
+                    <div
+                      key={inv.folderPath}
+                      className="rounded-card border border-border bg-surface p-3 text-[11.5px] leading-relaxed text-faint opacity-70"
+                    >
+                      <span className="font-mono">{inv.folderPath || "/"}</span> — excluded: {inv.reason}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              {localDuplicateNameSet.size > 0 ? (
+                <div className="mt-2.5 rounded-card border border-red/30 bg-red-soft p-3 text-[11.5px] leading-relaxed text-red">
+                  &quot;{[...localDuplicateNameSet].join('", "')}&quot;{" "}
+                  {localDuplicateNameSet.size === 1 ? "was" : "were"} detected more than once in this folder — only
+                  one of each can be selected.
+                </div>
+              ) : null}
+
+              {selectedLocalSkills.some((s) => existingNameSet.has(s.name)) ? (
+                <div className="mt-2.5 rounded-card border border-red/30 bg-red-soft p-3 text-[11.5px] leading-relaxed text-red">
+                  A selected skill&apos;s name already exists in this org — it will fail on upload while the rest of
+                  the batch still succeeds.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       )}
 
       <div className="flex justify-end gap-2.5 border-t border-border px-5.5 py-3.5">
@@ -360,7 +682,7 @@ export function NewPromptDrawer({
           >
             {isPending ? "Creating…" : "Create skill"}
           </button>
-        ) : (
+        ) : mode === "import" ? (
           <button
             type="button"
             disabled={importDisabled}
@@ -370,6 +692,17 @@ export function NewPromptDrawer({
             {isImporting
               ? "Importing…"
               : `Import ${selectedSkills.length} skill${selectedSkills.length === 1 ? "" : "s"}`}
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={localImportDisabled}
+            onClick={runLocalImport}
+            className="rounded-control bg-a px-4.5 py-2.5 text-[13px] font-semibold text-a-fg shadow-glow disabled:opacity-50"
+          >
+            {isUploading
+              ? "Uploading…"
+              : `Upload ${selectedLocalSkills.length} skill${selectedLocalSkills.length === 1 ? "" : "s"}`}
           </button>
         )}
       </div>

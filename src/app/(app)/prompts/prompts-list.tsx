@@ -2,7 +2,13 @@
 
 import { useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { createPromptAction, fetchExternalSkillSourceAction, importExternalSkillsAction } from "./actions";
+import {
+  createPromptAction,
+  fetchExternalSkillSourceAction,
+  importExternalSkillsAction,
+  importLocalSkillsAction,
+  scanLocalSkillFoldersAction,
+} from "./actions";
 import { NewPromptDrawer } from "./new-prompt-drawer";
 import { PromptsListView, type PromptListFilters, type PromptListRow, type ProjectOption } from "./prompts-list-view";
 
@@ -83,6 +89,8 @@ export function PromptsList({ rows, projectOptions, filters, existingNames }: Pr
           existingNames={existingNames}
           onFetchImportSource={fetchExternalSkillSourceAction}
           onImportSkills={importExternalSkillsAction}
+          onScanLocalFolder={scanLocalSkillFoldersAction}
+          onImportLocalSkills={importLocalSkillsAction}
           onImported={() => router.refresh()}
         />
       ) : null}

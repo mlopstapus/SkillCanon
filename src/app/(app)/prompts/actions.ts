@@ -15,11 +15,15 @@ import {
   publishVersion,
   reactivatePrompt,
   rollbackPrompt,
+  scanLocalSkillFolders,
   subscribeSkill,
   unassignSkillFromProject,
   unsubscribeSkill,
   type ChainStep,
   type ExternalSkillCandidate,
+  type LocalSkillCandidate,
+  type LocalSkillFileEntry,
+  type LocalSkillInvalidFolder,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
@@ -126,6 +130,110 @@ export async function importExternalSkillsAction(
       revalidatePath("/prompts");
     }
     return { ok: true, imported, failed };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export type ScanLocalSkillFoldersActionResult =
+  | {
+      ok: true;
+      candidates: LocalSkillCandidate[];
+      duplicateNames: string[];
+      invalidFolders: LocalSkillInvalidFolder[];
+    }
+  | { ok: false; error: string };
+
+/**
+ * Local Folder Skill Upload (013-skill-import-and-external-registries/002,
+ * spec 037-local-folder-skill-upload) — pure detection over already-read
+ * local file entries (already narrowed client-side to candidate-directory
+ * files only, FR-012). No DB call, so no `withTenantContext` wrapper, same
+ * as `fetchExternalSkillSourceAction`'s existing precedent.
+ */
+export async function scanLocalSkillFoldersAction(
+  entries: LocalSkillFileEntry[],
+): Promise<ScanLocalSkillFoldersActionResult> {
+  try {
+    await requireActingUser();
+    const result = scanLocalSkillFolders(entries);
+    return {
+      ok: true,
+      candidates: result.candidates,
+      duplicateNames: [...result.duplicateNames],
+      invalidFolders: result.invalidFolders,
+    };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export interface ImportLocalSkillsResult {
+  imported: string[];
+  failed: Array<{ name: string; error: string }>;
+}
+
+export type ImportLocalSkillsActionResult =
+  | ({ ok: true } & ImportLocalSkillsResult)
+  | { ok: false; error: string };
+
+/**
+ * The per-skill create/publish/error-isolation loop lives here, separately
+ * exported and taking the already-resolved actor as a plain parameter
+ * (rather than calling `requireActingUser()`/`headers()` itself) so it can
+ * be called directly from a Testcontainers-backed test with no Next.js
+ * request context — `importLocalSkillsAction` below is a thin wrapper that
+ * resolves the real caller and delegates. `dbOverride` exists for the same
+ * reason (defaults to the real `db` singleton in production; a test passes
+ * `testDb.appDb` instead — mirrors `withApiRoute`'s `deps.db` pattern for
+ * REST routes, `src/shared/api/handler.ts`). One independent
+ * `withTenantContext` transaction per skill, matching
+ * `importExternalSkillsAction`'s existing pattern, so a single collision
+ * or validation failure can't roll back the rest of the batch (FR-007) —
+ * but unlike that sibling import path, no `sourceUrl` is ever set (FR-005;
+ * this feature has no provenance concept).
+ */
+export async function runLocalSkillImportBatch(
+  actingUser: Pick<Awaited<ReturnType<typeof requireActingUser>>, "id" | "orgId">,
+  skills: LocalSkillCandidate[],
+  dbOverride: typeof db = db,
+): Promise<ImportLocalSkillsResult> {
+  const actor = { organizationId: actingUser.orgId, userId: actingUser.id };
+  const imported: string[] = [];
+  const failed: Array<{ name: string; error: string }> = [];
+  for (const skill of skills) {
+    try {
+      await withTenantContext(dbOverride, actingUser.orgId, async (tx) => {
+        await createPrompt(tx, actor, {
+          organizationId: actingUser.orgId,
+          name: skill.name,
+          description: skill.description || null,
+        });
+        await publishVersion(tx, actor, {
+          promptName: skill.name,
+          organizationId: actingUser.orgId,
+          version: "v1",
+          mainFile: { content: skill.mainFile.content },
+          supportingFiles: skill.supportingFiles,
+          tags: [],
+        });
+      });
+      imported.push(skill.name);
+    } catch (err) {
+      failed.push({ name: skill.name, error: err instanceof Error ? err.message : "Something went wrong." });
+    }
+  }
+  return { imported, failed };
+}
+
+export async function importLocalSkillsAction(skills: LocalSkillCandidate[]): Promise<ImportLocalSkillsActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const result = await runLocalSkillImportBatch(actingUser, skills);
+    if (result.imported.length > 0) {
+      revalidatePath("/prompts");
+    }
+    return { ok: true, ...result };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }
