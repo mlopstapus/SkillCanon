@@ -13,7 +13,7 @@ Both features become natural once a skill is a real file bundle (markdown + temp
 
 ## Features
 
-- [ ] [001 - External Skill Registry Import](001-external-skill-registry-import.md)
+- [x] [001 - External Skill Registry Import](archive/001-external-skill-registry-import.md)
 - [ ] [002 - Existing Repo Skill Upload](002-existing-repo-skill-upload.md)
 
 *Completed features are moved to `archive/` and checked off here.*
