@@ -26,6 +26,8 @@ export interface PromptSummary {
   ownerId: string;
   /** Lineage pointer, set only when this skill was created via forkSkill (future work). */
   forkedFromSkillId: string | null;
+  /** Set only for a skill created via external import (013-skill-import-and-external-registries) — the source it was fetched from. */
+  sourceUrl: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -78,6 +80,8 @@ export interface CreatePromptParams {
   organizationId: string;
   name: string;
   description?: string | null;
+  /** Set only when this skill is being created via external import (013-skill-import-and-external-registries). */
+  sourceUrl?: string | null;
 }
 
 export interface PublishVersionFileInput {

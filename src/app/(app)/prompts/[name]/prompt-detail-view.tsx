@@ -44,6 +44,8 @@ export interface PromptDetailData {
   description: string;
   isDeprecated: boolean;
   ownerLabel: string;
+  /** Set only for a skill created via external import (013-skill-import-and-external-registries) — where it was fetched from. */
+  sourceUrl: string | null;
   projectLabels: string[];
   activeVersion: string | null;
   versions: Array<{
@@ -119,6 +121,11 @@ const POLICY_BADGE: Record<string, "blue" | "violet" | "green" | "red"> = {
   validate: "red",
 };
 
+/** A supporting file with a script extension renders as plain code, never through the Markdown preview (mirrors the source design's own file-type detection). */
+function isScriptFile(name: string): boolean {
+  return /\.(sh|py|js|ts)$/.test(name);
+}
+
 const RUN_STATUS_BADGE: Record<ChainRunSummaryView["status"], "blue" | "green" | "red" | "neutral"> = {
   in_progress: "blue",
   completed: "green",
@@ -150,6 +157,7 @@ export function PromptDetailView({
   const [selectedFileId, setSelectedFileId] = useState<string | null>(mainFile?.id ?? null);
   const [fileView, setFileView] = useState<"preview" | "plain">("preview");
   const selectedFile = data.files.find((f) => f.id === selectedFileId) ?? mainFile;
+  const selectedIsScript = selectedFile ? isScriptFile(selectedFile.name) : false;
   const totalGrants = data.shareState.teams.filter((t) => t.granted).length +
     data.shareState.projects.filter((p) => p.granted).length;
 
@@ -252,6 +260,11 @@ export function PromptDetailView({
                   </Badge>
                 ))}
                 <span className="font-mono text-[11px] text-dim">{data.ownerLabel}</span>
+                {data.sourceUrl ? (
+                  <span className="font-mono text-[10.5px] text-faint" title={data.sourceUrl}>
+                    imported from {data.sourceUrl}
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
@@ -429,29 +442,37 @@ export function PromptDetailView({
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex items-center justify-between border-b border-border bg-bg px-4 py-2.5">
                 <span className="font-mono text-[12.5px] text-dim">{selectedFile?.name}</span>
-                <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5">
-                  <button
-                    type="button"
-                    onClick={() => setFileView("preview")}
-                    className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
-                      fileView === "preview" ? "bg-a-soft text-a" : "text-dim"
-                    }`}
-                  >
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFileView("plain")}
-                    className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
-                      fileView === "plain" ? "bg-a-soft text-a" : "text-dim"
-                    }`}
-                  >
-                    Plain text
-                  </button>
+                <div className="flex items-center gap-2">
+                  {selectedIsScript ? (
+                    <span className="rounded-[6px] bg-surface-2 px-2.5 py-1 font-mono text-[10.5px] text-faint">
+                      Code
+                    </span>
+                  ) : (
+                    <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setFileView("preview")}
+                        className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
+                          fileView === "preview" ? "bg-a-soft text-a" : "text-dim"
+                        }`}
+                      >
+                        Preview
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFileView("plain")}
+                        className={`rounded-[6px] px-2.5 py-1 font-mono text-[11px] ${
+                          fileView === "plain" ? "bg-a-soft text-a" : "text-dim"
+                        }`}
+                      >
+                        Plain text
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex-1 overflow-y-auto p-4.5">
-                {fileView === "plain" || !selectedFile ? (
+                {selectedIsScript || fileView === "plain" || !selectedFile ? (
                   <pre className="m-0 whitespace-pre-wrap font-mono text-[12.5px] leading-relaxed text-text">
                     {selectedFile?.content ?? "—"}
                   </pre>

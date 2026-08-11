@@ -106,6 +106,13 @@ export const prompts = promptRegistrySchema.table(
       (): AnyPgColumn => prompts.id,
       { onDelete: "set null" },
     ),
+    /**
+     * Provenance for a skill imported from an external source (013-skill-
+     * import-and-external-registries) — the source repo/registry identifier
+     * it was fetched from. `null` for a skill authored directly in
+     * SkillCanon. Never changes after import.
+     */
+    sourceUrl: text("source_url"),
     ...timestamps(),
   },
   (table) => [

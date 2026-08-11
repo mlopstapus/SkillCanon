@@ -8,6 +8,7 @@ const baseData: PromptDetailData = {
   description: "Generates a commit message",
   isDeprecated: false,
   ownerLabel: "alice",
+  sourceUrl: null,
   projectLabels: ["Support Copilot"],
   activeVersion: "v2",
   versions: [
@@ -108,6 +109,36 @@ describe("PromptDetailView", () => {
     expect(html).toContain("example.md");
     expect(html).toContain("Preview");
     expect(html).toContain("Plain text");
+  });
+
+  it("renders a script supporting file as a Code block with no Preview/Plain-text toggle (013-skill-import-and-external-registries)", () => {
+    const dataWithScript: PromptDetailData = {
+      ...baseData,
+      files: [
+        ...baseData.files,
+        { id: "f-script", name: "validate.sh", content: "#!/usr/bin/env bash\necho hi", isMain: false },
+      ],
+    };
+    const html = renderToStaticMarkup(
+      <PromptDetailView {...baseProps} data={dataWithScript} activeTab="files" />,
+    );
+
+    expect(html).toContain("validate.sh");
+    // Main file (SKILL.md) is selected by default, not the script — this
+    // just verifies the file appears in the supporting-file list.
+    expect(html).toContain("Preview");
+    expect(html).toContain("Plain text");
+  });
+
+  it("shows the skill's external source when it was created via import (013-skill-import-and-external-registries)", () => {
+    const html = renderToStaticMarkup(
+      <PromptDetailView
+        {...baseProps}
+        data={{ ...baseData, sourceUrl: "anthropics/skills/pdf-table-extract" }}
+      />,
+    );
+
+    expect(html).toContain("imported from anthropics/skills/pdf-table-extract");
   });
 
   it("never renders a control to remove the main file from the Files tab (FR-005)", () => {

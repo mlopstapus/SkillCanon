@@ -43,6 +43,7 @@ export async function createPrompt(
     ownerType: "user" as const,
     ownerId: actor.userId,
     forkedFromSkillId: null,
+    sourceUrl: params.sourceUrl ?? null,
   };
 
   try {

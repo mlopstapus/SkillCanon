@@ -61,11 +61,11 @@ export function PromptsListView({
         <div className="flex items-start justify-between gap-5">
           <div>
             <div className="mb-2 font-mono text-[10.5px] tracking-[0.12em] text-faint uppercase">
-              Prompt registry
+              Skill registry
             </div>
-            <h1 className="font-display text-[22px] font-bold tracking-tight">Prompts</h1>
+            <h1 className="font-display text-[22px] font-bold tracking-tight">Skills</h1>
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-relaxed text-dim">
-              Reusable, versioned templates expanded with governance policies applied. Share a prompt
+              Reusable, versioned templates expanded with governance policies applied. Share a skill
               so teammates can subscribe to updates or make their own editable copy.
             </p>
           </div>
@@ -74,7 +74,7 @@ export function PromptsListView({
             onClick={onNewPrompt}
             className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-control bg-a px-4 py-2.5 text-[13px] font-semibold text-a-fg shadow-glow"
           >
-            + New prompt
+            + New skill
           </button>
         </div>
 
@@ -83,13 +83,13 @@ export function PromptsListView({
             <input
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
-              aria-label="Search prompts"
-              placeholder="Search prompts…"
+              aria-label="Search skills"
+              placeholder="Search skills…"
               className="flex-1 bg-transparent text-[12.5px] text-text outline-none"
             />
           </div>
           <select
-            aria-label="Filter prompts by project"
+            aria-label="Filter skills by project"
             value={filters.project}
             onChange={(e) => onProjectChange(e.target.value)}
             className="rounded-control border border-border-2 bg-surface px-3 py-2 font-mono text-[11.5px] text-text outline-none"
@@ -101,7 +101,7 @@ export function PromptsListView({
               </option>
             ))}
           </select>
-          <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5" role="group" aria-label="Filter prompts by owner">
+          <div className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5" role="group" aria-label="Filter skills by owner">
             {(["all", "mine", "shared"] as const).map((owner) => (
               <button
                 key={owner}
@@ -140,11 +140,11 @@ export function PromptsListView({
         {rows.length === 0 ? (
           <AppState
             variant="empty"
-            title={activeFilters ? "No prompts match these filters" : "No prompts yet"}
+            title={activeFilters ? "No skills match these filters" : "No skills yet"}
             description={
               activeFilters
                 ? "Try a different project or owner filter, or clear the search."
-                : "Create your first prompt to start versioning and expanding it with governance applied."
+                : "Create your first skill to start versioning and expanding it with governance applied."
             }
             action={
               activeFilters ? (

@@ -169,3 +169,20 @@ export {
   RunStepConflictError,
   validateChainSteps,
 } from "./domain/skill-chain";
+
+// ---------------------------------------------------------------------------
+// External Skill Registry Import (013-skill-import-and-external-registries,
+// spec 036-external-skill-import)
+// ---------------------------------------------------------------------------
+export { fetchExternalSkillSource } from "./application/fetch-external-skill-source";
+export type {
+  ExternalSkillCandidate,
+  ExternalSkillFile,
+  ExternalSkillSourceResult,
+} from "./domain/external-skill-source";
+export {
+  ExternalSourceNotFoundError,
+  ExternalSourceUnreachableError,
+  InvalidExternalSourceError,
+  MAX_EXTERNAL_SKILLS_PER_SOURCE,
+} from "./domain/external-skill-source";

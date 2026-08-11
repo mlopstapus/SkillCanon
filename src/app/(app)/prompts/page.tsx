@@ -28,7 +28,7 @@ export default async function PromptsPage({
   const projectFilter = typeof resolvedSearchParams.project === "string" ? resolvedSearchParams.project : "all";
   const ownerFilter = typeof resolvedSearchParams.owner === "string" ? resolvedSearchParams.owner : "all";
 
-  const { rows, projectOptions } = await withTenantContext(db, user.orgId, async (tx) => {
+  const { rows, projectOptions, existingNames } = await withTenantContext(db, user.orgId, async (tx) => {
     const actor = { organizationId: user.orgId, userId: user.id };
     const [prompts, assignments, projects, users, teams] = await Promise.all([
       listPrompts(tx, actor),
@@ -82,6 +82,7 @@ export default async function PromptsPage({
     return {
       rows: filtered.sort((a, b) => a.name.localeCompare(b.name)),
       projectOptions: projects.map((p) => ({ id: p.id, name: p.name })).sort((a, b) => a.name.localeCompare(b.name)),
+      existingNames: resolved.map((r) => r.name),
     };
   });
 
@@ -90,6 +91,7 @@ export default async function PromptsPage({
       rows={rows}
       projectOptions={projectOptions}
       filters={{ q, project: projectFilter, owner: ownerFilter }}
+      existingNames={existingNames}
     />
   );
 }
