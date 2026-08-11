@@ -19,8 +19,8 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
   if (state.status === "blocked") {
     return (
       <TerminalState
-        heading="This instance is already set up"
-        message="First-run setup can only run once. Sign in with an existing admin account to continue."
+        heading="This instance already has an organization"
+        message="Self-hosted instances support exactly one organization for their entire lifetime, and this one already has an admin account. Sign in with that account to continue — registering again from here isn't possible."
         buttonLabel="Go to sign in"
         href="/login"
         tone="accent"
