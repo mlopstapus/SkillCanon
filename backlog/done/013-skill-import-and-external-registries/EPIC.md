@@ -1,7 +1,7 @@
 # Epic 013: Skill Import & External Registries
 
 **Priority:** 13
-**Status:** not-started
+**Status:** done
 **Goal:** Make onboarding an existing project (or team) into SkillCanon fast by loading skills in bulk, from two different directions — pulling in publicly-published skills from outside the org, and pulling in skills a team already has sitting in their own repo.
 
 ## Overview
@@ -14,7 +14,7 @@ Both features become natural once a skill is a real file bundle (markdown + temp
 ## Features
 
 - [x] [001 - External Skill Registry Import](archive/001-external-skill-registry-import.md)
-- [ ] [002 - Existing Repo Skill Upload](002-existing-repo-skill-upload.md)
+- [x] [002 - Existing Repo Skill Upload](archive/002-existing-repo-skill-upload.md)
 
 *Completed features are moved to `archive/` and checked off here.*
 

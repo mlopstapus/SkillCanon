@@ -186,3 +186,15 @@ export {
   InvalidExternalSourceError,
   MAX_EXTERNAL_SKILLS_PER_SOURCE,
 } from "./domain/external-skill-source";
+
+// ---------------------------------------------------------------------------
+// Local Folder Skill Upload (013-skill-import-and-external-registries/002,
+// spec 037-local-folder-skill-upload)
+// ---------------------------------------------------------------------------
+export { scanLocalSkillFolders } from "./domain/local-skill-source";
+export type {
+  LocalSkillCandidate,
+  LocalSkillFileEntry,
+  LocalSkillInvalidFolder,
+  LocalSkillScanResult,
+} from "./domain/local-skill-source";
