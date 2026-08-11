@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Standard per-job step sequence for any job that needs pnpm/Node (lint, typecheck,
+# test, build — not docker-build, which builds entirely inside the Docker build
+# context): actions/checkout, pnpm/action-setup (version read from package.json's
+# packageManager field), actions/setup-node (node-version read from package.json's
+# engines.node field, with pnpm store caching), then `pnpm install --frozen-lockfile`.
+# No `services:` Postgres block is used anywhere in this file — the test job's
+# Testcontainers-backed tests self-provision an ephemeral Postgres container per
+# test file via the existing startTestDb() helper; the runner only needs Docker,
+# which ubuntu-latest ships with by default. See specs/004-ci-pipeline/research.md
+# Decision 2.
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build .
+
+  # Single required check for main's branch protection (contracts/required-check.md).
+  # Constituent jobs above may be renamed/split/added without touching branch
+  # protection settings, as long as this job's `needs:` list is kept in sync.
+  ci-gate:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, build, docker-build]
+    steps:
+      - run: echo "ci-gate passed"
