@@ -1,16 +1,11 @@
-legacy
 node_modules
 .next
 dist
 build
 coverage
-.venv
-__pycache__
-*.pyc
 .git
 Dockerfile*
 .dockerignore
-.pytest_cache
 .pnpm-store
 *.tsbuildinfo
 .env*
