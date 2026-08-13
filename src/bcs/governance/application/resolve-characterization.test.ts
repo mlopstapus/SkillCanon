@@ -2,10 +2,9 @@
  * Characterization test (005-governance/003-hierarchical-resolution-engine):
  * asserts the TypeScript `resolveEffectivePolicies`/`resolveAllPolicies`/
  * `resolveEffectiveObjectives`/`resolveAllObjectives` produce output
- * matching the REAL legacy `resolve_effective`/`resolve_all_policies`
- * (`legacy/backend/src/skillcanon_server/services/policy_service.py`) and
- * `resolve_effective`/`resolve_all_objectives`
- * (`.../services/objective_service.py`) for the same fixture scenarios.
+ * matching the real legacy `resolve_effective`/`resolve_all_policies` and
+ * `resolve_effective`/`resolve_all_objectives` (Python `policy_service.py`/
+ * `objective_service.py`) for the same fixture scenarios.
  *
  * Scope note (PDR-016): legacy policy resolution accepts an optional
  * `project_id` that adds an independent project-scoped policy layer; the
@@ -16,13 +15,14 @@
  * documented divergence — not a silently-dropped case. `Objective` kept its
  * `projectId` scope unchanged, so the objective scenarios do exercise it.
  *
- * The legacy side is never re-run from this test (no Python/`uv` dependency
- * at `vitest` time) — `legacy/backend/scratch/governance_characterization_harness.py`
- * is run once via `uv run` to *record* its output to
- * `governance_characterization_output.json` in the same directory, and this
- * test reads that recorded JSON. Literal fixture values (team names, policy
- * names/priorities/content, objective titles) are hand-mirrored exactly
- * between the two sides — see the harness's own module docstring.
+ * `./resolve-characterization.fixture.json` is a frozen, one-time recording
+ * of the real legacy service's output for these fixture scenarios — it was
+ * captured before `legacy/backend/` was deleted (the TypeScript rewrite was
+ * complete and every consuming epic archived) and moved here so this parity
+ * check keeps working without the Python source it was originally recorded
+ * against. It can no longer be regenerated (the recording harness required
+ * the legacy Python service code, which no longer exists) — treat it as a
+ * permanent, frozen fixture, not a cache to invalidate/refresh.
  */
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
@@ -50,7 +50,7 @@ import {
 } from "./objective-test-helpers";
 
 const HARNESS_OUTPUT_PATH = fileURLToPath(
-  new URL("../../../../legacy/backend/scratch/governance_characterization_output.json", import.meta.url),
+  new URL("./resolve-characterization.fixture.json", import.meta.url),
 );
 
 interface HarnessPolicy {

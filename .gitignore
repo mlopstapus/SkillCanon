@@ -1,17 +1,6 @@
-# Python
-__pycache__/
 dev-credentials.csv
-*.py[codz]
-*$py.class
-*.so
-*.egg-info/
-*.egg
 dist/
 build/
-
-# Legacy backend scripts (except the Docker entrypoint)
-legacy/backend/scripts/*
-!legacy/backend/scripts/start.sh
 
 # Node.js / Next.js scaffold
 node_modules/
@@ -20,35 +9,14 @@ next-env.d.ts
 *.tsbuildinfo
 .pnpm-store/
 
-# Virtual environments
-.venv
-venv/
-env/
-
 # Environment files
 .env
 .env*
 !.env.example
 .envrc
 
-# Test / coverage
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-
 # Logs
 *.log
-
-# Distribution
-*.whl
-
-# Type checkers
-.mypy_cache/
-
-# Linting
-.ruff_cache/
 
 # TLS certificates (e.g. extracted from OpenShift CRC)
 *.crt

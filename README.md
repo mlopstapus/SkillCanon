@@ -1,190 +1,100 @@
 # SkillCanon
 
-An open-source, self-hosted prompt registry with **hierarchical governance**, distributed via [MCP (Model Context Protocol)](https://modelcontextprotocol.io/).
+An open-source, self-hosted skill/prompt registry with **hierarchical governance**, distributed via REST, [MCP](https://modelcontextprotocol.io/), and a CLI.
 
-Define prompts once, distribute them to every developer's AI tool (Claude, Windsurf, Copilot) as `sh-*` MCP tools. Enforce organizational policies and objectives automatically during prompt expansion. SkillCanon never calls an LLM — it serves expanded prompts, and the IDE's own LLM does the work.
-
-> **In progress:** SkillCanon is being rewritten as a single Next.js/TypeScript application (see `context/architecture.md`). The functionality below is fully implemented today in the preserved `legacy/backend/` and `legacy/frontend/`, but `docker compose up -d` now builds and runs the new unified scaffold (`app`) plus Postgres (`database`) instead — the new scaffold has no business logic yet, so run the legacy backend/frontend manually (see Quickstart below) during the transition.
+Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work.
 
 ## Key Features
 
-- **Prompt Registry** — versioned Jinja2 templates with input schemas, tags, and deprecation
-- **MCP Distribution** — every prompt becomes an `sh-{name}` tool accessible from any MCP-compatible IDE
+- **Skill Registry** — versioned skills authored as a `SKILL.md` file plus optional supporting files (Nunjucks-templated), with tags, deprecation, sharing (subscribe/fork), and multi-step **skill chains**
+- **Distribution** — REST API, an MCP server, and the `skillcanon` CLI (syncs a repo's local skill files with a project's governed roster and resolves skills live at invocation time)
 - **Hierarchical Teams** — recursive team tree with users, enabling org-wide governance
-- **Policy Enforcement** — policies (prepend/append/inject) are automatically applied during prompt expansion
-- **Objective Tracking** — team and user objectives are surfaced alongside expanded prompts
+- **Policy Enforcement** — policies (`prepend`/`append`/`inject`/`validate`) are automatically applied during skill expansion
+- **Objective Tracking** — team, user, and project objectives are surfaced alongside expanded skills
 - **Two-Layer Inheritance** — inherited (immutable from parent teams) + local (mutable at your level)
-- **Projects** — team-owned with cross-team members, layering additional policies/objectives
-- **User-Scoped API Keys** — authentication tied to users, not projects
-- **Workflows** — multi-step prompt pipelines
-- **Admin Dashboard** — Next.js frontend for managing teams, prompts, policies, and more
+- **Projects** — team-owned, with cross-team members and required/optional skill assignments
+- **User-Scoped API Keys** — authentication tied to users, usable for both REST and MCP
+- **Skill Import** — bulk-import skills from a public GitHub source, or from a local folder already on disk (e.g. a repo's `.claude/skills/`)
+- **Audit Log** — every mutation across the product is recorded to an immutable audit trail
+- **Admin Dashboard** — Next.js web UI for managing teams, skills, policies, projects, and more
 
 ## Quickstart (docker-compose)
 
 ```bash
-git clone <repo> && cd skillcanon
+git clone https://github.com/mlopstapus/SkillCanon.git && cd SkillCanon
 
-# Start Postgres
-docker compose up -d database
-
-# Install backend dependencies
-cd legacy/backend
-uv venv --python 3.12 .venv && source .venv/bin/activate
-uv pip install -e ".[dev]"
-
-# Run migrations
-alembic upgrade head
-
-# Start the server
-uvicorn src.skillcanon_server.main:app --reload --port 8000
+docker compose up -d
 ```
 
-- **REST API:** http://localhost:8000/api/v1/prompts
-- **MCP endpoint:** http://localhost:8000/mcp/
-- **OpenAPI docs:** http://localhost:8000/docs
-- **Health check:** http://localhost:8000/health
-- **Frontend:** http://localhost:3000 (run `cd legacy/frontend && npm run dev`)
+That builds and starts the whole self-hosted stack — the unified Next.js app (`app`, port 3000) and Postgres (`database`, port 5432). Postgres starts with no pre-baked schema; migrations run automatically as part of the app's own startup path via Drizzle.
 
-## Deploy with Helm
+- **Web app:** http://localhost:3000
+- First visit redirects to first-run setup, which creates the initial organization, admin user, and team.
 
-The chart is published to GHCR as an OCI artifact — no git clone needed:
+### Local dev (without Docker for the app)
 
 ```bash
-# Install the full stack (backend + frontend + database)
-helm install sh oci://ghcr.io/mlopstapus/charts/skillcanon --version 0.1.1
-
-# Or from a local clone
-helm install sh ./charts/skillcanon
+pnpm install
+docker compose up -d database   # Postgres only
+pnpm db:migrate
+pnpm dev
 ```
 
-Override defaults as needed:
-
-```bash
-helm install sh oci://ghcr.io/mlopstapus/charts/skillcanon --version 0.1.1 \
-  --set postgresql.password=<strong-password> \
-  --set backend.authToken=<your-auth-token> \
-  --set frontend.route.enabled=true
-```
-
-See [`charts/skillcanon/values.yaml`](charts/skillcanon/values.yaml) for all configuration options.
-
-For OpenShift deployment (S2I builds + Helm), see [Deploy to OpenShift](docs/deploy-openshift.md).
-
-### Rollout after a merge (OpenShift)
-
-```bash
-./scripts/rollout.sh              # rebuild all S2I images + cycle all deployments
-./scripts/rollout.sh backend      # backend only
-./scripts/rollout.sh --no-build   # skip builds, just restart pods
-```
+Requires Node `>=24` and `pnpm`. See `CLAUDE.md` for the full set of dev/lint/typecheck/test commands.
 
 ## Connect Your AI Tool
 
-SkillCanon uses API keys for authentication. When you connect with an API key, your team's **policies and objectives are automatically injected** into the first tool response of each session — no manual setup needed.
+SkillCanon uses API keys for authentication, scoped to a user. Every request made with a key — REST or MCP — resolves that user's effective policies and objectives automatically.
 
 ### Step 1: Get Your API Key
 
-If an admin has already set up the SkillCanon instance, ask them for your user account. Then generate an API key:
+Sign in to the web app and go to **Settings → API keys** (`/settings/api-keys`) to issue one. The key is shown once, in the form `sk_...` — save it immediately.
+
+### Step 2: Use it
+
+**Via the `skillcanon` CLI** (`cli/` — a standalone package, published separately):
 
 ```bash
-# Via the admin dashboard at http://localhost:3000/settings/api-keys
-# Or via the REST API:
-curl -X POST http://localhost:8000/api/v1/api-keys \
-  -H "Authorization: Bearer <your-jwt-token>" \
+npx skillcanon init <project-key> <api-key>   # one-time: links this repo to a SkillCanon project
+npx skillcanon sync                            # pulls the project's governed skills into .claude/skills/
+npx skillcanon run <slug>                      # resolves and prints one skill's current governed content
+```
+
+`init` also wires a Claude Code session-start hook, so a linked repo's skills stay in sync automatically.
+
+**Via REST:**
+
+```bash
+curl -s -X POST https://your-host/api/skills/release-notes/expand \
+  -H "Authorization: Bearer sk_YOUR_API_KEY_HERE" \
   -H "Content-Type: application/json" \
-  -d '{"name": "my-ide", "scopes": ["read", "expand"]}'
+  -d '{"projectId": "<project-uuid>"}'
 ```
 
-The response includes a `raw_key` (e.g., `sh_a3f1...`). **Save it — it's shown only once.**
+Response:
 
-### Step 2: Configure Your IDE
+```json
+{
+  "content": "the resolved skill markdown, with policy enforcement applied",
+  "appliedPolicies": ["Always include unit tests"],
+  "objectives": ["Ship the Q3 roadmap"]
+}
+```
 
-#### Windsurf
-
-Open MCP settings (⌘+Shift+P → "MCP: Configure MCP Servers") and add:
+**Via MCP** — point your MCP-compatible client at `/mcp` with the same bearer key:
 
 ```json
 {
   "mcpServers": {
     "skillcanon": {
-      "serverUrl": "http://localhost:8000/mcp/",
-      "headers": {
-        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
-      }
+      "url": "https://your-host/mcp",
+      "headers": { "Authorization": "Bearer sk_YOUR_API_KEY_HERE" }
     }
   }
 }
 ```
 
-#### Claude Code
-
-Add to `~/.claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "skillcanon": {
-      "transport": "sse",
-      "url": "http://localhost:8000/mcp/",
-      "headers": {
-        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
-      }
-    }
-  }
-}
-```
-
-#### GitHub Copilot
-
-Add to your MCP configuration:
-
-```json
-{
-  "mcpServers": {
-    "skillcanon": {
-      "url": "http://localhost:8000/mcp/",
-      "headers": {
-        "Authorization": "Bearer sh_YOUR_API_KEY_HERE"
-      }
-    }
-  }
-}
-```
-
-### Step 3: Use It
-
-Once connected, the **first tool call** in each session automatically receives your team's effective policies and objectives as context. Every prompt expansion also applies policy enforcement (prepend/append/inject) into the template itself. You don't need to do anything extra — just invoke tools as normal.
-
-> **Without an API key:** Tools still work, but you won't get automatic policy/objective injection. You can still pass `user_id` manually to `sh-context`.
-
-Once connected, you get these tools automatically:
-
-**Entrypoints** — start here:
-
-| Tool | Description |
-|------|-------------|
-| `sh-new` | Start a new feature or task — plans, implements, tests, and iterates with user feedback |
-| `sh-finish` | Finalize work — run tests, document, commit, review, and improve prompts |
-
-**Building blocks** — used by the entrypoints, or individually for targeted work:
-
-| Tool | Description |
-|------|-------------|
-| `sh-plan` | Generate a structured implementation plan |
-| `sh-feature` | Implement a new feature |
-| `sh-iterate` | Incrementally improve existing code based on feedback |
-| `sh-fix` | Diagnose and fix a bug or error |
-| `sh-refactor` | Restructure code without changing behavior |
-| `sh-test` | Generate tests for code |
-| `sh-review` | Perform a thorough code review |
-| `sh-document` | Generate documentation |
-| `sh-commit` | Commit changes to the repository |
-| `sh-ralph` | Iteratively improve SkillCanon prompts based on session takeaways |
-| `sh-list` | List all available prompts |
-| `sh-search` | Search prompts by name or tag |
-| `sh-context` | Show effective policies and objectives for the current user |
-
-All prompt tools accept an optional `project` parameter (UUID) to layer project-specific policies and objectives on top of the team hierarchy.
+Available tools: `sh-list` (list skills), `sh-search` (search by name/tag), `sh-context` (show effective policies/objectives for the caller), `sh-run` (run a skill by name).
 
 ## Governance Model
 
@@ -200,135 +110,53 @@ Org (root team)
     └── dave (user)
 ```
 
-**Policies** cascade down the tree. When Alice expands a prompt:
+**Policies** cascade down the tree. When Alice expands a skill:
 1. Org policies → inherited (immutable)
 2. Engineering policies → inherited (immutable)
 3. MLOps policies → local (mutable)
 4. If a project is specified → project policies added to local
 
-**Objectives** follow the same pattern — inherited from above, appendable at your level.
+**Objectives** follow the same pattern — inherited from above, appendable at your level, and may also be scoped directly to a project.
 
-The expand response includes `applied_policies` and `objectives` so the AI tool (and user) can see exactly what governance was applied.
+Every expansion response includes `appliedPolicies` and `objectives` so the caller (and user) can see exactly what governance was applied.
 
-## API Examples
+## Skill Composition
 
-**Create a team and user:**
+A skill's `SKILL.md` can include another skill's content at expansion time via `{{ include_prompt('other-skill') }}` in its template. Nested includes are supported (max depth 3, to prevent infinite recursion); a missing include resolves to a safe error marker rather than failing the whole expansion.
 
-```bash
-# Create a team
-curl -X POST http://localhost:8000/api/v1/teams \
-  -H "Content-Type: application/json" \
-  -d '{"name": "Engineering", "slug": "engineering"}'
+## Skill Chains
 
-# Create a user in that team
-curl -X POST http://localhost:8000/api/v1/users \
-  -H "Content-Type: application/json" \
-  -d '{"username": "alice", "team_id": "<team-id>"}'
-```
-
-**Create a policy:**
-
-```bash
-curl -X POST http://localhost:8000/api/v1/policies \
-  -H "Content-Type: application/json" \
-  -d '{
-    "team_id": "<team-id>",
-    "name": "always-test",
-    "enforcement_type": "append",
-    "content": "Always include unit tests for new code.",
-    "priority": 10
-  }'
-```
-
-**Create a prompt:**
-
-```bash
-curl -X POST http://localhost:8000/api/v1/prompts \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "my-prompt",
-    "description": "A custom prompt",
-    "user_id": "<user-id>",
-    "version": {
-      "version": "1.0.0",
-      "system_template": "You are a helpful assistant.",
-      "user_template": "Help me with: {{ input }}",
-      "tags": ["general"]
-    }
-  }'
-```
-
-**Expand a prompt (with policy enforcement):**
-
-```bash
-curl -X POST http://localhost:8000/api/v1/expand/my-prompt \
-  -H "Content-Type: application/json" \
-  -d '{"input": {"input": "building a REST API"}}'
-```
-
-Response includes `applied_policies` and `objectives` alongside the expanded messages.
-
-**View effective policies for a user:**
-
-```bash
-curl "http://localhost:8000/api/v1/policies/effective?user_id=<user-id>"
-```
-
-Returns `{ "inherited": [...], "local": [...] }`.
-
-## How It Works
-
-1. Admin creates teams, users, policies, and objectives via REST API or the admin dashboard
-2. Admin creates prompts via the admin dashboard or REST API
-3. SkillCanon dynamically registers each prompt as an `sh-{name}` MCP tool
-4. Developers connect their AI tool to SkillCanon's MCP endpoint
-5. Developer invokes `sh-plan build a feature store`
-6. SkillCanon resolves the user's effective policies and objectives from the team chain
-7. SkillCanon applies policy enforcement (prepend/append/inject) to the templates
-8. SkillCanon expands Jinja2 templates → returns `system_message` + `user_message` + `applied_policies` + `objectives`
-9. The IDE's own LLM uses the returned prompt to generate the response
-
-## Prompt Composition
-
-Prompts can include other prompts using `include_prompt()` in their Jinja2 templates. This lets a prompt pull in context from other prompts at expansion time.
-
-```jinja2
-Plan this feature: {{ input }}
-
-Consider the review perspective:
-{{ include_prompt('review') }}
-```
-
-When expanded, `include_prompt('review')` fetches the `review` prompt, renders its system + user templates with the same input variables, and inlines the result.
-
-- **Nested includes** are supported (A includes B includes C)
-- **Max depth of 3** prevents infinite recursion
-- **Missing prompts** return a safe error marker instead of failing
+A skill version can be a **chain** (multiple steps) instead of a single template. A caller starts a run (`POST /api/skills/[name]/chain-runs`), resolves and reports on each step in turn (`POST /api/chain-runs/[runId]/advance`), and the run tracks progress server-side. SkillCanon never executes a step or observes a model's real output — the web UI's Skill Chains view is read-only run history; driving a chain is always the caller's job.
 
 ## Running Tests
 
 ```bash
-cd legacy/backend
-uv run pytest tests/ -v
+pnpm exec vitest run --fileParallelism=false --testTimeout=30000
 ```
 
-162 tests covering prompt CRUD, expansion, policy enforcement, team hierarchy resolution, objective inheritance, project members, user-scoped API keys, workflows, and sharing.
+See `CLAUDE.md` for the full test-command reference (a faster scoped subset, the CLI's own separate test suite, etc.) — the full suite is Testcontainers-backed (spins up real ephemeral Postgres instances) and takes roughly 15–20 minutes.
 
 ## Tech Stack
 
-- **Python 3.12+**, FastAPI, SQLAlchemy 2.0 (async), Alembic
-- **PostgreSQL** for storage
-- **Jinja2** (sandboxed) for template expansion
-- **MCP Python SDK** for MCP server (Streamable HTTP transport)
-- **Next.js 14**, TailwindCSS, shadcn/ui for the admin dashboard
-- **Helm 3** for Kubernetes deployment
-- **GitHub Actions** for CI (lint, test, build, helm lint)
+- **Next.js 16** (App Router), **React 19**, **TypeScript**
+- **PostgreSQL** via **Drizzle ORM**, with Postgres Row-Level Security as a defense-in-depth tenant-isolation layer
+- **Nunjucks** for skill template rendering
+- **MCP SDK** for the MCP server (Streamable HTTP transport)
+- **Zod** for request/tool input validation, **jose** for JWT, **bcryptjs** for password hashing
+- **pnpm** for package management, **Docker Compose** for local dev and self-hosting
+- **Vitest** + Testcontainers for integration testing
+- **GitHub Actions** for CI (lint, typecheck, test, build, Docker build)
+
+## Deploy
+
+**Docker Compose** (above) is the current, working self-hosted deployment path.
+
+A Helm chart exists at [`charts/spechub`](charts/spechub) but describes an older split backend/frontend/database deployment shape that predates the unified app and has not yet been updated to match it — don't use it to deploy the current app until it's reworked to deploy the single unified image. The same applies to `scripts/rollout.sh`. CI publishes the current unified image to `ghcr.io/mlopstapus/skillcanon` on every merge to `main`.
 
 ## Documentation
 
 - [Architecture & Design](docs/architecture.md)
-- [Deploy to OpenShift](docs/deploy-openshift.md)
-- [Deploy to OpenShift CRC](docs/deploy-openshift-crc.md)
+- `CLAUDE.md` — commands, conventions, and accumulated project-specific notes
 
 ## License
 
