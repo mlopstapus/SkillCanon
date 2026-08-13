@@ -24,11 +24,14 @@
  * nested-inclusion depth handling, missing references, cycles, and
  * deprecated/unpublished rejection.
  *
- * The legacy side is never re-run from this test (no Python/`uv` dependency
- * at `vitest` time) — `legacy/backend/scratch/expand_characterization_harness.py`
- * (T012) is run once via `uv run` to *record* its output to
- * `expand_characterization_output.json` in the same directory, and this test
- * reads that recorded JSON file.
+ * `./expand-characterization.fixture.json` is a frozen, one-time recording
+ * of the real legacy service's output for these fixture scenarios — it was
+ * captured before `legacy/backend/` was deleted (the TypeScript rewrite was
+ * complete and every consuming epic archived) and moved here so this parity
+ * check keeps working without the Python source it was originally recorded
+ * against. It can no longer be regenerated (the recording harness required
+ * the legacy Python service code, which no longer exists) — treat it as a
+ * permanent, frozen fixture, not a cache to invalidate/refresh.
  */
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -46,7 +49,7 @@ import {
 
 const HARNESS_OUTPUT_PATH = fileURLToPath(
   new URL(
-    "../../../../legacy/backend/scratch/expand_characterization_output.json",
+    "./expand-characterization.fixture.json",
     import.meta.url,
   ),
 );
