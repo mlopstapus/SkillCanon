@@ -12,7 +12,9 @@ import type {
 } from "./actions";
 import {
   readLocalSkillFolderEntriesFromDataTransfer,
+  readLocalSkillFolderEntriesFromDirectoryHandle,
   readLocalSkillFolderEntriesFromFileList,
+  supportsFileSystemAccessDirectoryPicker,
   supportsFolderSelection,
 } from "./local-folder-reader";
 
@@ -99,7 +101,7 @@ export function NewPromptDrawer({
   const folderInputRef = useRef<HTMLInputElement>(null);
   const [folderSupported, setFolderSupported] = useState(true);
   const [isDragActive, setIsDragActive] = useState(false);
-  const [localScanState, setLocalScanState] = useState<"idle" | "scanning" | "scanned">("idle");
+  const [localScanState, setLocalScanState] = useState<"idle" | "reading" | "scanning" | "scanned">("idle");
   const [localScanError, setLocalScanError] = useState<string | null>(null);
   const [localCandidates, setLocalCandidates] = useState<LocalSkillCandidate[]>([]);
   const [localDuplicateNames, setLocalDuplicateNames] = useState<string[]>([]);
@@ -229,6 +231,7 @@ export function NewPromptDrawer({
     const fileList = e.target.files;
     e.target.value = "";
     if (!fileList || fileList.length === 0) return;
+    setLocalScanState("reading");
     const entries = await readLocalSkillFolderEntriesFromFileList(fileList);
     await scanLocalEntries(entries);
   }
@@ -238,7 +241,25 @@ export function NewPromptDrawer({
     setIsDragActive(false);
     const items = e.dataTransfer.items;
     if (!items || items.length === 0) return;
+    setLocalScanState("reading");
     const entries = await readLocalSkillFolderEntriesFromDataTransfer(items);
+    await scanLocalEntries(entries);
+  }
+
+  async function handleBrowseForFolder() {
+    if (!supportsFileSystemAccessDirectoryPicker()) {
+      folderInputRef.current?.click();
+      return;
+    }
+    let handle: FileSystemDirectoryHandle;
+    try {
+      handle = await window.showDirectoryPicker!();
+    } catch (err) {
+      if (err instanceof Error && err.name === "AbortError") return; // user cancelled — not an error
+      throw err;
+    }
+    setLocalScanState("reading");
+    const entries = await readLocalSkillFolderEntriesFromDirectoryHandle(handle);
     await scanLocalEntries(entries);
   }
 
@@ -517,13 +538,18 @@ export function NewPromptDrawer({
               <span className="text-[12.5px] font-semibold text-text">Drag a folder here, or</span>
               <button
                 type="button"
-                onClick={() => folderInputRef.current?.click()}
+                onClick={handleBrowseForFolder}
                 className="rounded-control border border-border-2 bg-panel px-3.5 py-2 text-[12.5px] font-semibold text-text"
               >
                 Choose folder
               </button>
               <span className="text-[11px] text-faint">
-                Scans for SKILL.md files inside — nothing else is read or sent.
+                Scans for SKILL.md files inside — nothing else is read or sent. Large directories like{" "}
+                <code>node_modules</code> are skipped automatically.
+              </span>
+              <span className="text-[11px] text-faint">
+                Don&apos;t see <code>.claude</code> or <code>.agents</code>? Press Cmd+Shift+. (Mac) to reveal
+                hidden folders, or just choose the parent folder.
               </span>
               <input
                 ref={folderInputRef}
@@ -536,6 +562,7 @@ export function NewPromptDrawer({
             </div>
           )}
 
+          {localScanState === "reading" ? <div className="text-[12px] text-dim">Reading folder…</div> : null}
           {localScanState === "scanning" ? <div className="text-[12px] text-dim">Scanning…</div> : null}
 
           {localScanError ? (
