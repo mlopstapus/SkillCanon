@@ -7,7 +7,7 @@
  * convention for browser-API-only wrappers.
  */
 import { describe, expect, it } from "vitest";
-import { candidateDirectoriesForPaths } from "./local-folder-reader";
+import { candidateDirectoriesForPaths, hasSkippedSegment } from "./local-folder-reader";
 
 describe("candidateDirectoriesForPaths", () => {
   it("returns the parent directory of any SKILL.md path", () => {
@@ -34,5 +34,31 @@ describe("candidateDirectoriesForPaths", () => {
     expect(candidateDirectoriesForPaths(paths)).toEqual(
       new Set(["node_modules/some-pkg", ".claude/skills/a", ".agents/skills/b"]),
     );
+  });
+});
+
+describe("hasSkippedSegment", () => {
+  it("flags a path under a noise directory like node_modules", () => {
+    expect(hasSkippedSegment("node_modules/some-pkg/SKILL.md")).toBe(true);
+  });
+
+  it("does not flag a dotfolder skills convention path", () => {
+    expect(hasSkippedSegment(".claude/skills/a/SKILL.md")).toBe(false);
+    expect(hasSkippedSegment(".agents/skills/b/SKILL.md")).toBe(false);
+  });
+
+  it("flags a noise directory nested deeper than the top level", () => {
+    expect(hasSkippedSegment("pkg/.git/hooks/x")).toBe(true);
+    expect(hasSkippedSegment("apps/web/dist/index.js")).toBe(true);
+  });
+
+  it("does not flag the filename itself matching a skipped name", () => {
+    // "build" only matters as a directory segment, not as a bare filename.
+    expect(hasSkippedSegment("scripts/build")).toBe(false);
+  });
+
+  it("does not flag an ordinary path with no noise segments", () => {
+    expect(hasSkippedSegment("src/index.ts")).toBe(false);
+    expect(hasSkippedSegment("SKILL.md")).toBe(false);
   });
 });
