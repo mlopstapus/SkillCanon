@@ -10,6 +10,7 @@ import {
   fetchGithubDirectory,
   fetchGithubFile,
   parseGithubSource,
+  type GithubContentEntry,
   type GithubSourceRef,
 } from "../infrastructure/github-skill-source";
 
@@ -20,22 +21,18 @@ function byteLength(content: string): number {
 }
 
 /**
- * Builds one skill candidate from a folder that's already known to (maybe)
- * contain a `SKILL.md`. Returns `null` when the folder turns out not to
- * qualify (no SKILL.md, or the main file violates the same size limit every
- * skill's content is held to) rather than throwing — a single bad folder in
- * a multi-skill source shouldn't fail the whole fetch (FR-004).
+ * Builds one skill candidate from a folder's already-fetched directory
+ * listing. Returns `null` when the folder turns out not to qualify (no
+ * SKILL.md, or the main file violates the same size limit every skill's
+ * content is held to) rather than throwing — a single bad folder in a
+ * multi-skill source shouldn't fail the whole fetch (FR-004).
  */
-async function buildCandidate(
+async function buildCandidateFromEntries(
   ref: GithubSourceRef,
-  folderPath: string,
+  entries: GithubContentEntry[],
   fallbackName: string,
   sourceLabel: string,
 ): Promise<ExternalSkillCandidate | null> {
-  const entries = await fetchGithubDirectory({ ...ref, path: folderPath }, sourceLabel);
-  if (!entries) {
-    return null;
-  }
   const skillMdEntry = entries.find((e) => e.type === "file" && e.name === "SKILL.md");
   if (!skillMdEntry) {
     return null;
@@ -66,15 +63,100 @@ async function buildCandidate(
   };
 }
 
+/** Fetches a folder's directory listing, then delegates to {@link buildCandidateFromEntries}. */
+async function buildCandidate(
+  ref: GithubSourceRef,
+  folderPath: string,
+  fallbackName: string,
+  sourceLabel: string,
+): Promise<ExternalSkillCandidate | null> {
+  const entries = await fetchGithubDirectory({ ...ref, path: folderPath }, sourceLabel);
+  if (!entries) {
+    return null;
+  }
+  return buildCandidateFromEntries(ref, entries, fallbackName, sourceLabel);
+}
+
+/**
+ * Looks for a directory literally named "skills" — either as an immediate
+ * child of the given root (the original FR-004 shape), or nested one level
+ * under a ".claude" directory. `.claude/skills/<name>/SKILL.md` is the
+ * standard Claude Code skills location (and the same convention this
+ * product's own `skillcanon sync` CLI command writes into locally), so a
+ * source using it should be discovered without the caller needing to supply
+ * the subpath manually. Returns the resolved directory's repo path, or
+ * `null` if neither shape is present.
+ */
+async function resolveSkillsDirectory(
+  ref: GithubSourceRef,
+  rootEntries: GithubContentEntry[],
+  sourceLabel: string,
+): Promise<string | null> {
+  const rootSkillsDir = rootEntries.find((e) => e.type === "dir" && e.name === "skills");
+  if (rootSkillsDir) {
+    return rootSkillsDir.path;
+  }
+  const claudeDir = rootEntries.find((e) => e.type === "dir" && e.name === ".claude");
+  if (!claudeDir) {
+    return null;
+  }
+  const claudeEntries = await fetchGithubDirectory({ ...ref, path: claudeDir.path }, sourceLabel);
+  const claudeSkillsDir = claudeEntries?.find((e) => e.type === "dir" && e.name === "skills");
+  return claudeSkillsDir?.path ?? null;
+}
+
+/**
+ * Scans a set of directories for skill folders. A directory that directly
+ * contains a SKILL.md becomes a candidate. A directory that doesn't, but
+ * has subdirectories of its own, is treated as a category folder (this
+ * repo's own `universal/`/`configurable/`/`components/` layout) and — only
+ * when `allowNesting` is set — its immediate children are checked too, one
+ * level deeper, with nesting disabled for that inner call so the scan never
+ * goes more than two levels below the original root. Bounded by `scanned`
+ * (total directory fetches, capped at MAX_DIRECTORIES_SCANNED) and
+ * `candidates.length` (capped at MAX_EXTERNAL_SKILLS_PER_SOURCE), mutated
+ * in place across the whole recursive scan.
+ */
+async function scanForCandidates(
+  ref: GithubSourceRef,
+  dirs: GithubContentEntry[],
+  sourceLabel: string,
+  candidates: ExternalSkillCandidate[],
+  scanned: { count: number },
+  allowNesting: boolean,
+): Promise<void> {
+  for (const dir of dirs) {
+    if (candidates.length >= MAX_EXTERNAL_SKILLS_PER_SOURCE || scanned.count >= MAX_DIRECTORIES_SCANNED) {
+      return;
+    }
+    scanned.count += 1;
+    const entries = await fetchGithubDirectory({ ...ref, path: dir.path }, sourceLabel);
+    if (!entries) {
+      continue;
+    }
+    const candidate = await buildCandidateFromEntries(ref, entries, dir.name, sourceLabel);
+    if (candidate) {
+      candidates.push(candidate);
+      continue;
+    }
+    if (allowNesting) {
+      const subdirs = entries.filter((e) => e.type === "dir");
+      await scanForCandidates(ref, subdirs, sourceLabel, candidates, scanned, false);
+    }
+  }
+}
+
 /**
  * Fetches every skill found at a GitHub source (FR-001/FR-002), detecting
- * three layouts in order: a single `SKILL.md` directly at the given path;
- * a `skills/` directory of per-skill subfolders; or, failing both, every
- * top-level subdirectory of the given path that itself contains a
- * `SKILL.md`. Returns full file contents for every candidate found — the
- * caller (the New Skill drawer's Import mode) shows them for selection and
- * later hands the selected ones straight to createPrompt/publishVersion
- * with no further fetch needed.
+ * layouts in order: a single `SKILL.md` directly at the given path; a
+ * `skills/` (or nested `.claude/skills/`) directory of per-skill
+ * subfolders; or, failing both, every top-level subdirectory of the given
+ * path that itself contains a `SKILL.md`, additionally recursing one level
+ * into a subdirectory that doesn't (a category folder, e.g. this repo's own
+ * `universal/`/`configurable/`/`components/` layout). Returns full file
+ * contents for every candidate found — the caller (the New Skill drawer's
+ * Import mode) shows them for selection and later hands the selected ones
+ * straight to createPrompt/publishVersion with no further fetch needed.
  */
 export async function fetchExternalSkillSource(source: string): Promise<ExternalSkillSourceResult> {
   const ref = parseGithubSource(source);
@@ -96,21 +178,18 @@ export async function fetchExternalSkillSource(source: string): Promise<External
       candidates.push(candidate);
     }
   } else {
-    const skillsDir = rootEntries.find((e) => e.type === "dir" && e.name === "skills");
-    const scanEntries = skillsDir
-      ? await fetchGithubDirectory({ ...ref, path: skillsDir.path }, sourceLabel)
+    const skillsDirPath = await resolveSkillsDirectory(ref, rootEntries, sourceLabel);
+    const scanEntries = skillsDirPath
+      ? await fetchGithubDirectory({ ...ref, path: skillsDirPath }, sourceLabel)
       : rootEntries;
 
     const subdirs = (scanEntries ?? []).filter((e) => e.type === "dir").slice(0, MAX_DIRECTORIES_SCANNED);
-    for (const dir of subdirs) {
-      if (candidates.length >= MAX_EXTERNAL_SKILLS_PER_SOURCE) {
-        break;
-      }
-      const candidate = await buildCandidate(ref, dir.path, dir.name, sourceLabel);
-      if (candidate) {
-        candidates.push(candidate);
-      }
-    }
+    const scanned = { count: 0 };
+    // A resolved skills/ (or .claude/skills/) directory's own children are
+    // expected to each be a skill folder directly. Falling back to a bare
+    // scan of the given root (no skills directory found at all) additionally
+    // allows one more level of nesting for a category-folder layout.
+    await scanForCandidates(ref, subdirs, sourceLabel, candidates, scanned, /* allowNesting */ !skillsDirPath);
   }
 
   if (candidates.length === 0) {

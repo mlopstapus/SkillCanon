@@ -38,7 +38,7 @@ export class InvalidExternalSourceError extends Error {
 /** Nothing importable found at an otherwise-reachable source (FR-011). */
 export class ExternalSourceNotFoundError extends Error {
   constructor(source: string) {
-    super(`No skill content found at "${source}". Expected a SKILL.md file at the repository root, under a "skills/" directory, or in a top-level subdirectory.`);
+    super(`No skill content found at "${source}". Expected a SKILL.md file at the repository root, under a "skills/" or ".claude/skills/" directory, or within a top-level subdirectory (or its own immediate subdirectories).`);
     this.name = "ExternalSourceNotFoundError";
   }
 }

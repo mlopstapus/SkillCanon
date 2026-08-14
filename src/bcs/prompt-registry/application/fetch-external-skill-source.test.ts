@@ -124,6 +124,77 @@ describe("fetchExternalSkillSource", () => {
     expect(extracted?.supportingFiles).toEqual([{ name: "extract.py", content: "print('hi')" }]);
   });
 
+  it("discovers skills nested under a .claude/skills/ directory when no root-level skills/ directory exists", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockGithubFs({
+        "": [
+          { name: ".claude", path: ".claude", type: "dir" },
+          { name: "README.md", path: "README.md", type: "file" },
+        ],
+        ".claude": [
+          { name: "skills", path: ".claude/skills", type: "dir" },
+          { name: "settings.json", path: ".claude/settings.json", type: "file" },
+        ],
+        ".claude/skills": [
+          { name: "as-rca", path: ".claude/skills/as-rca", type: "dir" },
+          { name: "as-architect", path: ".claude/skills/as-architect", type: "dir" },
+        ],
+        ".claude/skills/as-rca": [{ name: "SKILL.md", path: ".claude/skills/as-rca/SKILL.md", type: "file" }],
+        ".claude/skills/as-rca/SKILL.md": { content: b64("# RCA"), encoding: "base64" },
+        ".claude/skills/as-architect": [
+          { name: "SKILL.md", path: ".claude/skills/as-architect/SKILL.md", type: "file" },
+        ],
+        ".claude/skills/as-architect/SKILL.md": { content: b64("# Architect"), encoding: "base64" },
+      }),
+    );
+
+    const result = await fetchExternalSkillSource("owner/repo");
+
+    expect(result.skills.map((s) => s.name).sort()).toEqual(["as-architect", "as-rca"]);
+  });
+
+  it("recurses one level into a top-level category folder that has no SKILL.md directly (e.g. universal/<category>/SKILL.md)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockGithubFs({
+        "": [
+          { name: "universal", path: "universal", type: "dir" },
+          { name: "README.md", path: "README.md", type: "file" },
+        ],
+        universal: [
+          { name: "architect", path: "universal/architect", type: "dir" },
+          { name: "rca", path: "universal/rca", type: "dir" },
+        ],
+        "universal/architect": [{ name: "SKILL.md", path: "universal/architect/SKILL.md", type: "file" }],
+        "universal/architect/SKILL.md": { content: b64("# Architect"), encoding: "base64" },
+        "universal/rca": [{ name: "SKILL.md", path: "universal/rca/SKILL.md", type: "file" }],
+        "universal/rca/SKILL.md": { content: b64("# RCA"), encoding: "base64" },
+      }),
+    );
+
+    const result = await fetchExternalSkillSource("owner/repo");
+
+    expect(result.skills.map((s) => s.name).sort()).toEqual(["architect", "rca"]);
+  });
+
+  it("does not recurse a second level deep — a category folder's own non-skill subdirectories are ignored", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockGithubFs({
+        "": [{ name: "universal", path: "universal", type: "dir" }],
+        universal: [{ name: "architect", path: "universal/architect", type: "dir" }],
+        "universal/architect": [{ name: "nested", path: "universal/architect/nested", type: "dir" }],
+        "universal/architect/nested": [
+          { name: "SKILL.md", path: "universal/architect/nested/SKILL.md", type: "file" },
+        ],
+        "universal/architect/nested/SKILL.md": { content: b64("# Too deep"), encoding: "base64" },
+      }),
+    );
+
+    await expect(fetchExternalSkillSource("owner/repo")).rejects.toThrow(ExternalSourceNotFoundError);
+  });
+
   it("throws ExternalSourceNotFoundError when the source is reachable but has no SKILL.md anywhere (FR-011)", async () => {
     vi.stubGlobal(
       "fetch",

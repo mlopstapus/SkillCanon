@@ -396,13 +396,6 @@ export function NewPromptDrawer({
               placeholder="github.com/anthropics/skills or owner/repo"
               className="w-full rounded-control border border-border-2 bg-surface px-3 py-2.5 font-mono text-[13px] text-text outline-none focus:border-a"
             />
-            <div className="mt-2 flex items-center gap-2 rounded-control border border-border bg-bg px-3 py-2.5">
-              <span className="shrink-0 font-mono text-[9.5px] tracking-[0.06em] text-faint">CLI</span>
-              <span className="h-3 w-px shrink-0 bg-border-2" />
-              <span className="font-mono text-[11.5px] break-all text-dim">
-                <span className="text-a-2">npx</span> skills add {source.trim() || "<source>"}
-              </span>
-            </div>
           </div>
 
           <button
