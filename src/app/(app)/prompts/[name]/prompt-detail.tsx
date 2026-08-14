@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  assignSkillToProjectAction,
   deprecatePromptAction,
   forkSkillForSelfAction,
   getSkillChainRunAction,
@@ -12,10 +11,8 @@ import {
   reactivatePromptAction,
   rollbackPromptAction,
   subscribeSkillAction,
-  unassignSkillFromProjectAction,
   unsubscribeSkillAction,
 } from "../actions";
-import { AssignProjectsDrawer } from "./assign-projects-drawer";
 import { NewVersionDrawer } from "./new-version-drawer";
 import {
   PromptDetailView,
@@ -50,7 +47,6 @@ export function PromptDetail({ data }: PromptDetailProps) {
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [assignOpen, setAssignOpen] = useState(false);
   const [chainRunsPage, setChainRunsPage] = useState(data.chainRuns);
   const [runStepsByRunId, setRunStepsByRunId] = useState<Record<string, ChainRunStepView[] | undefined>>({});
 
@@ -112,7 +108,6 @@ export function PromptDetail({ data }: PromptDetailProps) {
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}
         onOpenShare={() => setShareOpen(true)}
-        onOpenAssignProjects={() => setAssignOpen(true)}
         onFork={async () => {
           await forkSkillForSelfAction(data.id);
           router.push("/prompts");
@@ -180,21 +175,6 @@ export function PromptDetail({ data }: PromptDetailProps) {
               await unsubscribeSkillAction(subscriptionId, data.name);
             } else {
               await subscribeSkillAction(data.id, data.name, { subscriberType: "project", subscriberId: projectId });
-            }
-            router.refresh();
-          }}
-        />
-      ) : null}
-      {assignOpen ? (
-        <AssignProjectsDrawer
-          promptName={data.name}
-          assignments={data.projectAssignment}
-          onClose={() => setAssignOpen(false)}
-          onSetRequirement={async (projectId, requirement) => {
-            if (requirement) {
-              await assignSkillToProjectAction(projectId, data.id, requirement, data.name);
-            } else {
-              await unassignSkillFromProjectAction(projectId, data.id, data.name);
             }
             router.refresh();
           }}

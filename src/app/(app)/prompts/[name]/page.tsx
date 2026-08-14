@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
+  countForksOfSkill,
   expand,
   getPrompt,
   listPrompts,
@@ -32,15 +33,17 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       return null;
     }
 
-    const [versions, users, teams, projects, assignments, subscriptions, accessibleSkills] = await Promise.all([
-      listVersions(tx, actor, name),
-      listUsers(tx, user),
-      listTeams(tx, user.orgId),
-      listProjectsByOrganization(tx, user.orgId),
-      listProjectSkillAssignmentsForOrganization(tx, user.orgId),
-      listSubscriptionsForSkill(tx, user.orgId, prompt.id),
-      listPrompts(tx, actor),
-    ]);
+    const [versions, users, teams, projects, assignments, subscriptions, accessibleSkills, copyCount] =
+      await Promise.all([
+        listVersions(tx, actor, name),
+        listUsers(tx, user),
+        listTeams(tx, user.orgId),
+        listProjectsByOrganization(tx, user.orgId),
+        listProjectSkillAssignmentsForOrganization(tx, user.orgId),
+        listSubscriptionsForSkill(tx, user.orgId, prompt.id),
+        listPrompts(tx, actor),
+        countForksOfSkill(tx, user.orgId, prompt.id),
+      ]);
 
     const userNameById = new Map(users.map((u) => [u.id, u.displayName]));
     const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
@@ -182,10 +185,11 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
           subscriptionId: grantedProjectIds.get(p.id) ?? null,
         })),
       },
-      projectAssignment: projects.map((p) => {
-        const assignment = projectAssociations.find((a) => a.projectId === p.id);
-        return { projectId: p.id, projectName: p.name, requirement: assignment?.requirement ?? null };
-      }),
+      shareSummary: {
+        teamCount: grantedTeamIds.size,
+        subscriberCount: subscriptions.length,
+        copyCount,
+      },
     };
     return result;
   });

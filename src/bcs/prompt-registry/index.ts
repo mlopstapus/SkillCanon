@@ -71,6 +71,7 @@ export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expans
 // ---------------------------------------------------------------------------
 // Skill Sharing — Subscribe & Fork (feature 020-prompt-sharing, PDR-016)
 // ---------------------------------------------------------------------------
+export { countForksOfSkill } from "./application/count-forks-of-skill";
 export { forkSkill } from "./application/fork-skill";
 export { listSkillsByOrganization } from "./application/list-skills-by-organization";
 export { listSubscriptionsForSkill } from "./application/list-subscriptions-for-skill";

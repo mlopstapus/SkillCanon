@@ -42,15 +42,15 @@ Single unified Next.js app at repo root (`src/`) — see plan.md's Project Struc
 
 ### Implementation for User Story 1
 
-- [ ] T001 [US1] Remove the "Projects" toolbar button, `assignOpen` state, `onOpenAssignProjects` prop/callback, and the `AssignProjectsDrawer` render (plus its now-unused `assignSkillToProjectAction`/`unassignSkillFromProjectAction` imports) from `src/app/(app)/prompts/[name]/prompt-detail.tsx`
-- [ ] T002 [US1] Remove the "Projects" button and `onOpenAssignProjects` prop from `src/app/(app)/prompts/[name]/prompt-detail-view.tsx`; remove the `projectAssignment` field from the `PromptDetailData` type in the same file (keep `projectLabels` untouched)
-- [ ] T003 [US1] Remove the `projectAssignment` field construction from the data loader in `src/app/(app)/prompts/[name]/page.tsx` (keep the `projectAssociations` variable and `projectLabels` derivation intact — still used for the read-only badge)
-- [ ] T004 [P] [US1] Delete `src/app/(app)/prompts/[name]/assign-projects-drawer.tsx`
-- [ ] T005 [P] [US1] Delete `src/app/(app)/prompts/[name]/assign-projects-drawer.test.tsx`
-- [ ] T006 [US1] Update the intro banner copy in `src/app/(app)/prompts/[name]/share-drawer.tsx` to: "Members of a shared team can subscribe to get live updates as new versions publish, or make a copy they own and edit independently. Only you can edit the original."
-- [ ] T007 [US1] Normalize the Teams section's grant/revoke button label in `src/app/(app)/prompts/[name]/share-drawer.tsx` from "Share"/"Revoke" to "Grant"/"Revoke", matching the People and Projects sections
-- [ ] T008 [US1] Update `src/app/(app)/prompts/[name]/prompt-detail-view.test.tsx` to remove any assertions on the "Projects" button/`onOpenAssignProjects` prop, add an assertion that no requirement/enforcement control renders, and add an assertion (FR-008 regression check) that "Make a copy", Deprecate/Reactivate, and "New version" still render after the Projects-button removal
-- [ ] T009 [US1] Update `src/app/(app)/prompts/[name]/share-drawer.test.tsx` for the new banner copy (T006) and the normalized Teams label (T007)
+- [X] T001 [US1] Remove the "Projects" toolbar button, `assignOpen` state, `onOpenAssignProjects` prop/callback, and the `AssignProjectsDrawer` render (plus its now-unused `assignSkillToProjectAction`/`unassignSkillFromProjectAction` imports) from `src/app/(app)/prompts/[name]/prompt-detail.tsx`
+- [X] T002 [US1] Remove the "Projects" button and `onOpenAssignProjects` prop from `src/app/(app)/prompts/[name]/prompt-detail-view.tsx`; remove the `projectAssignment` field from the `PromptDetailData` type in the same file (keep `projectLabels` untouched)
+- [X] T003 [US1] Remove the `projectAssignment` field construction from the data loader in `src/app/(app)/prompts/[name]/page.tsx` (keep the `projectAssociations` variable and `projectLabels` derivation intact — still used for the read-only badge)
+- [X] T004 [P] [US1] Delete `src/app/(app)/prompts/[name]/assign-projects-drawer.tsx`
+- [X] T005 [P] [US1] Delete `src/app/(app)/prompts/[name]/assign-projects-drawer.test.tsx`
+- [X] T006 [US1] Update the intro banner copy in `src/app/(app)/prompts/[name]/share-drawer.tsx` to: "Members of a shared team can subscribe to get live updates as new versions publish, or make a copy they own and edit independently. Only you can edit the original."
+- [X] T007 [US1] Normalize the Teams section's grant/revoke button label in `src/app/(app)/prompts/[name]/share-drawer.tsx` from "Share"/"Revoke" to "Grant"/"Revoke", matching the People and Projects sections — turned out to be a no-op: the real code already used a single shared `GrantRow` component with uniform "Grant"/"Revoke" labels across all three sections. The mockup's inconsistency never existed here.
+- [X] T008 [US1] Update `src/app/(app)/prompts/[name]/prompt-detail-view.test.tsx` to remove any assertions on the "Projects" button/`onOpenAssignProjects` prop, add an assertion that no requirement/enforcement control renders, and add an assertion (FR-008 regression check) that "Make a copy", Deprecate/Reactivate, and "New version" still render after the Projects-button removal
+- [X] T009 [US1] Update `src/app/(app)/prompts/[name]/share-drawer.test.tsx` for the new banner copy (T006) and the normalized Teams label (T007)
 
 **Checkpoint**: User Story 1 is fully functional and testable independently — a skill's detail page has one sharing control, with correct copy and consistent labeling.
 
@@ -64,8 +64,8 @@ Single unified Next.js app at repo root (`src/`) — see plan.md's Project Struc
 
 ### Verification for User Story 2
 
-- [ ] T010 [US2] Run the existing test suites for `src/app/(app)/projects/[id]/project-detail.tsx` and `project-detail-view.tsx` (unchanged by this feature) and confirm all pass with zero modifications needed — this is the regression check that US1's removals didn't reach into the project route
-- [ ] T011 [US2] Manually verify quickstart.md's "User Story 2" steps: set/unset a skill's requirement from the project Skills tab, then confirm the skill detail page's `projectLabels` badge reflects it correctly and offers no edit control
+- [X] T010 [US2] Run the existing test suites for `src/app/(app)/projects/[id]/project-detail.tsx` and `project-detail-view.tsx` (unchanged by this feature) and confirm all pass with zero modifications needed — this is the regression check that US1's removals didn't reach into the project route
+- [X] T011 [US2] Manually verify quickstart.md's "User Story 2" steps: set/unset a skill's requirement from the project Skills tab, then confirm the skill detail page's `projectLabels` badge reflects it correctly and offers no edit control
 
 **Checkpoint**: User Stories 1 and 2 both hold — enforcement management is confirmed intact and undisturbed on the project page.
 
@@ -81,18 +81,18 @@ Single unified Next.js app at repo root (`src/`) — see plan.md's Project Struc
 
 > Write this test FIRST, ensure it FAILS before implementing T013–T014
 
-- [ ] T012 [P] [US3] Write `src/bcs/prompt-registry/application/count-forks-of-skill.test.ts` (Testcontainers-backed, mirroring `list-subscriptions-for-skill.test.ts`'s shape): asserts `countForksOfSkill` returns the correct count for a skill with 0, 1, and multiple forks, and is scoped to the calling organization (a same-name fork in a different org is not counted)
+- [X] T012 [P] [US3] Write `src/bcs/prompt-registry/application/count-forks-of-skill.test.ts` (Testcontainers-backed, mirroring `list-subscriptions-for-skill.test.ts`'s shape): asserts `countForksOfSkill` returns the correct count for a skill with 0, 1, and multiple forks, and is scoped to the calling organization (a same-name fork in a different org is not counted)
 
 ### Implementation for User Story 3
 
-- [ ] T013 [US3] Add `countForksOfSkill(tx, organizationId, sourceSkillId)` to `src/bcs/prompt-registry/infrastructure/prompts-repo.ts` (depends on T012 failing first)
-- [ ] T014 [US3] Add the thin application-layer wrapper `src/bcs/prompt-registry/application/count-forks-of-skill.ts` calling the repo function (depends on T013)
-- [ ] T015 [US3] Export `countForksOfSkill` from `src/bcs/prompt-registry/index.ts` (depends on T014)
-- [ ] T016 [P] [US3] Add the `countForksOfSkill` row to `src/bcs/prompt-registry/CONTRACT.md`'s Exposed APIs table, per `contracts/count-forks-of-skill.md`'s drafted entry (depends on T014)
-- [ ] T017 [US3] Wire `countForksOfSkill` into `src/app/(app)/prompts/[name]/page.tsx`'s existing `Promise.all([...])` data-fetch block, alongside the already-fetched `listSubscriptionsForSkill` result (depends on T015)
-- [ ] T018 [US3] Add a new `shareSummary: { teamCount, subscriberCount, copyCount }` field to `PromptDetailData` in `src/app/(app)/prompts/[name]/prompt-detail-view.tsx` (per data-model.md) — there is no pre-existing field to replace; today's pill computes its counts inline in the component body (`totalGrants = data.shareState.teams.filter(...).length + ...`). Remove that inline computation, render the pill from `shareSummary` as "X teams · Y subscribers · Z copies". The pill's *visibility gate* stays computed from `shareState.teams`/`shareState.projects` granted counts, unchanged — `shareSummary` has no "projects granted" field, only the displayed text switches to it. (depends on T017)
-- [ ] T019 [US3] Update `src/app/(app)/prompts/[name]/page.tsx` to populate `shareSummary` from `listSubscriptionsForSkill(...).length` (teamCount unchanged; subscriberCount = total subscriptions) and the new `countForksOfSkill` result (copyCount) (depends on T017, T018)
-- [ ] T020 [US3] Update `src/app/(app)/prompts/[name]/prompt-detail-view.test.tsx` for the new three-metric pill text and its visibility rule (depends on T018)
+- [X] T013 [US3] Add `countForksOfSkill(tx, organizationId, sourceSkillId)` to `src/bcs/prompt-registry/infrastructure/prompts-repo.ts` (depends on T012 failing first)
+- [X] T014 [US3] Add the thin application-layer wrapper `src/bcs/prompt-registry/application/count-forks-of-skill.ts` calling the repo function (depends on T013)
+- [X] T015 [US3] Export `countForksOfSkill` from `src/bcs/prompt-registry/index.ts` (depends on T014)
+- [X] T016 [P] [US3] Add the `countForksOfSkill` row to `src/bcs/prompt-registry/CONTRACT.md`'s Exposed APIs table, per `contracts/count-forks-of-skill.md`'s drafted entry (depends on T014)
+- [X] T017 [US3] Wire `countForksOfSkill` into `src/app/(app)/prompts/[name]/page.tsx`'s existing `Promise.all([...])` data-fetch block, alongside the already-fetched `listSubscriptionsForSkill` result (depends on T015)
+- [X] T018 [US3] Add a new `shareSummary: { teamCount, subscriberCount, copyCount }` field to `PromptDetailData` in `src/app/(app)/prompts/[name]/prompt-detail-view.tsx` (per data-model.md) — there is no pre-existing field to replace; today's pill computes its counts inline in the component body (`totalGrants = data.shareState.teams.filter(...).length + ...`). Remove that inline computation, render the pill from `shareSummary` as "X teams · Y subscribers · Z copies". The pill's *visibility gate* stays computed from `shareState.teams`/`shareState.projects` granted counts, unchanged — `shareSummary` has no "projects granted" field, only the displayed text switches to it. (depends on T017)
+- [X] T019 [US3] Update `src/app/(app)/prompts/[name]/page.tsx` to populate `shareSummary` from `listSubscriptionsForSkill(...).length` (teamCount unchanged; subscriberCount = total subscriptions) and the new `countForksOfSkill` result (copyCount) (depends on T017, T018)
+- [X] T020 [US3] Update `src/app/(app)/prompts/[name]/prompt-detail-view.test.tsx` for the new three-metric pill text and its visibility rule (depends on T018)
 
 **Checkpoint**: All three user stories are independently functional — one sharing control, unaffected project-side enforcement, and an accurate share summary.
 
@@ -100,10 +100,10 @@ Single unified Next.js app at repo root (`src/`) — see plan.md's Project Struc
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T021 [P] Run `pnpm typecheck` and `pnpm lint` — zero errors
-- [ ] T022 [P] Run `pnpm exec vitest run --fileParallelism=false --testTimeout=30000 src/app/\(app\)/prompts src/bcs/prompt-registry` — all green, confirming no regressions elsewhere in either touched area
-- [ ] T023 Run every manual step in `quickstart.md` (all three user stories) against a running local dev stack
-- [ ] T024 Confirm via `git diff --stat` against main that no file under `src/app/(app)/projects/` changed, and that `assign-projects-drawer.tsx`/`.test.tsx` are deleted (not merely emptied)
+- [X] T021 [P] Run `pnpm typecheck` and `pnpm lint` — zero errors
+- [X] T022 [P] Run `pnpm exec vitest run --fileParallelism=false --testTimeout=30000 src/app/\(app\)/prompts src/bcs/prompt-registry` — all green, confirming no regressions elsewhere in either touched area — 66 test files / 313 tests passed
+- [X] T023 Run every manual step in `quickstart.md` (all three user stories) against a running local dev stack — confirmed live via browser: US1 (one Share button, correct banner copy, uniform Grant labels), US2 (project Skills tab renders Required/Optional/Available unaffected), US3 (pill correctly showed "1 teams · 1 subscribers · 0 copies" after granting a team; the nonzero-copy case is covered by the automated Testcontainers test T012 instead of live-forking, since the only available test skill was self-owned and self-forking is correctly rejected)
+- [X] T024 Confirm via `git diff --stat` against main that no file under `src/app/(app)/projects/` changed, and that `assign-projects-drawer.tsx`/`.test.tsx` are deleted (not merely emptied)
 
 ---
 

@@ -48,7 +48,7 @@ const baseData: PromptDetailData = {
   steps: null,
   chainRuns: null,
   shareState: { users: [], teams: [], projects: [] },
-  projectAssignment: [],
+  shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: ["commit-message"],
 };
 
@@ -61,7 +61,6 @@ const baseProps = {
   onOpenVersionHistory: vi.fn(),
   onOpenNewVersion: vi.fn(),
   onOpenShare: vi.fn(),
-  onOpenAssignProjects: vi.fn(),
   onFork: vi.fn(),
   chainRunsPage: null,
   onRunsPageChange: vi.fn(),
@@ -78,6 +77,48 @@ describe("PromptDetailView", () => {
     expect(html).toContain("Support Copilot");
     expect(html).toContain("Deprecate");
     expect(html).not.toContain("Reactivate");
+  });
+
+  it("has no Projects button or enforcement control — Share is the only sharing entry point (038-skill-share-consolidation, FR-001/FR-003)", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
+
+    expect(html).not.toContain(">Projects<");
+    expect(html).not.toContain("Make required");
+    expect(html).not.toContain("Make optional");
+    expect(html).toContain(">Share<");
+  });
+
+  it("still renders Make a copy, Deprecate, and New version after the Projects-button removal (FR-008 regression check)", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
+
+    expect(html).toContain("Make a copy");
+    expect(html).toContain("Deprecate");
+    expect(html).toContain("New version");
+  });
+
+  it("shows the share summary pill with real team/subscriber/copy counts when there's at least one grant", () => {
+    const html = renderToStaticMarkup(
+      <PromptDetailView
+        {...baseProps}
+        data={{
+          ...baseData,
+          shareState: {
+            users: [],
+            teams: [{ id: "t1", name: "Engineering", granted: true, subscriptionId: "sub-1" }],
+            projects: [],
+          },
+          shareSummary: { teamCount: 1, subscriberCount: 3, copyCount: 2 },
+        }}
+      />,
+    );
+
+    expect(html).toContain("Shared with 1 teams · 3 subscribers · 2 copies");
+  });
+
+  it("hides the share summary pill entirely when there are no grants", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
+
+    expect(html).not.toContain("Shared with");
   });
 
   it("shows the deprecated badge and a Reactivate action when the prompt is deprecated", () => {

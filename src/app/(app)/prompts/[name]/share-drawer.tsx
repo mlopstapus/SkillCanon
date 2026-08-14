@@ -61,8 +61,8 @@ export function ShareDrawer({
         </div>
         <div className="flex flex-1 flex-col gap-4.5 overflow-y-auto px-5.5 py-5">
           <div className="rounded-control border border-violet/25 bg-violet-soft p-3 text-[11.5px] leading-relaxed text-dim">
-            Members of a shared team or project can subscribe to get live updates as new versions publish, or make a
-            copy they own and edit independently.
+            Members of a shared team can subscribe to get live updates as new versions publish, or make a copy they
+            own and edit independently. Only you can edit the original.
           </div>
           <input
             value={query}
