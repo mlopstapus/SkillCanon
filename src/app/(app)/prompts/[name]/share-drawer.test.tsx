@@ -28,4 +28,21 @@ describe("ShareDrawer", () => {
     expect(html).toContain("Grant");
     expect(html).toContain("Support Copilot");
   });
+
+  it("shows the updated subscribe/copy banner copy (038-skill-share-consolidation)", () => {
+    const html = renderToStaticMarkup(
+      <ShareDrawer
+        promptName="commit-message"
+        shareState={shareState}
+        onToggleUser={vi.fn()}
+        onToggleTeam={vi.fn()}
+        onToggleProject={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(html).toContain(
+      "Members of a shared team can subscribe to get live updates as new versions publish, or make a copy they own and edit independently. Only you can edit the original.",
+    );
+  });
 });

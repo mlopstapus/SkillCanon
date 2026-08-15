@@ -87,7 +87,14 @@ export interface PromptDetailData {
     teams: Array<{ id: string; name: string; granted: boolean; subscriptionId: string | null }>;
     projects: Array<{ id: string; name: string; granted: boolean; subscriptionId: string | null }>;
   };
-  projectAssignment: Array<{ projectId: string; projectName: string; requirement: "required" | "optional" | null }>;
+  /** Real counts backing the Share drawer's reopen pill (038-skill-share-consolidation). */
+  shareSummary: {
+    teamCount: number;
+    /** Total subscription-row count across every subscriber type (people + teams + projects combined). */
+    subscriberCount: number;
+    /** Count of other org skills forked from this one. */
+    copyCount: number;
+  };
   /** Skills the current user can access — powers the chain step builder's target-skill picker (FR-011). */
   accessibleSkillNames: string[];
 }
@@ -104,7 +111,6 @@ export interface PromptDetailViewProps {
   onOpenVersionHistory: () => void;
   onOpenNewVersion: () => void;
   onOpenShare: () => void;
-  onOpenAssignProjects: () => void;
   onFork: () => void;
   /** Currently-displayed run history page (replaces `data.chainRuns` after a page change). */
   chainRunsPage: PromptDetailData["chainRuns"];
@@ -143,7 +149,6 @@ export function PromptDetailView({
   onOpenVersionHistory,
   onOpenNewVersion,
   onOpenShare,
-  onOpenAssignProjects,
   onFork,
   chainRunsPage,
   onRunsPageChange,
@@ -271,13 +276,6 @@ export function PromptDetailView({
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              onClick={onOpenAssignProjects}
-              className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-dim"
-            >
-              Projects
-            </button>
-            <button
-              type="button"
               onClick={onOpenShare}
               className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-dim"
             >
@@ -323,8 +321,8 @@ export function PromptDetailView({
             onClick={onOpenShare}
             className="mb-3.5 inline-flex items-center gap-1.5 rounded-pill border border-border-2 bg-surface px-3 py-1.5 font-mono text-[11px] text-dim"
           >
-            Shared with {data.shareState.teams.filter((t) => t.granted).length} teams ·{" "}
-            {data.shareState.projects.filter((p) => p.granted).length} projects
+            Shared with {data.shareSummary.teamCount} teams · {data.shareSummary.subscriberCount} subscribers ·{" "}
+            {data.shareSummary.copyCount} copies
           </button>
         ) : null}
         <div className="flex gap-0.5 border-b border-border">

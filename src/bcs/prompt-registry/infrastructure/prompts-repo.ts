@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, or } from "drizzle-orm";
+import { and, asc, count, eq, inArray, or } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { PromptOwnerType } from "../domain/prompt";
 import { prompts, subscriptions } from "./schema";
@@ -47,6 +47,15 @@ export async function findPromptByOrgAndId(tx: Tx, organizationId: string, promp
 
 export async function listPromptsByOrg(tx: Tx, organizationId: string) {
   return tx.select().from(prompts).where(eq(prompts.organizationId, organizationId)).orderBy(asc(prompts.name));
+}
+
+/** Count of skills within the organization forked from `sourceSkillId` (038-skill-share-consolidation). */
+export async function countForksOfSkill(tx: Tx, organizationId: string, sourceSkillId: string): Promise<number> {
+  const [row] = await tx
+    .select({ value: count() })
+    .from(prompts)
+    .where(and(eq(prompts.organizationId, organizationId), eq(prompts.forkedFromSkillId, sourceSkillId)));
+  return row?.value ?? 0;
 }
 
 /**
