@@ -286,8 +286,10 @@ describe("TransferOwnershipDrawer", () => {
         .filter((button) => button.textContent === "Back" || button.textContent === "Cancel")
         .every((button) => button.disabled),
     ).toBe(true);
-    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
-    expect(dialog?.contains(document.activeElement)).toBe(true);
+    const pendingStatus = container.querySelector<HTMLElement>('[role="status"]');
+    expect(pendingStatus?.textContent).toBe("Transferring ownership…");
+    expect(pendingStatus?.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(pendingStatus);
     expect(document.activeElement?.closest(".hidden")).toBeNull();
     const closeButton = container.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
     await act(async () => {

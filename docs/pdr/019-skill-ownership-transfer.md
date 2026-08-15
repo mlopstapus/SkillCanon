@@ -57,5 +57,6 @@ Fork and subscribe remain separate operations for another party gaining an indep
 - `src/shared/api/errors.ts` / `errors.test.ts` — REST error mappings and their public-code/status coverage.
 - `src/app/(app)/prompts/actions.ts` / `actions.transfer-ownership.test.ts` — server action and focused composition-root coverage.
 - `src/app/(app)/prompts/[name]/page.tsx`, `page.test.tsx`, `transfer-ownership-drawer.tsx`, `transfer-ownership-drawer.test.tsx`, `prompt-detail-view.tsx`, `prompt-detail-view.test.tsx`, `prompt-detail.tsx`, and `prompt-detail.test.tsx` — transfer candidates, permission gate, drawer, detail-page wiring, and focused UI coverage.
+- `src/shared/ui/drawer.tsx` / `drawer.test.tsx` — stable close-handler focus management and visible-control focus trapping used by the transfer drawer.
 
 If a later task needs an unplanned support or test file, that task must add it to this list.

@@ -44,6 +44,7 @@ export function TransferOwnershipDrawer({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const pendingStatusRef = useRef<HTMLParagraphElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const wasSelectedRef = useRef(false);
   const normalizedQuery = query.trim().toLowerCase();
@@ -67,6 +68,12 @@ export function TransferOwnershipDrawer({
       searchInputRef.current?.focus();
     }
   }, [selected]);
+
+  useEffect(() => {
+    if (isPending) {
+      pendingStatusRef.current?.focus();
+    }
+  }, [isPending]);
 
   function submit() {
     if (!selected) return;
@@ -183,6 +190,11 @@ export function TransferOwnershipDrawer({
           <div className="rounded-card border border-amber-400/30 bg-amber-400/10 p-3 text-[11.5px] leading-relaxed text-dim">
             The current owner may lose access unless otherwise subscribed.
           </div>
+          {isPending ? (
+            <p ref={pendingStatusRef} role="status" tabIndex={-1} className="text-[12px] text-dim outline-none">
+              Transferring ownership…
+            </p>
+          ) : null}
         </div>
       </div>
       <div className="flex justify-end gap-2.5 border-t border-border px-5.5 py-3.5">
