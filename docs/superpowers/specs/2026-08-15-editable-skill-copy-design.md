@@ -115,6 +115,14 @@ skill can be left in.
   client can open Step 2 against the right skill without a refetch).
 - No changes needed to `publishVersion`/`publishVersionAction` — Step 2
   is just a normal version publish.
+- `src/app/api/skills/[name]/fork/route.ts`: **found during implementation
+  planning** — this REST endpoint passes its request body straight through
+  as `ForkSkillParams`, so its `forkSchema` needs `name`/`description`
+  added too, and its test's request-body fixtures need `name` added
+  (Zod strips unknown keys, so without this the route would 500 on a
+  now-missing-but-required `name`). Not a new capability for REST
+  consumers beyond what `forkSkill` itself now requires — no separate
+  design decision, just keeping the existing consumer in sync.
 
 ## Frontend changes
 
