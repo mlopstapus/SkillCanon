@@ -124,6 +124,23 @@ describe("/api/skills/[name]/transfer", () => {
     expect((await response.json()).error.code).toBe("CROSS_ORG_TRANSFER");
   });
 
+  it("returns 403 before revealing that an unauthorized caller's destination is cross-organization", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const otherOrg = await seedOrgWithAdmin(testDb.authDb);
+    const name = `unauthorized-cross-org-${randomUUID()}`;
+    await seedSkill(seeded, name);
+    const member = await seedMember(seeded);
+    const cookie = await loginAndBuildCookie(testDb.authDb, member.email, member.password);
+
+    const response = await postTransfer(name, cookie, {
+      newOwnerType: "user",
+      newOwnerId: otherOrg.adminUserId,
+    });
+
+    expect(response.status).toBe(403);
+    expect((await response.json()).error.code).toBe("SUBSCRIBER_NOT_AUTHORIZED");
+  });
+
   it("returns 422 CANNOT_TRANSFER_TO_SAME_OWNER for the current owner", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const name = `same-owner-${randomUUID()}`;

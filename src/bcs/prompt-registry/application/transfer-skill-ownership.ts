@@ -23,9 +23,10 @@ import { findPromptByOrgAndId, updatePrompt } from "../infrastructure/prompts-re
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
 
 /**
- * Reassigns an existing skill in place. Destination preflight deliberately
- * occurs before authorization so missing and cross-org destinations use the
- * transfer-specific error contract rather than authorization's generic one.
+ * Reassigns an existing skill in place. A non-admin must first be authorized
+ * for the source owner, preventing destination lookup from revealing identity
+ * membership. Destination validation still precedes destination authorization
+ * so valid source actors receive the transfer-specific error contract.
  */
 export async function transferSkillOwnership(
   db: PostgresJsDatabase<Record<string, never>>,
@@ -43,6 +44,10 @@ export async function transferSkillOwnership(
     throw new CannotTransferToSameOwnerError();
   }
 
+  if (actingUser.role !== "admin") {
+    await assertAuthorizedForOwner(db, actingUser, source.ownerType, source.ownerId);
+  }
+
   try {
     if (params.newOwnerType === "team") {
       await getTeam(db, actingUser.orgId, params.newOwnerId);
@@ -57,7 +62,6 @@ export async function transferSkillOwnership(
   }
 
   if (actingUser.role !== "admin") {
-    await assertAuthorizedForOwner(db, actingUser, source.ownerType, source.ownerId);
     await assertAuthorizedForOwner(db, actingUser, params.newOwnerType, params.newOwnerId);
   }
 
