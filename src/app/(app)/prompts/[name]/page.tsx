@@ -50,6 +50,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
     const ownerLabel =
       (prompt.ownerType === "user" ? userNameById.get(prompt.ownerId) : teamNameById.get(prompt.ownerId)) ??
       prompt.ownerId;
+    const isOwnSkill = prompt.ownerType === "user" && prompt.ownerId === user.id;
 
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
@@ -135,6 +136,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       description: prompt.description ?? "",
       isDeprecated: prompt.isDeprecated,
       ownerLabel,
+      isOwnSkill,
       sourceUrl: prompt.sourceUrl,
       projectLabels,
       activeVersion: activeVersion?.version ?? null,
