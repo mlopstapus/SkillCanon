@@ -73,9 +73,17 @@ git commit -m "feat: add name/description to ForkSkillParams"
 
 This is the core behavior change: `forkSkill` stops copying the source's version/files and stops auto-generating a hash-suffixed name. It creates only the new `Prompt` row (caller-supplied name/description, `forkedFromSkillId` set, `activeVersionId: null`), still enforcing every existing validation rule (org boundary, self-fork rejection, team-admin authorization) plus a new duplicate-name check.
 
+`ForkSkillParams` now requires `name` (Task 1), so every other file in the repo that calls `forkSkill` directly also needs fixing — grepping `forkSkill(` across `src/` turns up 6 more files beyond `fork-skill.test.ts` itself. Five just need a `name` added to an object literal; one (`skill-chain-sharing.test.ts`) has a real behavioral dependency on the old auto-copy behavior and needs restructuring, not just a field addition. All of it is covered below.
+
 **Files:**
 - Modify: `src/bcs/prompt-registry/application/fork-skill.ts`
 - Test: `src/bcs/prompt-registry/application/fork-skill.test.ts`
+- Test: `src/bcs/prompt-registry/application/count-forks-of-skill.test.ts`
+- Test: `src/bcs/prompt-registry/application/personal-to-team-sharing.test.ts`
+- Test: `src/bcs/prompt-registry/application/tenant-isolation.test.ts`
+- Test: `src/bcs/prompt-registry/application/skill-chain-sharing.test.ts`
+- Test: `src/app/api/projects/[projectId]/skills/route.test.ts`
+- Test: `src/app/api/projects/[projectId]/skills/[skillId]/route.test.ts`
 
 - [ ] **Step 1: Rewrite the test file for shell-only behavior**
 
@@ -382,13 +390,136 @@ describe("forkSkill", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [ ] **Step 2: Fix the other 6 call sites across the repo that construct `ForkSkillParams` literals**
+
+`ForkSkillParams` now requires `name` (Task 1) — every other test file that calls `forkSkill` directly needs a `name` added, or it'll fail a NOT NULL constraint once Task 2's Step 4 lands. Grep confirms exactly these 6 files, each with the call site(s) shown:
+
+In `src/bcs/prompt-registry/application/count-forks-of-skill.test.ts`, both calls (around lines 45 and 48) need a unique `name`:
+
+```ts
+      forkSkill(tx, fixture.userB, source.id, { ownerType: "user", ownerId: fixture.userB.id, name: "count-fork-user" }),
+    );
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      forkSkill(tx, fixture.team1Owner, source.id, { ownerType: "team", ownerId: fixture.team1Id, name: "count-fork-team" }),
+```
+
+and the third call (around line 77):
+
+```ts
+      forkSkill(tx, fixtureB.userB, sourceB.id, { ownerType: "user", ownerId: fixtureB.userB.id, name: "count-fork-cross-org" }),
+```
+
+In `src/bcs/prompt-registry/application/personal-to-team-sharing.test.ts` (around line 30):
+
+```ts
+      forkSkill(tx, fixture.team1Owner, original.id, {
+        ownerType: "team",
+        ownerId: fixture.team1Id,
+        name: "personal-to-team-fork",
+      }),
+```
+
+In `src/bcs/prompt-registry/application/tenant-isolation.test.ts` (around line 208):
+
+```ts
+            forkSkill(tx, actingUser, id, { ownerType: "user", ownerId: actingUser.id, name: "tenant-isolation-fork" }),
+```
+
+In `src/app/api/projects/[projectId]/skills/route.test.ts` (around line 61):
+
+```ts
+      const teamSkill = await forkSkill(tx, adminActingUser, userSkill.id, {
+        ownerType: "team",
+        ownerId: seeded.teamId,
+        name: `team-skill-${suffix}`,
+      });
+```
+
+In `src/app/api/projects/[projectId]/skills/[skillId]/route.test.ts` (around line 57), the identical fix (this file has its own separate `seedProjectWithAssignedSkill` helper with the same shape):
+
+```ts
+      const teamSkill = await forkSkill(tx, adminActingUser, userSkill.id, {
+        ownerType: "team",
+        ownerId: seeded.teamId,
+        name: `team-skill-${suffix}`,
+      });
+```
+
+`src/bcs/prompt-registry/application/skill-chain-sharing.test.ts` needs a **behavioral** fix, not just a `name` addition — its "forking a chain creates an independent copy" test currently forks a chain-kind source and immediately asserts the fork is runnable (`startSkillChainRun` succeeds) with zero versions published on the fork, relying on `forkSkill`'s old auto-copy behavior. Since `forkSkill` is now shell-only, the fork needs its own chain version published first — mirroring what the real "Make a copy" flow's Step 2 (New Version drawer) would do. Replace (around lines 108-133):
+
+```ts
+    const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      forkSkill(tx, fixture.userA, source.id, { ownerType: "user", ownerId: fixture.userA.id }),
+    );
+
+    // The fork itself is runnable, carrying over the chain's steps (kind/steps propagation).
+    const forkRun = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      startSkillChainRun(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, fork.name),
+    );
+    expect("step" in forkRun).toBe(true);
+
+    // Publish a different (non-chain) version on the fork — the source is unaffected.
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, {
+        organizationId: fixture.organizationId,
+        promptName: fork.name,
+        version: "2.0.0",
+        mainFile: { content: "no longer a chain on the fork" },
+      }),
+    );
+```
+
+with:
+
+```ts
+    const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      forkSkill(tx, fixture.userA, source.id, {
+        ownerType: "user",
+        ownerId: fixture.userA.id,
+        name: "fork-chain-target",
+      }),
+    );
+
+    // forkSkill no longer copies content (shell-only) — give the fork its
+    // own first version, mirroring the source's chain steps, exactly like
+    // the real "Make a copy" flow's Step 2 (New Version drawer) would.
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, {
+        organizationId: fixture.organizationId,
+        promptName: fork.name,
+        version: "1.0.0",
+        steps: CHAIN_STEPS,
+      }),
+    );
+
+    // The fork is runnable once it has its own chain version.
+    const forkRun = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      startSkillChainRun(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, fork.name),
+    );
+    expect("step" in forkRun).toBe(true);
+
+    // Publish a different (non-chain) version on the fork — the source is unaffected.
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, {
+        organizationId: fixture.organizationId,
+        promptName: fork.name,
+        version: "2.0.0",
+        mainFile: { content: "no longer a chain on the fork" },
+      }),
+    );
+```
+
+- [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `pnpm exec vitest run src/bcs/prompt-registry/application/fork-skill.test.ts`
 
 Expected: FAIL — the first test fails on `expect(fork.name).toBe("fork-target")` (old code still generates a hash-suffixed name) and `expect(fork.activeVersionId).toBeNull()` (old code still copies content); the "rejects forking into a name that already exists" test fails because old `forkSkill` never checks for a duplicate name; the two independence tests fail with a `DuplicatePromptVersionError` (old code already created "v1" for the fork via auto-copy, so this plan's explicit "v1" `publishVersion` call on the fork collides) or a related assertion mismatch.
 
-- [ ] **Step 3: Rewrite `fork-skill.ts` to shell-only behavior**
+Also run: `pnpm exec vitest run src/bcs/prompt-registry/application/count-forks-of-skill.test.ts src/bcs/prompt-registry/application/personal-to-team-sharing.test.ts src/bcs/prompt-registry/application/tenant-isolation.test.ts src/bcs/prompt-registry/application/skill-chain-sharing.test.ts "src/app/api/projects/[projectId]/skills/route.test.ts" "src/app/api/projects/[projectId]/skills/[skillId]/route.test.ts"`
+
+Expected: these should mostly still PASS at this point (adding a `name` field to an object literal doesn't change old `forkSkill`'s behavior, since it never read `name` before), **except** `skill-chain-sharing.test.ts`, which should now FAIL differently — the old `forkSkill` still auto-copies content, so publishing "1.0.0" again on the fork right after forking it will hit `DuplicatePromptVersionError` (the fork already has a "1.0.0" from the old auto-copy). This confirms you're mid-transition; both fixes land together in Step 5 below.
+
+- [ ] **Step 4: Rewrite `fork-skill.ts` to shell-only behavior**
 
 Replace the full contents of `src/bcs/prompt-registry/application/fork-skill.ts` with:
 
@@ -483,16 +614,16 @@ export async function forkSkill(
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to verify they pass**
 
-Run: `pnpm exec vitest run src/bcs/prompt-registry/application/fork-skill.test.ts`
+Run: `pnpm exec vitest run src/bcs/prompt-registry/application/fork-skill.test.ts src/bcs/prompt-registry/application/count-forks-of-skill.test.ts src/bcs/prompt-registry/application/personal-to-team-sharing.test.ts src/bcs/prompt-registry/application/tenant-isolation.test.ts src/bcs/prompt-registry/application/skill-chain-sharing.test.ts "src/app/api/projects/[projectId]/skills/route.test.ts" "src/app/api/projects/[projectId]/skills/[skillId]/route.test.ts"`
 
-Expected: PASS — all 9 tests green.
+Expected: PASS — all tests in all 7 files green.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
-git add src/bcs/prompt-registry/application/fork-skill.ts src/bcs/prompt-registry/application/fork-skill.test.ts
+git add src/bcs/prompt-registry/application/fork-skill.ts src/bcs/prompt-registry/application/fork-skill.test.ts src/bcs/prompt-registry/application/count-forks-of-skill.test.ts src/bcs/prompt-registry/application/personal-to-team-sharing.test.ts src/bcs/prompt-registry/application/tenant-isolation.test.ts src/bcs/prompt-registry/application/skill-chain-sharing.test.ts "src/app/api/projects/[projectId]/skills/route.test.ts" "src/app/api/projects/[projectId]/skills/[skillId]/route.test.ts"
 git commit -m "feat: make forkSkill shell-only with caller-supplied name/description"
 ```
 
