@@ -33,6 +33,9 @@ export interface SubscribeSkillParams {
 export interface ForkSkillParams {
   ownerType: OwnerType;
   ownerId: string;
+  /** Caller-supplied — the copy's own name, edited before creation rather than auto-generated. */
+  name: string;
+  description?: string;
 }
 
 // ---------------------------------------------------------------------------
