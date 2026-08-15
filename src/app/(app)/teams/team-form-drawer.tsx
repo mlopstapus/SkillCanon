@@ -182,6 +182,10 @@ export function TeamFormDrawer({
                 </option>
               ))}
             </select>
+            <span className="text-[11px] leading-relaxed text-faint">
+              An administrative role — this does not add them as a team member. Use
+              &quot;+ add member&quot; on the team&apos;s Members tab for that.
+            </span>
           </label>
         </div>
         <div className="flex justify-end gap-2.5 border-t border-border px-5.5 py-3.5">

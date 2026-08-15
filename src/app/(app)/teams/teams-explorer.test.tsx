@@ -131,6 +131,38 @@ describe("TeamsExplorer", () => {
     expect(markup).toContain("carol@acme.com");
   });
 
+  it("shows admin member-management controls, including the org-wide add-member picker (not just email invite)", () => {
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={adminSession}
+        teams={teams}
+        users={users}
+        initialSelectedTeamId={platform.id}
+      refresh={noop}
+      />,
+    );
+
+    expect(markup).toContain("+ add member");
+    expect(markup).toContain("+ invite by email");
+  });
+
+  it("hides the add-member picker (admin-only, since updateUser only allows admins to change teamId) from a non-admin team owner, while still showing email invite", () => {
+    // memberSession is Carol — platform.ownerId, so canManageMembers is true for her,
+    // but she isn't an org admin.
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={memberSession}
+        teams={teams}
+        users={users}
+        initialSelectedTeamId={platform.id}
+      refresh={noop}
+      />,
+    );
+
+    expect(markup).not.toContain("+ add member");
+    expect(markup).toContain("+ invite by email");
+  });
+
   it("renders an admin-gated 'New sub-team' CTA in the empty sub-teams state", () => {
     const markup = renderToStaticMarkup(
       <TeamsExplorerView
