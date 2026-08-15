@@ -80,7 +80,7 @@ describe("/api/skills/[name]/fork", () => {
       new Request(`http://x/api/skills/${name}/fork`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ ownerType: "user", ownerId: member.userId }),
+        body: JSON.stringify({ ownerType: "user", ownerId: member.userId, name: `copy-of-${name}` }),
       }),
       { params: Promise.resolve({ name }) },
     );
@@ -101,7 +101,7 @@ describe("/api/skills/[name]/fork", () => {
       new Request(`http://x/api/skills/${bogusName}/fork`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ ownerType: "user", ownerId: seeded.adminUserId }),
+        body: JSON.stringify({ ownerType: "user", ownerId: seeded.adminUserId, name: "irrelevant-name" }),
       }),
       { params: Promise.resolve({ name: bogusName }) },
     );
@@ -122,7 +122,7 @@ describe("/api/skills/[name]/fork", () => {
       new Request(`http://x/api/skills/${name}/fork`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ ownerType: "user", ownerId: seeded.adminUserId }),
+        body: JSON.stringify({ ownerType: "user", ownerId: seeded.adminUserId, name: "irrelevant-name" }),
       }),
       { params: Promise.resolve({ name }) },
     );
@@ -149,7 +149,7 @@ describe("/api/skills/[name]/fork", () => {
       new Request(`http://x/api/skills/${name}/fork`, {
         method: "POST",
         headers: { cookie, "content-type": "application/json" },
-        body: JSON.stringify({ ownerType: "user", ownerId: memberC.userId }),
+        body: JSON.stringify({ ownerType: "user", ownerId: memberC.userId, name: "irrelevant-name" }),
       }),
       { params: Promise.resolve({ name }) },
     );
