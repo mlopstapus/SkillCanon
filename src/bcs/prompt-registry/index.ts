@@ -95,6 +95,16 @@ export {
 } from "./domain/subscription";
 
 // ---------------------------------------------------------------------------
+// Skill Ownership Transfer (PDR-019)
+// ---------------------------------------------------------------------------
+export { transferSkillOwnership } from "./application/transfer-skill-ownership";
+export {
+  CannotTransferToSameOwnerError,
+  CrossOrgTransferError,
+  SkillNotFoundForTransferError,
+} from "./domain/subscription";
+
+// ---------------------------------------------------------------------------
 // Project Skill Assignment (feature 022-project-skill-assignment, PDR-016)
 // ---------------------------------------------------------------------------
 export { addCollaboratorTeam } from "./application/add-collaborator-team";

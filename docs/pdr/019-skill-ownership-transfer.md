@@ -54,7 +54,7 @@ Fork and subscribe remain separate operations for another party gaining an indep
 - `src/app/api/users/[userId]/route.ts` — preserves the established `USER_NOT_FOUND` REST mapping for the typed scoped-user lookup failure.
 - `src/bcs/prompt-registry/index.ts` — public bounded-context export.
 - `src/app/api/skills/[name]/transfer/route.ts` / `route.test.ts` — ownership-transfer REST endpoint and coverage.
-- `src/shared/api/errors.ts` — REST error mappings.
+- `src/shared/api/errors.ts` / `errors.test.ts` — REST error mappings and their public-code/status coverage.
 - `src/app/(app)/prompts/actions.ts` — server action.
 - `src/app/(app)/prompts/[name]/page.tsx`, `transfer-ownership-drawer.tsx`, `transfer-ownership-drawer.test.tsx`, `prompt-detail-view.tsx`, `prompt-detail-view.test.tsx`, and `prompt-detail.tsx` — transfer candidates, permission gate, drawer, detail-page wiring, and focused UI coverage.
 
