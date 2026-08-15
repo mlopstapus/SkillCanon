@@ -127,6 +127,7 @@ describe("TransferOwnershipDrawer", () => {
     document.body.append(container);
     const root = createRoot(container);
     let closeCount = 0;
+    let resolveTransfer: ((result: { ok: false; error: string }) => void) | undefined;
 
     await act(async () => {
       root.render(
@@ -137,7 +138,11 @@ describe("TransferOwnershipDrawer", () => {
           onClose={() => {
             closeCount += 1;
           }}
-          onConfirm={async () => ({ ok: false, error: "Destination is no longer available." })}
+          onConfirm={() =>
+            new Promise<{ ok: false; error: string }>((resolve) => {
+              resolveTransfer = resolve;
+            })
+          }
         />,
       );
     });
@@ -148,11 +153,16 @@ describe("TransferOwnershipDrawer", () => {
       [...container.querySelectorAll("button")]
         .find((button) => button.textContent === "Transfer ownership")
         ?.click();
+      await Promise.resolve();
+    });
+    await act(async () => {
+      resolveTransfer?.({ ok: false, error: "Destination is no longer available." });
     });
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(
       "Destination is no longer available.",
     );
+    expect(document.activeElement?.textContent).toBe("Transfer ownership");
     expect(closeCount).toBe(0);
 
     await act(async () => root.unmount());

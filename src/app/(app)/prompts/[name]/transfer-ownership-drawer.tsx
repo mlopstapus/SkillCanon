@@ -46,6 +46,7 @@ export function TransferOwnershipDrawer({
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
   const pendingStatusRef = useRef<HTMLParagraphElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const wasPendingRef = useRef(false);
   const wasSelectedRef = useRef(false);
   const normalizedQuery = query.trim().toLowerCase();
   const matches = (candidate: TransferCandidate) =>
@@ -71,7 +72,11 @@ export function TransferOwnershipDrawer({
 
   useEffect(() => {
     if (isPending) {
+      wasPendingRef.current = true;
       pendingStatusRef.current?.focus();
+    } else if (wasPendingRef.current) {
+      wasPendingRef.current = false;
+      confirmButtonRef.current?.focus();
     }
   }, [isPending]);
 

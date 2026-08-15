@@ -57,6 +57,10 @@ export function Drawer({ onClose, labelledBy, widthClassName = "w-[452px]", chil
       }
       const focusable = getVisibleFocusableElements(panel);
       if (focusable.length === 0) {
+        event.preventDefault();
+        if (!panel.contains(document.activeElement)) {
+          panel.focus();
+        }
         return;
       }
       const first = focusable[0];

@@ -112,6 +112,34 @@ describe("Drawer", () => {
     expect(focusedElement).toBe(visibleSearch);
   });
 
+  it("keeps Tab inside the dialog when no visible controls are enabled", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <Drawer onClose={noop} labelledBy="drawer-title">
+          <span id="drawer-title">Transfer ownership</span>
+          <p role="status" tabIndex={-1}>Transferring ownership…</p>
+          <button type="button" disabled>Cancel</button>
+        </Drawer>,
+      );
+    });
+    const status = container.querySelector<HTMLElement>('[role="status"]');
+    status?.focus();
+    const tab = new KeyboardEvent("keydown", { key: "Tab", bubbles: true, cancelable: true });
+    await act(async () => {
+      document.dispatchEvent(tab);
+    });
+
+    expect(tab.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(status);
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
   it("has no critical or serious axe violations", async () => {
     const html = renderToStaticMarkup(
       <Drawer onClose={noop} labelledBy="my-title">
