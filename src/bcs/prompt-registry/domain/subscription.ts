@@ -90,6 +90,30 @@ export class CannotForkOwnSkillError extends Error {
   }
 }
 
+/** Thrown when a skill does not exist, or belongs to a different organization, during an ownership transfer. */
+export class SkillNotFoundForTransferError extends Error {
+  constructor() {
+    super("No skill found with this id in the caller's organization.");
+    this.name = "SkillNotFoundForTransferError";
+  }
+}
+
+/** Thrown when an ownership-transfer destination does not belong to the caller's organization. */
+export class CrossOrgTransferError extends Error {
+  constructor() {
+    super("The new owner must belong to the same organization as the skill.");
+    this.name = "CrossOrgTransferError";
+  }
+}
+
+/** Thrown when an ownership transfer would leave the skill with the same owner. */
+export class CannotTransferToSameOwnerError extends Error {
+  constructor() {
+    super("Cannot transfer a skill to its current owner.");
+    this.name = "CannotTransferToSameOwnerError";
+  }
+}
+
 /** Thrown when the acting user is not the named user, nor an admin/owner of the named team (FR-005/FR-013). */
 export class SubscriberNotAuthorizedError extends Error {
   constructor() {

@@ -122,6 +122,8 @@ export async function updatePrompt(
     isDeprecated: boolean;
     activeVersionId: string | null;
     description: string | null;
+    ownerType: PromptOwnerType;
+    ownerId: string;
   }>,
 ) {
   const [row] = await tx
