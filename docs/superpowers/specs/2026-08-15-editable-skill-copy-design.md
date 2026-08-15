@@ -126,7 +126,15 @@ skill can be left in.
   through.
 - New `src/app/(app)/prompts/[name]/copy-skill-drawer.tsx`: the Step 1
   drawer described above (name + description, existing-name collision
-  check, submit → `forkSkillForSelfAction`).
+  check, submit → `forkSkillForSelfAction`). Built on the shared
+  `Drawer` primitive from `@/shared/ui` (constitution Principle
+  VIII/U5) exactly as `NewVersionDrawer` and `NewPromptDrawer` already
+  are — never a hand-rolled panel/backdrop — so it inherits
+  `role="dialog"`/`aria-modal`/focus trap/Escape-to-close for free.
+  Field/button styling reuses the same existing Tailwind token classes
+  those two drawers already use (`border-border-2`, `bg-surface`,
+  focus-visible ring, etc.) — no hardcoded color/spacing literals
+  (U2), and no new focus-suppression (U4).
 - `src/app/(app)/prompts/[name]/prompt-detail.tsx`: replace the current
   one-line `onFork` handler with drawer-open state for Step 1; on its
   success, open `NewVersionDrawer` (already imported) prefilled from
@@ -135,6 +143,66 @@ skill can be left in.
   `publishVersionAction`. After Step 2 succeeds, `router.push` to the
   new skill's detail page (`/prompts/${newSkillName}`) instead of the
   current `/prompts` list redirect — so you land on the actual result.
+
+## Constitution compliance
+
+Checked against `.specify/memory/constitution.md` (v1.2.0) /
+`specs/tenets.md`:
+
+- **I. Test-First (P1)**: implementation follows red-green-iterate —
+  `fork-skill.test.ts`'s updated/new assertions (below) are written and
+  run failing *before* `fork-skill.ts` is changed to shell-only
+  behavior, not after.
+- **II/III. Bounded contexts & domain invariants (D1/D2)**: no new
+  cross-context model access. All validation (org boundary, self-fork
+  rejection, team-admin authorization) stays in
+  `application/fork-skill.ts`, the same place it lives today — never
+  duplicated into the route/action or the client. The client hiding the
+  button is a UX convenience layered on top of, not a replacement for,
+  the server-side `CannotForkOwnSkillError` check.
+- **IV. Multi-tenant isolation (M1-M3)**: no new tenant-scoped table.
+  `forkSkill` keeps resolving the source through the caller's own
+  `withTenantContext`-scoped connection, so a cross-org source id still
+  resolves to nothing (`SourceSkillNotFoundError`), and the existing
+  `fork-skill.test.ts` cross-org negative test (M3) is preserved, not
+  deleted, through the shell-only refactor.
+- **V. Secure by default (S1-S3)**: no secrets involved. Step 2's
+  prefilled content still only ever reaches Nunjucks rendering through
+  the existing, already-sandboxed `publishVersion` → `expand` path — no
+  new template-rendering surface is introduced.
+- **VI. Auditable (C1/C2)**: the `skill.forked` audit event now fires
+  at shell creation (Step 1) with `activeVersionId: null` instead of a
+  populated one — still a complete, honest record of the mutation that
+  actually happened at that moment. The content mutation isn't left
+  unaudited: `publishVersion` (Step 2) already writes its own
+  `prompt_version.published` audit event, so the full lineage (forked →
+  content published) remains fully reconstructable from the audit log.
+- **VII. Feature-gated by entitlement (G1)**: **known pre-existing
+  gap, not introduced by this change.** No entitlement check exists
+  anywhere in `prompt-registry` today — not on `createPrompt`, not on
+  the current `forkSkill`, not on `subscribeSkill`. This change
+  preserves that status quo rather than silently deepening or fixing
+  it; retrofitting entitlement gating across skill creation/sharing is
+  a separate, BC-wide initiative outside this fix's scope. Filing this
+  as an explicit backlog item (rather than leaving it as only a chat
+  mention) is called out under Follow-ups below.
+- **VIII. Consistent, accessible UI (U1-U7)**: dark-only, no light-theme
+  override touched (U1). Shared `Drawer` primitive, not a hand-rolled
+  one (U5, see Frontend changes above). Design tokens only, no literals
+  (U2). Visible focus states preserved via existing input/button
+  classes (U4). No page-level empty/loading/error state is introduced
+  by this change, so `AppState` (U3) doesn't apply. `copy-skill-drawer.tsx`
+  gets its own Vitest + `axe-core` check (U7), matching
+  `new-prompt-drawer.test.tsx`'s existing pattern. The app shell's
+  mobile behavior (U6) is unaffected — `Drawer` already handles
+  responsive width.
+
+## Follow-ups
+
+- File a backlog item tracking entitlement gating for skill
+  creation/sharing (`createPrompt`, `forkSkill`, `subscribeSkill`) as a
+  known gap against constitution Principle VII — this fix does not
+  close it, only avoids making it worse.
 
 ## Out of scope
 
@@ -145,6 +213,8 @@ skill can be left in.
 - Bulk copy of multiple versions — only the current active version's
   content is offered as Step 2's starting point, matching today's
   fork's existing "current active version only" behavior.
+- Retrofitting entitlement gating (see Follow-ups) — tracked
+  separately, not part of this change.
 
 ## Testing
 
@@ -152,11 +222,16 @@ skill can be left in.
   shell-only behavior (no version/files created by `forkSkill` itself
   anymore); add a case asserting the custom `name`/`description` are
   used verbatim (no more hash-suffixed auto-name) and that
-  `SkillForked` fires with `activeVersionId: null`.
+  `SkillForked` fires with `activeVersionId: null`. The existing
+  cross-org negative test (M3) and self-fork rejection test are kept
+  and adapted, not dropped. Written/run failing before the
+  implementation change, per Principle I.
 - New test coverage for `copy-skill-drawer.tsx`'s structural rendering
   (name/description fields, collision error display) — same
   `renderToStaticMarkup` convention used for the New Skill drawer's
-  static content.
+  static content — plus a Vitest + `axe-core` check asserting zero
+  critical/serious violations (Principle VIII/U7), matching
+  `new-prompt-drawer.test.tsx`.
 - Manual browser verification (per this repo's convention for
   client-interaction-heavy drawer flows): copy a skill you don't own,
   confirm the button is absent on a skill you do own, edit name/content
