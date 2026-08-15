@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, useTransition } from "react";
+import { useCallback, useId, useState, useTransition } from "react";
 import { Drawer } from "@/shared/ui";
 import type { PromptActionResult } from "../actions";
 
@@ -51,9 +51,9 @@ export function TransferOwnershipDrawer({
     setSelected({ type, candidate });
   }
 
-  function requestClose() {
+  const requestClose = useCallback(() => {
     if (!isPending) onClose();
-  }
+  }, [isPending, onClose]);
 
   function submit() {
     if (!selected) return;

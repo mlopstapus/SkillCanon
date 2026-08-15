@@ -333,4 +333,37 @@ describe("TransferOwnershipDrawer", () => {
     await act(async () => root.unmount());
     container.remove();
   });
+
+  it("keeps search focus across individual input keystrokes", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <TransferOwnershipDrawer
+          promptName="commit-message"
+          currentOwnerLabel="Alice Admin"
+          candidates={candidates}
+          onClose={() => {}}
+          onConfirm={async () => ({ ok: true })}
+        />,
+      );
+    });
+    const search = container.querySelector<HTMLInputElement>('[aria-label="Search transfer candidates"]');
+    expect(search).not.toBeNull();
+    search?.focus();
+
+    for (const value of ["C", "CA", "CAR"]) {
+      await act(async () => {
+        search?.dispatchEvent(new KeyboardEvent("keydown", { key: value.at(-1), bubbles: true }));
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(search, value);
+        search?.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      expect(document.activeElement).toBe(search);
+    }
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
 });
