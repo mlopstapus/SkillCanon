@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
-import * as promptRegistry from "../index";
 import { forkSkill } from "./fork-skill";
 import { subscribeSkill } from "./subscribe-skill";
 import {
@@ -61,25 +60,5 @@ describe("A personal skill becomes team-owned (US3)", () => {
     expect(originalRows).toHaveLength(1);
     expect(originalRows[0]?.owner_type).toBe("user");
     expect(originalRows[0]?.owner_id).toBe(fixture.userA.id);
-  });
-
-  it("no function exported from this bounded context's public API can reassign an existing skill's owner in place", () => {
-    // Characterization check (mirrors prompt-characterization.test.ts): the
-    // only way a *new* owner ever gains a version of a skill is a new
-    // Subscription row or a new forked Prompt row (PDR-016) — there is no
-    // "reassign owner" operation anywhere, and this asserts none was ever
-    // added to the public barrel.
-    const exportNames = Object.keys(promptRegistry);
-    const ownerMutators = exportNames.filter((name) => {
-      const lower = name.toLowerCase();
-      return (
-        lower.includes("reassign") ||
-        lower.includes("transferowner") ||
-        lower.includes("changeowner") ||
-        lower.includes("setowner") ||
-        lower.includes("updateowner")
-      );
-    });
-    expect(ownerMutators).toHaveLength(0);
   });
 });
