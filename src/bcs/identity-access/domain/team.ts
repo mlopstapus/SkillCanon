@@ -17,6 +17,14 @@ export interface TeamChainEntry {
   parentTeamId: string | null;
 }
 
+/** Thrown when a team is absent from the caller's organization. */
+export class CrossOrgTeamAccessError extends Error {
+  constructor() {
+    super("No team found with this id in your organization.");
+    this.name = "CrossOrgTeamAccessError";
+  }
+}
+
 /** Thrown when a parent team belongs to a different organization than the child (FR-009). */
 export class CrossOrgReparentError extends Error {
   constructor() {

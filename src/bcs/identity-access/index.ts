@@ -37,6 +37,7 @@ export { removeTeamMember } from "./application/remove-team-member";
 export { listUnassignedUsers } from "./application/list-unassigned-users";
 export type { Team, TeamChainEntry } from "./domain/team";
 export {
+  CrossOrgTeamAccessError,
   CrossOrgReparentError,
   CycleError,
   DuplicateTeamSlugError,

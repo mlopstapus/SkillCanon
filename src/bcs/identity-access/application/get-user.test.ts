@@ -6,6 +6,7 @@ import { insert as insertOrg } from "../infrastructure/organizations-repo";
 import { insert as insertTeam } from "../infrastructure/teams-repo";
 import { insertValidatedUser } from "./insert-validated-user";
 import { getUser } from "./get-user";
+import { CrossOrgUserAccessError } from "../domain/user";
 
 describe("getUser", () => {
   let testDb: TestDb;
@@ -65,7 +66,7 @@ describe("getUser", () => {
       withTenantContext(testDb.appDb, organizationId, (tx) =>
         getUser(tx, randomUUID(), organizationId),
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(CrossOrgUserAccessError);
   });
 
   it("throws for a user id that belongs to a different organization (M1/M3)", async () => {
@@ -76,7 +77,7 @@ describe("getUser", () => {
       withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
         getUser(tx, orgB.userId, orgA.organizationId),
       ),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(CrossOrgUserAccessError);
   });
 
   it("with no organizationId, falls back to an unscoped lookup — the path authenticateSession relies on", async () => {

@@ -4,7 +4,13 @@ import {
   record,
   type AuditContext,
 } from "@/bcs/audit-compliance";
-import { getTeam, getUser, type UserSummary } from "@/bcs/identity-access";
+import {
+  CrossOrgTeamAccessError,
+  CrossOrgUserAccessError,
+  getTeam,
+  getUser,
+  type UserSummary,
+} from "@/bcs/identity-access";
 import { withAudit } from "@/shared/db";
 import type { PromptSummary } from "../domain/prompt";
 import {
@@ -43,8 +49,11 @@ export async function transferSkillOwnership(
     } else {
       await getUser(db, params.newOwnerId, actingUser.orgId);
     }
-  } catch {
-    throw new CrossOrgTransferError();
+  } catch (error) {
+    if (error instanceof CrossOrgTeamAccessError || error instanceof CrossOrgUserAccessError) {
+      throw new CrossOrgTransferError();
+    }
+    throw error;
   }
 
   if (actingUser.role !== "admin") {
