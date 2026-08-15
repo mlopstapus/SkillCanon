@@ -46,6 +46,7 @@ async function waitForConcurrentOwnershipUpdates(testDb: TestDb): Promise<void> 
       from pg_stat_activity
       where datname = current_database()
         and state = 'active'
+        and pid <> pg_backend_pid()
         and query ilike '%update "prompt_registry"."prompts"%'
     `);
     if (Number(rows[0]?.count) >= 2) {
@@ -65,6 +66,19 @@ describe("transferSkillOwnership", () => {
 
   afterAll(async () => {
     await testDb.teardown();
+  });
+
+  it("does not count the ownership-update monitor as an external update", async () => {
+    const rows = await testDb.ownerDb.execute<{ count: number }>(sql`
+      select count(*)::int as count
+      from pg_stat_activity
+      where datname = current_database()
+        and state = 'active'
+        and pid <> pg_backend_pid()
+        and query ilike '%update "prompt_registry"."prompts"%'
+    `);
+
+    expect(Number(rows[0]?.count)).toBe(0);
   });
 
   it("moves a user-owned skill to its owner's team and records ownership-only audit snapshots", async () => {
