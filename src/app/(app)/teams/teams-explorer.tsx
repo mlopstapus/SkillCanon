@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
 import { AppState, Badge } from "@/shared/ui";
+import { AddMemberDrawer } from "./add-member-drawer";
 import { InviteMemberDrawer } from "./invite-member-drawer";
 import { RemoveMemberConfirm } from "./remove-member-confirm";
 import { TeamFormDrawer, type TeamFormMode } from "./team-form-drawer";
@@ -196,6 +197,7 @@ export function TeamsExplorerView({
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("team");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<UserAccountSummary | null>(null);
 
   function closeDrawer() {
@@ -209,6 +211,10 @@ export function TeamsExplorerView({
 
   function onInviteSuccess() {
     setInviteOpen(false);
+    refresh();
+  }
+
+  function onAddMemberSuccess() {
     refresh();
   }
 
@@ -310,6 +316,7 @@ export function TeamsExplorerView({
     ? users.find((u) => u.id === selectedTeam.ownerId)
     : undefined;
   const canManageMembers = isAdmin || selectedTeam.ownerId === currentUser.id;
+  const addMemberCandidates = users.filter((u) => u.teamId !== selectedTeam.id);
 
   return (
     <div className="grid min-h-full grid-cols-[280px_minmax(0,1fr)]">
@@ -489,13 +496,22 @@ export function TeamsExplorerView({
 
           <div className={tab === "members" ? "flex flex-col gap-2.5" : "hidden"}>
             {canManageMembers ? (
-              <div className="mb-1 flex justify-end">
+              <div className="mb-1 flex justify-end gap-2">
+                {isAdmin ? (
+                  <button
+                    type="button"
+                    onClick={() => setAddMemberOpen(true)}
+                    className="rounded-control border border-border-2 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dim"
+                  >
+                    + add member
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => setInviteOpen(true)}
                   className="rounded-control border border-border-2 bg-transparent px-2.5 py-1.5 font-mono text-[11px] text-dim"
                 >
-                  + invite member
+                  + invite by email
                 </button>
               </div>
             ) : null}
@@ -549,6 +565,17 @@ export function TeamsExplorerView({
           teamName={selectedTeam.name}
           onClose={() => setInviteOpen(false)}
           onSuccess={onInviteSuccess}
+        />
+      ) : null}
+
+      {addMemberOpen ? (
+        <AddMemberDrawer
+          teamId={selectedTeam.id}
+          teamName={selectedTeam.name}
+          candidateUsers={addMemberCandidates}
+          teamsById={byId}
+          onClose={() => setAddMemberOpen(false)}
+          onSuccess={onAddMemberSuccess}
         />
       ) : null}
 
