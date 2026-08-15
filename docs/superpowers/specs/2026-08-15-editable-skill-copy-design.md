@@ -48,9 +48,17 @@ skill) opens a small drawer, structurally the same as today's blank
 "New Skill" step:
 
 - **Name**: prefilled with a suggested, human-readable default (e.g.
-  `` `${source.name}-copy` ``, de-duplicated against existing org skill
-  names the same way `NewPromptDrawer`'s import-mode collision check
-  already works), fully editable.
+  `` `${source.name}-copy` ``), fully editable. No client-side
+  collision pre-check — this drawer has no `existingNames` list to
+  check against (unlike `NewPromptDrawer`'s import/upload modes, which
+  already have the full candidate batch in hand for that check).
+  Matches `NewPromptDrawer`'s own **blank** mode instead, which submits
+  and relies entirely on the server's `DuplicatePromptNameError`,
+  surfaced as the inline form error described below. **Amended
+  2026-08-15** during implementation planning: an earlier draft of this
+  section proposed a client-side pre-check; dropped in favor of this
+  simpler, already-precedented behavior before any task was written
+  against it.
 - **Description**: prefilled from the source skill's description,
   editable.
 
@@ -133,7 +141,7 @@ skill can be left in.
   `prompt.ownerType`/`prompt.ownerId` vs. the session user, pass it
   through.
 - New `src/app/(app)/prompts/[name]/copy-skill-drawer.tsx`: the Step 1
-  drawer described above (name + description, existing-name collision
+  drawer described above (name + description, no client-side collision
   check, submit → `forkSkillForSelfAction`). Built on the shared
   `Drawer` primitive from `@/shared/ui` (constitution Principle
   VIII/U5) exactly as `NewVersionDrawer` and `NewPromptDrawer` already
