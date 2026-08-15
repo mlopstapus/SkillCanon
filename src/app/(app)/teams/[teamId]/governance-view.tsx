@@ -141,7 +141,7 @@ export function GovernanceView(props: GovernanceViewProps) {
   }
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[288px_minmax(0,1fr)]">
+    <div className="grid h-full grid-cols-1 md:grid-cols-[288px_minmax(0,1fr)]">
       {scopeTreeOpen ? (
         <div
           aria-hidden="true"

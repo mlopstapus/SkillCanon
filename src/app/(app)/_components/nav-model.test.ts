@@ -9,12 +9,12 @@ describe("getNavigation", () => {
         items: [
           { key: "overview", label: "Overview", href: "/dashboard" },
           { key: "prompts", label: "Skills", href: "/prompts" },
+          { key: "teams", label: "Teams", href: "/teams" },
           {
             key: "governance",
             label: "Governance",
             href: "/teams/team-123/policies",
           },
-          { key: "teams", label: "Teams", href: "/teams" },
           { key: "projects", label: "Projects", href: "/projects" },
           { key: "metrics", label: "Metrics", href: "/metrics" },
         ],
