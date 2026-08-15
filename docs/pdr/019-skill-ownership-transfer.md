@@ -47,6 +47,7 @@ Fork and subscribe remain separate operations for another party gaining an indep
 - `src/bcs/prompt-registry/infrastructure/prompts-repo.ts` — in-place ownership fields in the additive prompt update shape.
 - `src/bcs/prompt-registry/application/transfer-skill-ownership.ts` / `transfer-skill-ownership.test.ts` — ownership-transfer application service and focused coverage.
 - `src/bcs/prompt-registry/application/transfer-skill-ownership.operational-error.test.ts` — proves operational authorization failures propagate unchanged and stale source authorization cannot overwrite an intervening transfer.
+- `src/bcs/prompt-registry/application/authorize-owner-action.ts` — shared owner-action authorization used by transfer to evaluate personal and team ownership consistently.
 - `src/bcs/identity-access/domain/team.ts`, `index.ts`, and `application/get-team.ts` / `get-team.test.ts` — typed same-organization team lookup failure used to distinguish invalid destinations from operational faults.
 - `src/bcs/identity-access/application/get-user.ts` / `get-user.test.ts` — typed scoped user lookup failure with the same distinction.
 - `src/app/api/teams/[teamId]/route.ts` — preserves the established `TEAM_NOT_FOUND` REST mapping for the typed team lookup failure.

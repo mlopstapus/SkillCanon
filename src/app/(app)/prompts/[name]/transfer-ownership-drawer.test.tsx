@@ -89,6 +89,39 @@ describe("TransferOwnershipDrawer", () => {
     container.remove();
   });
 
+  it("moves focus from the selected candidate to the visible confirmation action", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(
+        <TransferOwnershipDrawer
+          promptName="commit-message"
+          currentOwnerLabel="Alice Admin"
+          candidates={candidates}
+          onClose={() => {}}
+          onConfirm={async () => ({ ok: true })}
+        />,
+      );
+    });
+
+    const bobButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Bob Builder",
+    );
+    bobButton?.focus();
+    await act(async () => bobButton?.click());
+
+    const confirmButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Transfer ownership",
+    );
+    expect(document.activeElement).toBe(confirmButton);
+    expect(document.activeElement?.closest(".hidden")).toBeNull();
+
+    await act(async () => root.unmount());
+    container.remove();
+  });
+
   it("keeps the drawer open and shows the action error when transfer fails", async () => {
     const container = document.createElement("div");
     document.body.append(container);
@@ -152,9 +185,11 @@ describe("TransferOwnershipDrawer", () => {
     await act(async () => {
       [...container.querySelectorAll("button")].find((button) => button.textContent === "Bob Builder")?.click();
     });
-    await act(async () => {
-      [...container.querySelectorAll("button")].find((button) => button.textContent === "Back")?.click();
-    });
+    const backButton = [...container.querySelectorAll("button")].find(
+      (button) => button.textContent === "Back",
+    );
+    backButton?.focus();
+    await act(async () => backButton?.click());
 
     expect(
       [...container.querySelectorAll("button")].some(
@@ -162,6 +197,11 @@ describe("TransferOwnershipDrawer", () => {
       ),
     ).toBe(false);
     expect(container.querySelector('[role="group"]')?.parentElement?.className).not.toContain("hidden");
+    const searchInput = container.querySelector<HTMLInputElement>(
+      'input[aria-label="Search transfer candidates"]',
+    );
+    expect(document.activeElement).toBe(searchInput);
+    expect(document.activeElement?.closest(".hidden")).toBeNull();
     expect(submitCount).toBe(0);
     expect(closeCount).toBe(0);
 
@@ -246,6 +286,9 @@ describe("TransferOwnershipDrawer", () => {
         .filter((button) => button.textContent === "Back" || button.textContent === "Cancel")
         .every((button) => button.disabled),
     ).toBe(true);
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]');
+    expect(dialog?.contains(document.activeElement)).toBe(true);
+    expect(document.activeElement?.closest(".hidden")).toBeNull();
     const closeButton = container.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
     await act(async () => {
       closeButton?.click();

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useId, useState, useTransition } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useTransition } from "react";
 import { Drawer } from "@/shared/ui";
 import type { PromptActionResult } from "../actions";
 
@@ -43,6 +43,9 @@ export function TransferOwnershipDrawer({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const wasSelectedRef = useRef(false);
   const normalizedQuery = query.trim().toLowerCase();
   const matches = (candidate: TransferCandidate) =>
     !normalizedQuery || candidate.name.toLowerCase().includes(normalizedQuery);
@@ -54,6 +57,16 @@ export function TransferOwnershipDrawer({
   const requestClose = useCallback(() => {
     if (!isPending) onClose();
   }, [isPending, onClose]);
+
+  useEffect(() => {
+    if (selected) {
+      wasSelectedRef.current = true;
+      confirmButtonRef.current?.focus();
+    } else if (wasSelectedRef.current) {
+      wasSelectedRef.current = false;
+      searchInputRef.current?.focus();
+    }
+  }, [selected]);
 
   function submit() {
     if (!selected) return;
@@ -119,6 +132,7 @@ export function TransferOwnershipDrawer({
             </button>
           </div>
           <input
+            ref={searchInputRef}
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             aria-label="Search transfer candidates"
@@ -195,6 +209,7 @@ export function TransferOwnershipDrawer({
         </button>
         {selected ? (
           <button
+            ref={confirmButtonRef}
             type="button"
             disabled={isPending}
             onClick={submit}
