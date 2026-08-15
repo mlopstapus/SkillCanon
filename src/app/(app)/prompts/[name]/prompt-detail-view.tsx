@@ -44,6 +44,8 @@ export interface PromptDetailData {
   description: string;
   isDeprecated: boolean;
   ownerLabel: string;
+  /** True when the current caller personally owns this skill — "Make a copy" is hidden for it (self-copy stays rejected server-side). */
+  isOwnSkill: boolean;
   /** Set only for a skill created via external import (013-skill-import-and-external-registries) — where it was fetched from. */
   sourceUrl: string | null;
   projectLabels: string[];
@@ -281,13 +283,15 @@ export function PromptDetailView({
             >
               Share
             </button>
-            <button
-              type="button"
-              onClick={onFork}
-              className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-dim"
-            >
-              Make a copy
-            </button>
+            {!data.isOwnSkill ? (
+              <button
+                type="button"
+                onClick={onFork}
+                className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-dim"
+              >
+                Make a copy
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={onOpenNewVersion}
