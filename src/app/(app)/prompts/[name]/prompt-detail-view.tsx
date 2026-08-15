@@ -43,9 +43,16 @@ export interface PromptDetailData {
   name: string;
   description: string;
   isDeprecated: boolean;
+  ownerType: "user" | "team";
+  ownerId: string;
   ownerLabel: string;
   /** True when the current caller personally owns this skill — "Make a copy" is hidden for it (self-copy stays rejected server-side). */
   isOwnSkill: boolean;
+  canTransferOwnership: boolean;
+  transferCandidates: {
+    users: Array<{ id: string; name: string }>;
+    teams: Array<{ id: string; name: string }>;
+  };
   /** Set only for a skill created via external import (013-skill-import-and-external-registries) — where it was fetched from. */
   sourceUrl: string | null;
   projectLabels: string[];
@@ -113,6 +120,7 @@ export interface PromptDetailViewProps {
   onOpenVersionHistory: () => void;
   onOpenNewVersion: () => void;
   onOpenShare: () => void;
+  onOpenTransferOwnership: () => void;
   onFork: () => void;
   /** Currently-displayed run history page (replaces `data.chainRuns` after a page change). */
   chainRunsPage: PromptDetailData["chainRuns"];
@@ -151,6 +159,7 @@ export function PromptDetailView({
   onOpenVersionHistory,
   onOpenNewVersion,
   onOpenShare,
+  onOpenTransferOwnership,
   onFork,
   chainRunsPage,
   onRunsPageChange,
@@ -283,6 +292,15 @@ export function PromptDetailView({
             >
               Share
             </button>
+            {data.canTransferOwnership ? (
+              <button
+                type="button"
+                onClick={onOpenTransferOwnership}
+                className="rounded-control border border-border-2 bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-dim"
+              >
+                Transfer ownership
+              </button>
+            ) : null}
             {!data.isOwnSkill ? (
               <button
                 type="button"

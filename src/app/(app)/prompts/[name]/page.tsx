@@ -51,6 +51,11 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       (prompt.ownerType === "user" ? userNameById.get(prompt.ownerId) : teamNameById.get(prompt.ownerId)) ??
       prompt.ownerId;
     const isOwnSkill = prompt.ownerType === "user" && prompt.ownerId === user.id;
+    const team = prompt.ownerType === "team" ? teams.find((candidate) => candidate.id === prompt.ownerId) : undefined;
+    const canTransferOwnership =
+      user.role === "admin" ||
+      (prompt.ownerType === "user" && prompt.ownerId === user.id) ||
+      (prompt.ownerType === "team" && team?.ownerId === user.id);
 
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
@@ -135,8 +140,19 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       name: prompt.name,
       description: prompt.description ?? "",
       isDeprecated: prompt.isDeprecated,
+      ownerType: prompt.ownerType,
+      ownerId: prompt.ownerId,
       ownerLabel,
       isOwnSkill,
+      canTransferOwnership,
+      transferCandidates: {
+        users: users
+          .filter((candidate) => !(prompt.ownerType === "user" && candidate.id === prompt.ownerId))
+          .map((candidate) => ({ id: candidate.id, name: candidate.displayName })),
+        teams: teams
+          .filter((candidate) => !(prompt.ownerType === "team" && candidate.id === prompt.ownerId))
+          .map((candidate) => ({ id: candidate.id, name: candidate.name })),
+      },
       sourceUrl: prompt.sourceUrl,
       projectLabels,
       activeVersion: activeVersion?.version ?? null,

@@ -8,8 +8,12 @@ const baseData: PromptDetailData = {
   name: "commit-message",
   description: "Generates a commit message",
   isDeprecated: false,
+  ownerType: "user",
+  ownerId: "u1",
   ownerLabel: "alice",
   isOwnSkill: false,
+  canTransferOwnership: false,
+  transferCandidates: { users: [], teams: [] },
   sourceUrl: null,
   projectLabels: ["Support Copilot"],
   activeVersion: "v2",
@@ -63,6 +67,7 @@ const baseProps = {
   onOpenVersionHistory: vi.fn(),
   onOpenNewVersion: vi.fn(),
   onOpenShare: vi.fn(),
+  onOpenTransferOwnership: vi.fn(),
   onFork: vi.fn(),
   chainRunsPage: null,
   onRunsPageChange: vi.fn(),
@@ -71,6 +76,31 @@ const baseProps = {
 };
 
 describe("PromptDetailView", () => {
+  it("shows Transfer ownership only when the server grants permission, between Share and Make a copy", () => {
+    const transferAwareData = {
+      ...baseData,
+      ownerType: "user" as const,
+      ownerId: "u1",
+      canTransferOwnership: true,
+      transferCandidates: { users: [], teams: [] },
+    };
+    const transferAwareProps = { ...baseProps, onOpenTransferOwnership: vi.fn() };
+    const allowedHtml = renderToStaticMarkup(
+      <PromptDetailView {...transferAwareProps} data={transferAwareData} />,
+    );
+    const deniedHtml = renderToStaticMarkup(
+      <PromptDetailView
+        {...transferAwareProps}
+        data={{ ...transferAwareData, canTransferOwnership: false }}
+      />,
+    );
+
+    expect(allowedHtml).toContain("Transfer ownership");
+    expect(allowedHtml.indexOf(">Share<")).toBeLessThan(allowedHtml.indexOf(">Transfer ownership<"));
+    expect(allowedHtml.indexOf(">Transfer ownership<")).toBeLessThan(allowedHtml.indexOf(">Make a copy<"));
+    expect(deniedHtml).not.toContain("Transfer ownership");
+  });
+
   it("renders the header, version badge, project label, and Deprecate action for a non-deprecated prompt", () => {
     const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
 
