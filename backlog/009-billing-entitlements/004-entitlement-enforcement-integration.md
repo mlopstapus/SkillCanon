@@ -19,6 +19,7 @@ Go back through every bounded context and wire real `resolveEntitlements()` call
 - [ ] `002-identity-access`'s team/API-key creation checked against `maxTeams`/`maxApiKeys` entitlements where those limits exist per `context/entitlements.md`
 - [ ] `002-identity-access/003-user-accounts-and-registration.md`'s `registerFirstRunAdmin` hardcoded-`true` `coreFeaturesEnabled` stand-in (`src/bcs/identity-access/application/entitlement-gate.ts`) replaced with a real `requireEntitlement(orgId, "coreFeaturesEnabled")` call
 - [ ] Audit sweep of all prior epics for any other hardcoded-default stand-ins introduced along the way, replaced with real entitlement calls
+- [ ] `006-prompt-registry`'s skill creation/sharing surface (`createPrompt`, `forkSkill`, `subscribeSkill`) has no entitlement check at all today — not even a hardcoded stand-in. Identified 2026-08-15 while reworking `forkSkill`'s "Make a copy" flow (`docs/superpowers/specs/2026-08-15-editable-skill-copy-design.md`); left unfixed there as out of scope for a UX-only change. Needs a real gate here (or, at minimum, a hardcoded-Free stand-in matching this file's own convention) before this item can be considered complete.
 - [ ] Self-hosted mode continues to use the hardcoded Free-tier path unchanged (this feature only affects the SaaS/live-entitlement path)
 
 ## Acceptance Criteria

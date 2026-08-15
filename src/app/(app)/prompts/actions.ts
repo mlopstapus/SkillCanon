@@ -385,7 +385,7 @@ export async function unsubscribeSkillAction(
 
 export async function forkSkillAction(
   sourceSkillId: string,
-  params: { ownerType: "user" | "team"; ownerId: string },
+  params: { ownerType: "user" | "team"; ownerId: string; name: string; description?: string },
 ): Promise<PromptActionResult> {
   try {
     const actingUser = await requireActingUser();
@@ -399,15 +399,20 @@ export async function forkSkillAction(
 
 /**
  * Convenience wrapper over `forkSkillAction` for the common case (FR-016):
- * the acting user forks their own independent copy, with no ownership
- * picker needed — resolves `ownerId` from the session instead of a caller-
- * supplied value.
+ * the acting user copies into their own ownership, with no ownership
+ * picker needed — resolves `ownerId` from the session. Creates only the
+ * new skill's shell (name/description); its first version is authored
+ * separately through `publishVersionAction`, prefilled from the source
+ * (2026-08-15 design doc).
  */
-export async function forkSkillForSelfAction(sourceSkillId: string): Promise<PromptActionResult> {
+export async function forkSkillForSelfAction(
+  sourceSkillId: string,
+  values: { name: string; description?: string },
+): Promise<PromptActionResult> {
   try {
     const actingUser = await requireActingUser();
     await withTenantContext(db, actingUser.orgId, (tx) =>
-      forkSkill(tx, actingUser, sourceSkillId, { ownerType: "user", ownerId: actingUser.id }),
+      forkSkill(tx, actingUser, sourceSkillId, { ownerType: "user", ownerId: actingUser.id, ...values }),
     );
     revalidatePath("/prompts");
     return { ok: true };

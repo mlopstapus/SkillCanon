@@ -12,6 +12,8 @@ interface Params {
 const forkSchema = z.object({
   ownerType: z.enum(["user", "team"]),
   ownerId: z.string().min(1),
+  name: z.string().min(1),
+  description: z.string().optional(),
 });
 
 /**

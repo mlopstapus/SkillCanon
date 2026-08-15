@@ -1,5 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
+import { expectNoCriticalOrSeriousAxeViolations } from "@/shared/testing/accessibility";
 import { PromptDetailView, type PromptDetailData } from "./prompt-detail-view";
 
 const baseData: PromptDetailData = {
@@ -8,6 +9,7 @@ const baseData: PromptDetailData = {
   description: "Generates a commit message",
   isDeprecated: false,
   ownerLabel: "alice",
+  isOwnSkill: false,
   sourceUrl: null,
   projectLabels: ["Support Copilot"],
   activeVersion: "v2",
@@ -94,6 +96,18 @@ describe("PromptDetailView", () => {
     expect(html).toContain("Make a copy");
     expect(html).toContain("Deprecate");
     expect(html).toContain("New version");
+  });
+
+  it("hides Make a copy when the caller owns the skill", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={{ ...baseData, isOwnSkill: true }} />);
+
+    expect(html).not.toContain("Make a copy");
+    expect(html).toContain("Deprecate");
+  });
+
+  it("has no critical or serious axe violations in its default (overview) rendered state (Constitution Principle VIII)", async () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} />);
+    await expectNoCriticalOrSeriousAxeViolations(html);
   });
 
   it("shows the share summary pill with real team/subscriber/copy counts when there's at least one grant", () => {

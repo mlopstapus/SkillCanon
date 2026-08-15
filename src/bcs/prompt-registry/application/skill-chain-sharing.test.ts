@@ -107,10 +107,26 @@ describe("skill chains inherit sharing with zero new code (026-skill-chains, US3
     expect(sourceVersion.kind).toBe("chain");
 
     const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.userA, source.id, { ownerType: "user", ownerId: fixture.userA.id }),
+      forkSkill(tx, fixture.userA, source.id, {
+        ownerType: "user",
+        ownerId: fixture.userA.id,
+        name: "fork-chain-target",
+      }),
     );
 
-    // The fork itself is runnable, carrying over the chain's steps (kind/steps propagation).
+    // forkSkill no longer copies content (shell-only) — give the fork its
+    // own first version, mirroring the source's chain steps, exactly like
+    // the real "Make a copy" flow's Step 2 (New Version drawer) would.
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, {
+        organizationId: fixture.organizationId,
+        promptName: fork.name,
+        version: "1.0.0",
+        steps: CHAIN_STEPS,
+      }),
+    );
+
+    // The fork is runnable once it has its own chain version.
     const forkRun = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       startSkillChainRun(tx, { organizationId: fixture.organizationId, userId: fixture.userA.id }, fork.name),
     );

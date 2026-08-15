@@ -13,6 +13,7 @@ import {
   subscribeSkillAction,
   unsubscribeSkillAction,
 } from "../actions";
+import { CopySkillDrawer } from "./copy-skill-drawer";
 import { NewVersionDrawer } from "./new-version-drawer";
 import {
   PromptDetailView,
@@ -47,6 +48,8 @@ export function PromptDetail({ data }: PromptDetailProps) {
   const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
   const [newVersionOpen, setNewVersionOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [copyTargetName, setCopyTargetName] = useState<string | null>(null);
   const [chainRunsPage, setChainRunsPage] = useState(data.chainRuns);
   const [runStepsByRunId, setRunStepsByRunId] = useState<Record<string, ChainRunStepView[] | undefined>>({});
 
@@ -108,10 +111,7 @@ export function PromptDetail({ data }: PromptDetailProps) {
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}
         onOpenShare={() => setShareOpen(true)}
-        onFork={async () => {
-          await forkSkillForSelfAction(data.id);
-          router.push("/prompts");
-        }}
+        onFork={() => setCopyOpen(true)}
       />
       {versionHistoryOpen ? (
         <VersionHistoryDrawer
@@ -144,6 +144,53 @@ export function PromptDetail({ data }: PromptDetailProps) {
             if (result.ok) {
               setNewVersionOpen(false);
               router.refresh();
+            }
+            return result;
+          }}
+        />
+      ) : null}
+      {copyOpen ? (
+        <CopySkillDrawer
+          sourceName={data.name}
+          sourceDescription={data.description}
+          onClose={() => setCopyOpen(false)}
+          onSubmit={async (values) => {
+            const result = await forkSkillForSelfAction(data.id, values);
+            if (result.ok) {
+              setCopyOpen(false);
+              setCopyTargetName(values.name);
+            }
+            return result;
+          }}
+        />
+      ) : null}
+      {copyTargetName ? (
+        <NewVersionDrawer
+          promptName={copyTargetName}
+          nextVersionLabel="v1"
+          mainFileContent={
+            data.isLegacyShape
+              ? `System template:\n${data.legacySystemTemplate ?? ""}\n\nUser template:\n${data.legacyUserTemplate ?? ""}`
+              : (data.files.find((f) => f.isMain)?.content ?? "")
+          }
+          supportingFiles={
+            data.isLegacyShape ? [] : data.files.filter((f) => !f.isMain).map(({ name, content }) => ({ name, content }))
+          }
+          tags={data.versions.find((v) => v.isActive)?.tags ?? []}
+          activeVersionKind={data.kind}
+          activeVersionSteps={(data.steps ?? []).map((s) => ({
+            id: s.id,
+            promptName: s.promptName,
+            promptVersion: s.promptVersionLabel ?? "",
+            dependsOn: s.dependsOn,
+          }))}
+          accessibleSkillNames={data.accessibleSkillNames}
+          onClose={() => setCopyTargetName(null)}
+          onSubmit={async (values) => {
+            const result = await publishVersionAction({ promptName: copyTargetName, ...values });
+            if (result.ok) {
+              setCopyTargetName(null);
+              router.push(`/prompts/${copyTargetName}`);
             }
             return result;
           }}
