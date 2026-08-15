@@ -30,6 +30,7 @@ describe("A personal skill becomes team-owned (US3)", () => {
       forkSkill(tx, fixture.team1Owner, original.id, {
         ownerType: "team",
         ownerId: fixture.team1Id,
+        name: "personal-to-team-fork",
       }),
     );
 

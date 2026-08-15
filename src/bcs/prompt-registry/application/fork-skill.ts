@@ -7,21 +7,24 @@ import {
 } from "@/bcs/audit-compliance";
 import type { UserSummary } from "@/bcs/identity-access";
 import { withAudit } from "@/shared/db";
+import { isUniqueViolation } from "@/shared/db/postgres-errors";
+import { DuplicatePromptNameError } from "../domain/prompt";
 import { CannotForkOwnSkillError, SourceSkillNotFoundError, type ForkSkillParams } from "../domain/subscription";
-import { insertFiles, type InsertPromptVersionFileParams } from "../infrastructure/prompt-version-files-repo";
-import { findPromptByOrgAndId, insertPrompt, updatePrompt } from "../infrastructure/prompts-repo";
-import { findVersionById, insertPromptVersion } from "../infrastructure/prompt-versions-repo";
+import { findPromptByOrgAndId, findPromptByOrgAndName, insertPrompt } from "../infrastructure/prompts-repo";
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
 /**
- * Creates a fully independent copy of the source skill's *current* active
- * version under a new owner, stamped with a permanent `forkedFromSkillId`
- * lineage pointer. No column, flag, or background job ever links the two
- * versions after this point — the fork never re-syncs with its source, in
- * either direction, ever again (FR-010, research.md's "enforced by
- * construction" decision).
+ * Creates a new, independent skill shell stamped with a permanent
+ * `forkedFromSkillId` lineage pointer back to the source. Content (the
+ * fork's own first version) is authored separately afterward through the
+ * normal publishVersion path — exactly like a blank-created skill
+ * (032-skill-file-format-refactor's FR-018) — never copied automatically
+ * here. Superseded 020-prompt-sharing's original "copy the source's
+ * current active version verbatim" behavior per the 2026-08-15 design doc:
+ * a caller-editable copy needs an editable name up front and editable
+ * content afterward, not an instant unrenamable duplicate.
  */
 export async function forkSkill(
   db: Db,
@@ -41,17 +44,16 @@ export async function forkSkill(
 
   await assertAuthorizedForOwner(db, actingUser, params.ownerType, params.ownerId);
 
-  const sourceVersion = source.activeVersionId
-    ? await findVersionById(db, source.activeVersionId)
-    : null;
+  if (await findPromptByOrgAndName(db, actingUser.orgId, params.name)) {
+    throw new DuplicatePromptNameError(params.name);
+  }
 
   const newPromptId = randomUUID();
-  const newVersionId = randomUUID();
   const promptValues = {
     id: newPromptId,
     organizationId: actingUser.orgId,
-    name: `${source.name}-fork-${newPromptId.slice(0, 8)}`,
-    description: source.description,
+    name: params.name,
+    description: params.description ?? null,
     isDeprecated: false,
     activeVersionId: null,
     ownerType: params.ownerType,
@@ -59,53 +61,28 @@ export async function forkSkill(
     forkedFromSkillId: sourceSkillId,
   };
 
-  return withAudit(
-    db,
-    async (tx) => {
-      const inserted = await insertPrompt(tx, promptValues);
-      if (!sourceVersion) {
-        return inserted;
-      }
-
-      await insertPromptVersion(tx, {
-        id: newVersionId,
-        promptId: newPromptId,
-        version: "v1",
-        kind: sourceVersion.kind,
-        // New-shape source (has files): copy them verbatim below instead.
-        // Legacy-shape source: copy its system/user template columns
-        // unchanged — forking follows whichever shape the source version
-        // is already in (032-skill-file-format-refactor), no reshaping.
-        systemTemplate: sourceVersion.files.length > 0 ? null : sourceVersion.systemTemplate,
-        userTemplate: sourceVersion.files.length > 0 ? null : sourceVersion.userTemplate,
-        steps: sourceVersion.steps,
-        tags: sourceVersion.tags as string[],
-      });
-      if (sourceVersion.files.length > 0) {
-        const fileRows: InsertPromptVersionFileParams[] = sourceVersion.files.map((f) => ({
-          id: randomUUID(),
-          promptVersionId: newVersionId,
-          name: f.name,
-          content: f.content,
-          isMain: f.isMain,
-        }));
-        await insertFiles(tx, fileRows);
-      }
-      const updated = await updatePrompt(tx, newPromptId, { activeVersionId: newVersionId });
-      return updated ?? inserted;
-    },
-    (tx) =>
-      record(tx, {
-        organizationId: actingUser.orgId,
-        actorUserId: actingUser.id,
-        actorApiKeyId: null,
-        action: "skill.forked",
-        resourceType: "prompt",
-        resourceId: newPromptId,
-        before: null,
-        after: { ...promptValues, activeVersionId: sourceVersion ? newVersionId : null },
-        transport: auditContext.transport,
-        sourceIp: auditContext.sourceIp ?? null,
-      }),
-  );
+  try {
+    return await withAudit(
+      db,
+      (tx) => insertPrompt(tx, promptValues),
+      (tx) =>
+        record(tx, {
+          organizationId: actingUser.orgId,
+          actorUserId: actingUser.id,
+          actorApiKeyId: null,
+          action: "skill.forked",
+          resourceType: "prompt",
+          resourceId: newPromptId,
+          before: null,
+          after: promptValues,
+          transport: auditContext.transport,
+          sourceIp: auditContext.sourceIp ?? null,
+        }),
+    );
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      throw new DuplicatePromptNameError(params.name);
+    }
+    throw err;
+  }
 }

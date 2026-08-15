@@ -205,7 +205,7 @@ describe("prompt registry tenant isolation (022-prompt-registry-tenant-isolation
         resourceId: prompt.id,
         fetchResourceById: (id) =>
           withTenantContext(testDb.appDb, orgA.organizationId, (tx) =>
-            forkSkill(tx, actingUser, id, { ownerType: "user", ownerId: actingUser.id }),
+            forkSkill(tx, actingUser, id, { ownerType: "user", ownerId: actingUser.id, name: "tenant-isolation-fork" }),
           ),
       });
 

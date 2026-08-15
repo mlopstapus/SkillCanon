@@ -42,10 +42,10 @@ describe("countForksOfSkill", () => {
     );
 
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.userB, source.id, { ownerType: "user", ownerId: fixture.userB.id }),
+      forkSkill(tx, fixture.userB, source.id, { ownerType: "user", ownerId: fixture.userB.id, name: "count-fork-user" }),
     );
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.team1Owner, source.id, { ownerType: "team", ownerId: fixture.team1Id }),
+      forkSkill(tx, fixture.team1Owner, source.id, { ownerType: "team", ownerId: fixture.team1Id, name: "count-fork-team" }),
     );
 
     const count = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -74,7 +74,7 @@ describe("countForksOfSkill", () => {
       }),
     );
     await withTenantContext(testDb.appDb, fixtureB.organizationId, (tx) =>
-      forkSkill(tx, fixtureB.userB, sourceB.id, { ownerType: "user", ownerId: fixtureB.userB.id }),
+      forkSkill(tx, fixtureB.userB, sourceB.id, { ownerType: "user", ownerId: fixtureB.userB.id, name: "count-fork-cross-org" }),
     );
 
     const count = await withTenantContext(testDb.appDb, fixtureA.organizationId, (tx) =>

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import { DuplicatePromptNameError } from "../domain/prompt";
 import {
   CannotForkOwnSkillError,
   CrossOrgSubscriberError,
@@ -29,7 +30,7 @@ describe("forkSkill", () => {
     await testDb.teardown();
   });
 
-  it("forks another user's skill into a new, independent skill with a lineage pointer and audit event", async () => {
+  it("creates a new, independent skill shell with the caller-supplied name/description and a lineage pointer, plus an audit event — no content copied (shell-only, superseding 020-prompt-sharing's original auto-copy)", async () => {
     const fixture = await makeSubscriptionFixtureOrg(testDb);
     const source = await createTestSkillOwnedByUser(
       testDb,
@@ -52,16 +53,21 @@ describe("forkSkill", () => {
         tx,
         fixture.userB,
         source.id,
-        { ownerType: "user", ownerId: fixture.userB.id },
+        { ownerType: "user", ownerId: fixture.userB.id, name: "fork-target", description: "My copy" },
         { transport: "api", sourceIp: "10.0.0.2" },
       ),
     );
 
     expect(fork.id).not.toBe(source.id);
+    expect(fork.name).toBe("fork-target");
+    expect(fork.description).toBe("My copy");
     expect(fork.ownerType).toBe("user");
     expect(fork.ownerId).toBe(fixture.userB.id);
     expect(fork.forkedFromSkillId).toBe(source.id);
-    expect(fork.activeVersionId).not.toBeNull();
+    // Shell-only: content authoring happens separately through
+    // publishVersion (the New Version drawer's own submit), not copied
+    // automatically here anymore.
+    expect(fork.activeVersionId).toBeNull();
 
     const events = await querySubscriptionAuditEvents(
       testDb,
@@ -71,12 +77,32 @@ describe("forkSkill", () => {
     expect(events[0]?.transport).toBe("api");
   });
 
+  it("rejects forking into a name that already exists in the organization", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.userA.id);
+    await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.userB.id, "taken-name");
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        forkSkill(tx, fixture.userB, source.id, {
+          ownerType: "user",
+          ownerId: fixture.userB.id,
+          name: "taken-name",
+        }),
+      ),
+    ).rejects.toBeInstanceOf(DuplicatePromptNameError);
+  });
+
   it("forks a skill into a team via its owner_id admin", async () => {
     const fixture = await makeSubscriptionFixtureOrg(testDb);
     const source = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.userA.id);
 
     const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.team1Owner, source.id, { ownerType: "team", ownerId: fixture.team1Id }),
+      forkSkill(tx, fixture.team1Owner, source.id, {
+        ownerType: "team",
+        ownerId: fixture.team1Id,
+        name: "team-fork-target",
+      }),
     );
 
     expect(fork.ownerType).toBe("team");
@@ -89,7 +115,11 @@ describe("forkSkill", () => {
 
     await expect(
       withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        forkSkill(tx, fixture.userB, source.id, { ownerType: "team", ownerId: fixture.team1Id }),
+        forkSkill(tx, fixture.userB, source.id, {
+          ownerType: "team",
+          ownerId: fixture.team1Id,
+          name: "unauthorized-team-fork",
+        }),
       ),
     ).rejects.toBeInstanceOf(SubscriberNotAuthorizedError);
   });
@@ -103,6 +133,7 @@ describe("forkSkill", () => {
         forkSkill(tx, fixture.otherOrgUser, source.id, {
           ownerType: "user",
           ownerId: fixture.otherOrgUser.id,
+          name: "cross-org-fork",
         }),
       ),
     ).rejects.toBeInstanceOf(SourceSkillNotFoundError);
@@ -120,6 +151,7 @@ describe("forkSkill", () => {
         forkSkill(tx, fixture.orgAdmin, source.id, {
           ownerType: "team",
           ownerId: fixture.otherOrgTeamId,
+          name: "cross-org-team-fork",
         }),
       ),
     ).rejects.toBeInstanceOf(CrossOrgSubscriberError);
@@ -131,12 +163,16 @@ describe("forkSkill", () => {
 
     await expect(
       withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        forkSkill(tx, fixture.userA, source.id, { ownerType: "user", ownerId: fixture.userA.id }),
+        forkSkill(tx, fixture.userA, source.id, {
+          ownerType: "user",
+          ownerId: fixture.userA.id,
+          name: "self-fork-attempt",
+        }),
       ),
     ).rejects.toBeInstanceOf(CannotForkOwnSkillError);
   });
 
-  it("keeps the fork independent from later publishes on the source", async () => {
+  it("keeps the fork independent from later publishes on the source, once the fork has its own version", async () => {
     const fixture = await makeSubscriptionFixtureOrg(testDb);
     const source = await createTestSkillOwnedByUser(
       testDb,
@@ -154,9 +190,26 @@ describe("forkSkill", () => {
     );
 
     const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.userB, source.id, { ownerType: "user", ownerId: fixture.userB.id }),
+      forkSkill(tx, fixture.userB, source.id, {
+        ownerType: "user",
+        ownerId: fixture.userB.id,
+        name: "independence-fork",
+      }),
     );
-    const forkVersionAfterFork = fork.activeVersionId;
+    // Mirrors the real Step 2 New Version flow — forkSkill itself no
+    // longer copies content, so give the fork its own first version here.
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userB.id }, {
+        organizationId: fixture.organizationId,
+        promptName: fork.name,
+        version: "v1",
+        mainFile: { content: "fork's own content" },
+      }),
+    );
+    const forkAfterOwnPublish = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      getPromptById(tx, fixture.organizationId, fork.id),
+    );
+    const forkVersionAfterOwnPublish = forkAfterOwnPublish?.activeVersionId;
 
     // Publish a new version on the source — the fork must be unaffected.
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
@@ -171,7 +224,7 @@ describe("forkSkill", () => {
     const forkAfter = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getPromptById(tx, fixture.organizationId, fork.id),
     );
-    expect(forkAfter?.activeVersionId).toBe(forkVersionAfterFork);
+    expect(forkAfter?.activeVersionId).toBe(forkVersionAfterOwnPublish);
   });
 
   it("keeps the source independent from later publishes on the fork", async () => {
@@ -192,19 +245,23 @@ describe("forkSkill", () => {
     );
 
     const fork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.userB, source.id, { ownerType: "user", ownerId: fixture.userB.id }),
+      forkSkill(tx, fixture.userB, source.id, {
+        ownerType: "user",
+        ownerId: fixture.userB.id,
+        name: "reverse-independence-fork",
+      }),
     );
 
     const sourceBefore = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       getPromptById(tx, fixture.organizationId, source.id),
     );
 
-    // Publish a new version on the fork — the source must be unaffected.
+    // Publish the fork's first version — the source must be unaffected.
     await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
       publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.userB.id }, {
         organizationId: fixture.organizationId,
         promptName: fork.name,
-        version: "v2",
+        version: "v1",
         mainFile: { content: "content" },
       }),
     );
@@ -220,7 +277,11 @@ describe("forkSkill", () => {
     const root = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.userA.id);
 
     const firstFork = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-      forkSkill(tx, fixture.userB, root.id, { ownerType: "user", ownerId: fixture.userB.id }),
+      forkSkill(tx, fixture.userB, root.id, {
+        ownerType: "user",
+        ownerId: fixture.userB.id,
+        name: "first-fork",
+      }),
     );
     expect(firstFork.forkedFromSkillId).toBe(root.id);
 
@@ -228,6 +289,7 @@ describe("forkSkill", () => {
       forkSkill(tx, fixture.team1Owner, firstFork.id, {
         ownerType: "team",
         ownerId: fixture.team1Id,
+        name: "second-fork",
       }),
     );
     expect(secondFork.forkedFromSkillId).toBe(firstFork.id);

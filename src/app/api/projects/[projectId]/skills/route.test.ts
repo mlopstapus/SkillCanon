@@ -61,6 +61,7 @@ describe("/api/projects/[projectId]/skills", () => {
       const teamSkill = await forkSkill(tx, adminActingUser, userSkill.id, {
         ownerType: "team",
         ownerId: seeded.teamId,
+        name: `team-skill-${suffix}`,
       });
       return { project, teamSkill };
     });
