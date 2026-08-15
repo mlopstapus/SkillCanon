@@ -118,9 +118,14 @@ skill can be left in.
   caller-supplied `name`/`description` and `forkedFromSkillId`, write
   the `skill.forked` audit event, return the new prompt.
 - `src/app/(app)/prompts/actions.ts`: `forkSkillForSelfAction` and
-  `forkSkillAction` take the new `{ name, description }` fields and
-  return the created prompt's `{ id, name }` on success (needed so the
-  client can open Step 2 against the right skill without a refetch).
+  `forkSkillAction` take the new `{ name, description }` fields.
+  **Amended during implementation (Task 7)**: no server round-trip is
+  needed to open Step 2 against the right skill — the client already
+  has the new name from the value it just submitted. `PromptActionResult`
+  stays `{ ok: true } | { ok: false; error }`, unchanged from every
+  other action in this file; an earlier draft of this section proposed
+  widening it to return `{ id, name }`, dropped as unnecessary before
+  any task was written against it.
 - No changes needed to `publishVersion`/`publishVersionAction` — Step 2
   is just a normal version publish.
 - `src/app/api/skills/[name]/fork/route.ts`: **found during implementation
