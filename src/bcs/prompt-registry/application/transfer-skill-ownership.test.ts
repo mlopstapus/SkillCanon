@@ -39,7 +39,7 @@ async function addUnassignedOrgAdmin(testDb: TestDb, organizationId: string): Pr
   return { id, orgId: organizationId, teamId: null, role: "admin", email };
 }
 
-async function waitForConcurrentOwnershipUpdates(testDb: TestDb): Promise<void> {
+async function waitForOwnershipUpdate(testDb: TestDb): Promise<void> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const rows = await testDb.ownerDb.execute<{ count: number }>(sql`
       select count(*)::int as count
@@ -49,12 +49,12 @@ async function waitForConcurrentOwnershipUpdates(testDb: TestDb): Promise<void> 
         and pid <> pg_backend_pid()
         and query ilike '%update "prompt_registry"."prompts"%'
     `);
-    if (Number(rows[0]?.count) >= 2) {
+    if (Number(rows[0]?.count) >= 1) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 25));
   }
-  throw new Error("Expected two concurrent ownership updates to overlap.");
+  throw new Error("Expected an ownership update to be active.");
 }
 
 describe("transferSkillOwnership", () => {
@@ -323,9 +323,8 @@ describe("transferSkillOwnership", () => {
     });
   });
 
-  it("allows overlapping unlocked transfers with last-write-wins ownership", async () => {
+  it("serializes overlapping transfers and audits each current ownership snapshot", async () => {
     const fixture = await makeSubscriptionFixtureOrg(testDb);
-    const secondTeamId = await addTeamOwnedBy(testDb, fixture.organizationId, fixture.team1Owner.id);
     const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
     const suffix = randomUUID().replaceAll("-", "");
     const functionName = `hold_ownership_update_${suffix}`;
@@ -348,19 +347,19 @@ describe("transferSkillOwnership", () => {
 
     try {
       const first = withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, {
           newOwnerType: "user",
-          newOwnerId: fixture.team1Owner.id,
+          newOwnerId: fixture.userA.id,
         }),
       );
       const second = withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
-        transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, {
           newOwnerType: "team",
-          newOwnerId: secondTeamId,
+          newOwnerId: fixture.team2Id,
         }),
       );
 
-      await waitForConcurrentOwnershipUpdates(testDb);
+      await waitForOwnershipUpdate(testDb);
       const advisoryLocks = await testDb.ownerDb.execute<{ count: number }>(sql`
         select count(*)::int as count
         from pg_locks
@@ -373,12 +372,30 @@ describe("transferSkillOwnership", () => {
       const current = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
         getPromptById(tx, fixture.organizationId, source.id),
       );
+      const events = await testDb.ownerDb.execute<{
+        before: { ownerType: "user" | "team"; ownerId: string };
+        after: { ownerType: "user" | "team"; ownerId: string };
+      }>(sql`
+        select before, after
+        from audit.audit_events
+        where action = 'skill.owner_transferred' and resource_id = ${source.id}
+      `);
+      const rootEvents = Array.from(events).filter(
+        (event) =>
+          event.before.ownerType === "team" && event.before.ownerId === fixture.team1Id,
+      );
 
       expect(results).toHaveLength(2);
-      expect([
-        { ownerType: "user", ownerId: fixture.team1Owner.id },
-        { ownerType: "team", ownerId: secondTeamId },
-      ]).toContainEqual({ ownerType: current?.ownerType, ownerId: current?.ownerId });
+      expect(rootEvents).toHaveLength(1);
+      const chainedEvents = Array.from(events).filter(
+        (event) =>
+          event.before.ownerType === rootEvents[0]?.after.ownerType &&
+          event.before.ownerId === rootEvents[0]?.after.ownerId,
+      );
+      expect(chainedEvents).toHaveLength(1);
+      expect({ ownerType: current?.ownerType, ownerId: current?.ownerId }).toEqual(
+        chainedEvents[0]?.after,
+      );
     } finally {
       await testDb.ownerDb.execute(sql.raw(`drop trigger ${triggerName} on prompt_registry.prompts`));
       await testDb.ownerDb.execute(sql.raw(`drop function ${functionName}()`));

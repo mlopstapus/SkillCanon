@@ -19,14 +19,18 @@ import {
   SkillNotFoundForTransferError,
   type OwnerType,
 } from "../domain/subscription";
-import { findPromptByOrgAndId, updatePrompt } from "../infrastructure/prompts-repo";
+import {
+  findPromptByOrgAndId,
+  findPromptByOrgAndIdForUpdate,
+  updatePrompt,
+} from "../infrastructure/prompts-repo";
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
 
 /**
- * Reassigns an existing skill in place. A non-admin must first be authorized
- * for the source owner, preventing destination lookup from revealing identity
- * membership. Destination validation still precedes destination authorization
- * so valid source actors receive the transfer-specific error contract.
+ * Reassigns an existing skill in place. A non-admin is authorized against the
+ * source before destination lookup, preventing an identity-membership oracle,
+ * then re-authorized against the row-locked current source inside the audited
+ * transaction so a stale request cannot overwrite an intervening transfer.
  */
 export async function transferSkillOwnership(
   db: PostgresJsDatabase<Record<string, never>>,
@@ -65,13 +69,46 @@ export async function transferSkillOwnership(
     await assertAuthorizedForOwner(db, actingUser, params.newOwnerType, params.newOwnerId);
   }
 
+  let lockedSource: PromptSummary;
+
   return withAudit(
     db,
-    async (tx) =>
-      (await updatePrompt(tx, skillId, {
+    async (tx) => {
+      const currentSource = await findPromptByOrgAndIdForUpdate(
+        tx,
+        actingUser.orgId,
+        skillId,
+      );
+      if (!currentSource) {
+        throw new SkillNotFoundForTransferError();
+      }
+
+      if (actingUser.role !== "admin") {
+        await assertAuthorizedForOwner(
+          tx,
+          actingUser,
+          currentSource.ownerType,
+          currentSource.ownerId,
+        );
+      }
+
+      if (
+        currentSource.ownerType === params.newOwnerType &&
+        currentSource.ownerId === params.newOwnerId
+      ) {
+        throw new CannotTransferToSameOwnerError();
+      }
+
+      lockedSource = currentSource;
+      const updated = await updatePrompt(tx, skillId, {
         ownerType: params.newOwnerType,
         ownerId: params.newOwnerId,
-      })) ?? source,
+      });
+      if (!updated) {
+        throw new SkillNotFoundForTransferError();
+      }
+      return updated;
+    },
     (tx) =>
       record(tx, {
         organizationId: actingUser.orgId,
@@ -80,7 +117,10 @@ export async function transferSkillOwnership(
         action: "skill.owner_transferred",
         resourceType: "prompt",
         resourceId: skillId,
-        before: { ownerType: source.ownerType, ownerId: source.ownerId },
+        before: {
+          ownerType: lockedSource.ownerType,
+          ownerId: lockedSource.ownerId,
+        },
         after: { ownerType: params.newOwnerType, ownerId: params.newOwnerId },
         transport: auditContext.transport,
         sourceIp: auditContext.sourceIp ?? null,
