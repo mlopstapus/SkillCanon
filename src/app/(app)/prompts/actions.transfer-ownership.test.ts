@@ -13,6 +13,8 @@ const state = vi.hoisted(() => ({
     skillId: string;
     params: { newOwnerType: "user" | "team"; newOwnerId: string };
   }>,
+  shouldTransferFail: false,
+  transferFailure: null as unknown,
   revalidatedPaths: [] as string[],
 }));
 
@@ -38,6 +40,7 @@ vi.mock("@/bcs/prompt-registry", () => ({
     skillId: string,
     params: { newOwnerType: "user" | "team"; newOwnerId: string },
   ) => {
+    if (state.shouldTransferFail) throw state.transferFailure;
     state.transfers.push({ tx, actingUser, skillId, params });
   },
 }));
@@ -55,6 +58,8 @@ describe("transferSkillOwnershipAction", () => {
     state.user = { id: "u1", orgId: "org-1", role: "admin" };
     state.tenantOrganizationIds.length = 0;
     state.transfers.length = 0;
+    state.shouldTransferFail = false;
+    state.transferFailure = null;
     state.revalidatedPaths.length = 0;
   });
 
@@ -80,5 +85,33 @@ describe("transferSkillOwnershipAction", () => {
       },
     ]);
     expect(state.revalidatedPaths).toEqual(["/prompts", "/prompts/commit-message"]);
+  });
+
+  it("returns the authentication error and does not revalidate when no actor is signed in", async () => {
+    state.user = null;
+
+    const result = await promptActions.transferSkillOwnershipAction("skill-1", "commit-message", {
+      newOwnerType: "team",
+      newOwnerId: "team-2",
+    });
+
+    expect(result).toEqual({ ok: false, error: "Not signed in." });
+    expect(state.revalidatedPaths).toEqual([]);
+  });
+
+  it.each([
+    { failure: new Error("Transfer denied."), expectedError: "Transfer denied." },
+    { failure: "opaque failure", expectedError: "Something went wrong." },
+  ])("returns $expectedError without revalidation when transfer rejects", async ({ failure, expectedError }) => {
+    state.shouldTransferFail = true;
+    state.transferFailure = failure;
+
+    const result = await promptActions.transferSkillOwnershipAction("skill-1", "commit-message", {
+      newOwnerType: "team",
+      newOwnerId: "team-2",
+    });
+
+    expect(result).toEqual({ ok: false, error: expectedError });
+    expect(state.revalidatedPaths).toEqual([]);
   });
 });

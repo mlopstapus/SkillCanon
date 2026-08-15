@@ -20,7 +20,7 @@ const candidates = {
 };
 
 describe("TransferOwnershipDrawer", () => {
-  it("keeps both user and team candidate panels mounted and hides only the inactive panel", () => {
+  it("uses a pressed-button mode group and keeps both labelled candidate regions mounted", () => {
     const html = renderToStaticMarkup(
       <TransferOwnershipDrawer
         promptName="commit-message"
@@ -31,12 +31,17 @@ describe("TransferOwnershipDrawer", () => {
       />,
     );
 
-    expect(html.match(/role="tabpanel"/g)).toHaveLength(2);
+    expect(html).toContain('role="group"');
+    expect(html).toContain('aria-label="New owner type"');
+    expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
+    expect(html.match(/aria-pressed="false"/g)).toHaveLength(1);
+    expect(html.match(/role="region"/g)).toHaveLength(2);
+    expect(html).not.toMatch(/role="tab(list|panel)?"/);
     expect(html).toContain("Bob Builder");
     expect(html).toContain("Carol Reviewer");
     expect(html).toContain("Platform");
     expect(html).toContain("Security");
-    expect(html).toMatch(/role="tabpanel"[^>]*class="[^"]*hidden/);
+    expect(html).toMatch(/role="region"[^>]*class="[^"]*hidden/);
   });
 
   it("confirms the selected owner with dynamic warning copy, submits that owner, and closes on success", async () => {
@@ -156,7 +161,7 @@ describe("TransferOwnershipDrawer", () => {
         (button) => button.textContent === "Transfer ownership",
       ),
     ).toBe(false);
-    expect(container.querySelector('[role="tablist"]')?.parentElement?.className).not.toContain("hidden");
+    expect(container.querySelector('[role="group"]')?.parentElement?.className).not.toContain("hidden");
     expect(submitCount).toBe(0);
     expect(closeCount).toBe(0);
 
@@ -241,7 +246,14 @@ describe("TransferOwnershipDrawer", () => {
         .filter((button) => button.textContent === "Back" || button.textContent === "Cancel")
         .every((button) => button.disabled),
     ).toBe(true);
+    const closeButton = container.querySelector<HTMLButtonElement>('button[aria-label="Close"]');
+    await act(async () => {
+      closeButton?.click();
+      container.querySelector<HTMLElement>('[aria-hidden="true"]')?.click();
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
     expect(closeCount).toBe(0);
+    expect(closeButton?.disabled).toBe(true);
 
     await act(async () => {
       resolveTransfer?.({ ok: true });
@@ -313,7 +325,7 @@ describe("TransferOwnershipDrawer", () => {
       search.dispatchEvent(new Event("input", { bubbles: true }));
     });
 
-    const candidateLabels = [...container.querySelectorAll('[role="tabpanel"] button')].map(
+    const candidateLabels = [...container.querySelectorAll('[role="region"] button')].map(
       (button) => button.textContent,
     );
     expect(candidateLabels).toEqual(["Carol Reviewer"]);

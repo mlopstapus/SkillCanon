@@ -51,6 +51,10 @@ export function TransferOwnershipDrawer({
     setSelected({ type, candidate });
   }
 
+  function requestClose() {
+    if (!isPending) onClose();
+  }
+
   function submit() {
     if (!selected) return;
     setError(null);
@@ -68,12 +72,12 @@ export function TransferOwnershipDrawer({
   }
 
   return (
-    <Drawer onClose={onClose} labelledBy={titleId} widthClassName="w-[452px]">
+    <Drawer onClose={requestClose} labelledBy={titleId} widthClassName="w-[452px]">
       <div className="flex h-14 items-center justify-between border-b border-border px-5">
         <span id={titleId} className="font-display text-[15px] font-semibold">
           Transfer {promptName}
         </span>
-        <button type="button" onClick={onClose} aria-label="Close">
+        <button type="button" disabled={isPending} onClick={requestClose} aria-label="Close">
           ×
         </button>
       </div>
@@ -85,15 +89,14 @@ export function TransferOwnershipDrawer({
         ) : null}
         <div className={selected ? "hidden" : "flex flex-col gap-4"}>
           <div
-            role="tablist"
+            role="group"
             aria-label="New owner type"
             className="flex gap-0.5 rounded-control border border-border-2 bg-surface p-0.5"
           >
             <button
               id={userTabId}
               type="button"
-              role="tab"
-              aria-selected={mode === "user"}
+              aria-pressed={mode === "user"}
               aria-controls={userPanelId}
               onClick={() => setMode("user")}
               className={`flex-1 rounded-[7px] px-3 py-2 font-mono text-[11.5px] ${
@@ -105,8 +108,7 @@ export function TransferOwnershipDrawer({
             <button
               id={teamTabId}
               type="button"
-              role="tab"
-              aria-selected={mode === "team"}
+              aria-pressed={mode === "team"}
               aria-controls={teamPanelId}
               onClick={() => setMode("team")}
               className={`flex-1 rounded-[7px] px-3 py-2 font-mono text-[11.5px] ${
@@ -125,7 +127,7 @@ export function TransferOwnershipDrawer({
           />
           <div
             id={userPanelId}
-            role="tabpanel"
+            role="region"
             aria-labelledby={userTabId}
             className={mode === "user" ? "flex flex-col gap-2" : "hidden"}
           >
@@ -142,7 +144,7 @@ export function TransferOwnershipDrawer({
           </div>
           <div
             id={teamPanelId}
-            role="tabpanel"
+            role="region"
             aria-labelledby={teamTabId}
             className={mode === "team" ? "flex flex-col gap-2" : "hidden"}
           >
@@ -186,7 +188,7 @@ export function TransferOwnershipDrawer({
         <button
           type="button"
           disabled={isPending}
-          onClick={onClose}
+          onClick={requestClose}
           className="rounded-control border border-border-2 bg-surface px-4 py-2.5 text-[13px] font-semibold text-text disabled:opacity-50"
         >
           Cancel
