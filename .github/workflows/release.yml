@@ -1,0 +1,208 @@
+name: Release
+
+# Runs on every push to main (i.e. after a PR merges). Supersedes the old
+# docker-publish.yml: it still unconditionally builds/pushes the :<sha> and
+# :latest image tags on every push exactly as that workflow did, and adds
+# semver tagging/versioning on top when the push corresponds to a merged PR.
+# Folding both into one workflow (rather than two workflows both triggered on
+# `push: branches: [main]`) avoids a race between two independent jobs each
+# running their own `docker build .` against the same tags — see
+# specs/039-pr-title-semver-versioning/research.md Decision 5.
+#
+# Bump detection reads the *merged PR's* title/body via the GitHub API
+# (`GET /repos/{owner}/{repo}/commits/{sha}/pulls`), not the merge commit
+# message. Verified against this repo's actual history: merges here produce a
+# plain "Merge pull request #N from owner/branch" commit with no PR title in
+# the body at all (confirmed via `git log --format=%B` on recent merges), so a
+# commit-message-parsing approach would never work here. The commits/pulls API
+# is the GitHub-documented way to resolve "which PR did this commit belong
+# to" and works for both merge-commit and squash-merge repos. See
+# specs/039-pr-title-semver-versioning/research.md Decision 1.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE: ghcr.io/mlopstapus/skillcanon
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t "${IMAGE}:${{ github.sha }}" -t "${IMAGE}:latest" .
+
+      - name: Push image (sha + latest)
+        run: |
+          docker push "${IMAGE}:${{ github.sha }}"
+          docker push "${IMAGE}:latest"
+
+      # Everything below is additive versioning on top of the always-run
+      # sha/latest publish above, and is skipped (not failed) when this push
+      # didn't come from a merged PR — e.g. a direct admin push to main.
+      - name: Resolve merged PR and bump type
+        id: pr
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+
+          PR_JSON=$(gh api "repos/${REPO}/commits/${SHA}/pulls" --jq '[.[] | select(.merged_at != null)]')
+          PR_COUNT=$(echo "${PR_JSON}" | jq 'length')
+
+          if [ "${PR_COUNT}" -eq 0 ]; then
+            echo "::notice::No merged PR found for commit ${SHA} (direct push to main?) — skipping version bump/tag."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Prefer the PR whose merge_commit_sha exactly matches this push,
+          # falling back to the first merged PR the API returned (covers the
+          # rare case where GitHub associates more than one PR with a commit).
+          PR_NUMBER=$(echo "${PR_JSON}" | jq -r --arg sha "${SHA}" \
+            '(map(select(.merge_commit_sha == $sha)) | .[0].number) // .[0].number')
+
+          TITLE=$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title -q .title)
+          BODY=$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json body -q .body)
+
+          echo "Resolved PR #${PR_NUMBER}: ${TITLE}"
+
+          # Conventional Commits title: type(scope)!: subject
+          # pr-title-lint.yml already enforces this on the PR before merge;
+          # this parse is defensive (e.g. an admin merge that bypassed
+          # required checks) and falls back to a patch bump on no match,
+          # rather than failing the whole release.
+          TYPE="fix"
+          BANG=""
+          CONVENTIONAL_TITLE_RE='^([a-zA-Z]+)(\([^)]*\))?(!)?:\ .+'
+          if [[ "${TITLE}" =~ ${CONVENTIONAL_TITLE_RE} ]]; then
+            TYPE="${BASH_REMATCH[1]}"
+            TYPE="${TYPE,,}"
+            BANG="${BASH_REMATCH[3]}"
+          else
+            echo "::warning::PR title '${TITLE}' doesn't match Conventional Commits format — defaulting to a patch bump."
+          fi
+
+          BREAKING="false"
+          if [ -n "${BANG}" ]; then
+            BREAKING="true"
+          fi
+          if echo "${BODY}" | grep -qiE '^BREAKING[ -]CHANGE:'; then
+            BREAKING="true"
+          fi
+
+          if [ "${BREAKING}" = "true" ]; then
+            BUMP="major"
+          elif [ "${TYPE}" = "feat" ]; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+
+          echo "Bump type: ${BUMP} (conventional type=${TYPE}, breaking=${BREAKING})"
+
+          {
+            echo "found=true"
+            echo "number=${PR_NUMBER}"
+            echo "title=${TITLE}"
+            echo "bump=${BUMP}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        id: version
+        if: steps.pr.outputs.found == 'true'
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [ -z "${LATEST_TAG}" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "Latest tag: ${LATEST_TAG}"
+
+          VERSION="${LATEST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
+
+          case "${{ steps.pr.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor)
+              MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch)
+              PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "tag=v${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+          echo "bare=${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push git tag
+        if: steps.pr.outputs.found == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.version.outputs.tag }}" \
+            -m "Release ${{ steps.version.outputs.tag }} (PR #${{ steps.pr.outputs.number }}: ${{ steps.pr.outputs.title }})"
+          git push origin "${{ steps.version.outputs.tag }}"
+
+      - name: Tag and push version image
+        if: steps.pr.outputs.found == 'true'
+        run: |
+          set -euo pipefail
+          docker tag "${IMAGE}:${{ github.sha }}" "${IMAGE}:${{ steps.version.outputs.tag }}"
+          docker push "${IMAGE}:${{ steps.version.outputs.tag }}"
+
+      - name: Bump Helm chart version
+        if: steps.pr.outputs.found == 'true'
+        id: chart
+        run: |
+          set -euo pipefail
+          CHART_FILE="charts/skillcanon/Chart.yaml"
+
+          # charts/skillcanon/ doesn't exist on main yet as of this writing —
+          # the chart is being reworked on a separate branch and still lives
+          # at charts/spechub/ here. Guard rather than fail so this step is a
+          # silent no-op until that rework merges.
+          if [ ! -f "${CHART_FILE}" ]; then
+            echo "::notice::${CHART_FILE} not found on this branch — skipping chart version bump."
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BARE="${{ steps.version.outputs.bare }}"
+          sed -i.bak -E "s/^version:.*/version: ${BARE}/" "${CHART_FILE}"
+          sed -i.bak -E "s/^appVersion:.*/appVersion: \"${BARE}\"/" "${CHART_FILE}"
+          rm -f "${CHART_FILE}.bak"
+
+          echo "updated=true" >> "$GITHUB_OUTPUT"
+
+      - name: Commit Chart.yaml version bump
+        if: steps.pr.outputs.found == 'true' && steps.chart.outputs.updated == 'true'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add charts/skillcanon/Chart.yaml
+          if git diff --cached --quiet; then
+            echo "Chart.yaml already at ${{ steps.version.outputs.bare }} — nothing to commit."
+          else
+            git commit -m "chore(release): bump chart version to ${{ steps.version.outputs.bare }} [skip ci]"
+            git push origin HEAD:main
+          fi
