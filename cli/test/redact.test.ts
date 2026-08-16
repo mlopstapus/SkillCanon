@@ -17,4 +17,18 @@ describe("redact", () => {
   it("does not redact a short, incidental sk_ substring below the length floor", () => {
     expect(redact("field sk_ok is required")).toBe("field sk_ok is required");
   });
+
+  it.each(["ghp_", "github_pat_", "gho_", "ghu_", "ghs_", "ghr_"])(
+    "redacts a real-shaped GitHub token (%s prefix)",
+    (prefix) => {
+      const realToken = prefix + randomBytes(24).toString("base64url");
+      const message = `.npmrc auth token rejected: ${realToken}`;
+      expect(redact(message)).not.toContain(realToken);
+      expect(redact(message)).toContain(`${prefix}***REDACTED***`);
+    },
+  );
+
+  it("does not redact a short, incidental ghp_ substring below the length floor", () => {
+    expect(redact("field ghp_ok is required")).toBe("field ghp_ok is required");
+  });
 });

@@ -1,0 +1,60 @@
+name: Publish CLI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cli/**"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cli
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: cli/package.json
+          registry-url: https://npm.pkg.github.com
+          scope: "@mlopstapus"
+          cache: pnpm
+          cache-dependency-path: cli/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run typecheck
+      - run: pnpm test
+      - run: pnpm run build
+
+      - name: Check whether this version is already published
+        id: version-check
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          LOCAL_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$LOCAL_VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "@mlopstapus/skillcanon@$LOCAL_VERSION" version >/dev/null 2>&1; then
+            echo "already-published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "already-published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Skip (no version change)
+        if: steps.version-check.outputs.already-published == 'true'
+        env:
+          VERSION: ${{ steps.version-check.outputs.version }}
+        run: echo "::notice::@mlopstapus/skillcanon@$VERSION is already published — nothing to do."
+
+      - name: Publish
+        if: steps.version-check.outputs.already-published == 'false'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm publish

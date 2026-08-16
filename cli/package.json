@@ -1,8 +1,21 @@
 {
-  "name": "skillcanon",
+  "name": "@mlopstapus/skillcanon",
   "version": "0.1.0",
   "description": "Syncs a repository's Claude Code skills with a SkillCanon project's governed prompt roster, resolving each prompt live at invocation time.",
-  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mlopstapus/SkillCanon.git",
+    "directory": "cli"
+  },
+  "homepage": "https://github.com/mlopstapus/SkillCanon/tree/main/cli",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "bin": {
     "skillcanon": "dist/index.js"
