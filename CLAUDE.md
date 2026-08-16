@@ -16,6 +16,7 @@ Self-hosted skill/prompt registry distributed via REST, MCP, and a CLI, with hie
 
 ## Notes
 
+- Any change touching more than 5 files must go through the Speckit loop (`/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`) rather than freeform/ad hoc implementation, even for infrastructure/tooling work that isn't a product feature (e.g. CI workflows, release tooling). Below that threshold, freeform work is fine — see the "Bundle small backlog fixes" precedent for several small unambiguous fixes in one branch/PR.
 - In managed Multica workspaces where `pnpm` is not installed globally, use `corepack pnpm <script>` for the same project commands rather than switching package managers.
 - If unrelated Multica-managed containers occupy SkillCanon default ports and cannot be stopped, health-check the app with a temporary Compose file/project that remaps ports (for example app 3001 and Postgres 5434); leave `docker-compose.yaml` defaults unchanged.
 - `skillcanon-app-1`/`skillcanon-database-1` in a Multica workspace are typically a long-lived shared dev stack (observed up 47h+ across sessions), alongside the platform's own `multica-*`/`infra-controller-1` containers on the same Docker daemon. Don't run `docker compose down`/rebuild for a change that doesn't touch `docker-compose.yaml`/`Dockerfile`/runtime app code — it's disruptive to concurrent work for no verification benefit; the Testcontainers-backed `pnpm test` suite already proves migrations/queries work against a real Postgres in isolation.
