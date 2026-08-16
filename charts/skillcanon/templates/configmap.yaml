@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skillcanon.app.fullname" . }}
+  labels:
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.app.selectorLabels" . | nindent 4 }}
+data:
+  APP_BASE_URL: {{ .Values.app.env.appBaseUrl | quote }}
+  JWT_EXPIRY_HOURS: {{ .Values.app.env.jwtExpiryHours | quote }}
+  INVITATION_EXPIRY_HOURS: {{ .Values.app.env.invitationExpiryHours | quote }}
+  {{- if .Values.app.smtp.enabled }}
+  SMTP_HOST: {{ .Values.app.smtp.host | quote }}
+  SMTP_PORT: {{ .Values.app.smtp.port | quote }}
+  {{- if .Values.app.smtp.user }}
+  SMTP_USER: {{ .Values.app.smtp.user | quote }}
+  {{- end }}
+  SMTP_FROM: {{ .Values.app.smtp.from | quote }}
+  {{- end }}

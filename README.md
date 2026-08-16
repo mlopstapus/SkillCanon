@@ -151,7 +151,7 @@ See `CLAUDE.md` for the full test-command reference (a faster scoped subset, the
 
 **Docker Compose** (above) is the current, working self-hosted deployment path.
 
-A Helm chart exists at [`charts/spechub`](charts/spechub) but describes an older split backend/frontend/database deployment shape that predates the unified app and has not yet been updated to match it — don't use it to deploy the current app until it's reworked to deploy the single unified image. The same applies to `scripts/rollout.sh`. CI publishes the current unified image to `ghcr.io/mlopstapus/skillcanon` on every merge to `main`.
+A Helm chart exists at [`charts/skillcanon`](charts/skillcanon) and deploys the unified app as a single Deployment/Service/Ingress plus a Postgres StatefulSet (or an external managed Postgres) — see the chart's own README for what changed from the old OpenShift/split-app shape and its open assumptions. `scripts/rollout.sh` still predates the unified app and hasn't been reworked to match it. CI publishes the current unified image to `ghcr.io/mlopstapus/skillcanon` on every merge to `main`.
 
 ## Documentation
 

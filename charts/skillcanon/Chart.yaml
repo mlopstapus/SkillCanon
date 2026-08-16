@@ -1,0 +1,16 @@
+apiVersion: v2
+name: skillcanon
+description: SkillCanon — an open-source, self-hosted prompt registry distributed via MCP. Deploys the unified Next.js app as a single Deployment/Service/Ingress (see README.md for what changed from the old split OpenShift shape).
+type: application
+version: 0.2.0
+appVersion: "0.2.0"
+keywords:
+  - prompts
+  - mcp
+  - llm
+  - ai
+home: https://github.com/mlopstapus/SkillCanon
+sources:
+  - https://github.com/mlopstapus/SkillCanon
+maintainers:
+  - name: mlopstapus

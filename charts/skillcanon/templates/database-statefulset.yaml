@@ -31,16 +31,14 @@ spec:
               protocol: TCP
           env:
             - name: POSTGRES_USER
-              value: {{ .Values.postgresql.username | quote }}
+              value: {{ .Values.database.postgresUser | quote }}
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "skillcanon.fullname" . }}
+                  name: {{ include "skillcanon.app.fullname" . }}
                   key: postgresql-password
             - name: POSTGRES_DB
-              value: {{ .Values.postgresql.database | quote }}
-            - name: PGDATA
-              value: /var/lib/postgresql/data/pgdata
+              value: {{ .Values.database.postgresDb | quote }}
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
@@ -49,7 +47,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.postgresql.username | quote }}
+                - {{ .Values.database.postgresUser | quote }}
             initialDelaySeconds: 30
             periodSeconds: 10
           readinessProbe:
@@ -57,7 +55,7 @@ spec:
               command:
                 - pg_isready
                 - -U
-                - {{ .Values.postgresql.username | quote }}
+                - {{ .Values.database.postgresUser | quote }}
             initialDelaySeconds: 5
             periodSeconds: 5
           {{- with .Values.database.resources }}

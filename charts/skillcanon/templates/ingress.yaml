@@ -33,9 +33,9 @@ spec:
             pathType: {{ .pathType }}
             backend:
               service:
-                name: {{ include "skillcanon.frontend.fullname" $ }}
+                name: {{ include "skillcanon.app.fullname" $ }}
                 port:
-                  number: {{ $.Values.frontend.service.port }}
+                  number: {{ $.Values.app.service.port }}
           {{- end }}
     {{- end }}
 {{- end }}

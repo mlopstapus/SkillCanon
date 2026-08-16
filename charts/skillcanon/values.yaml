@@ -1,0 +1,165 @@
+# ── Global ────────────────────────────────────────────────────────────────
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# ── App (unified Next.js app, built from the root Dockerfile) ──────────────
+# Single Deployment/Service for the whole app — there is no separate
+# frontend/backend split anymore (see Chart.yaml / README for history).
+app:
+  replicaCount: 1
+  image:
+    # Published by .github/workflows/docker-publish.yml on every merge to
+    # main. Only `latest` and `<git-sha>` tags exist today — there is no
+    # semver release pipeline yet, so this chart's own appVersion is
+    # aspirational until one exists. Pin to a `<git-sha>` tag for anything
+    # beyond local/dev use.
+    repository: ghcr.io/mlopstapus/skillcanon
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  service:
+    # ClusterIP + the Ingress in front of it, not LoadBalancer — bare-metal
+    # k3s (e.g. a home NUC with no MetalLB or cloud LB provisioner) leaves
+    # a LoadBalancer Service stuck Pending forever. Override to
+    # LoadBalancer yourself on a cluster that actually provisions one.
+    type: ClusterIP
+    port: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # Non-secret runtime config — see src/shared/config/index.ts /
+  # .env.example for the authoritative list.
+  env:
+    # Base URL used to build links shared outside the app (e.g. invitation
+    # accept links). Should be the externally-reachable URL for this
+    # deployment (ingress host + scheme), not the in-cluster service name.
+    appBaseUrl: "http://localhost:3000"
+    jwtExpiryHours: 24
+    invitationExpiryHours: 168
+  smtp:
+    # Generic SMTP fallback for outbound email (invitations, etc). Left
+    # disabled by default — same as an unset SMTP_HOST in .env.example —
+    # which makes the app log instead of send, not fail.
+    enabled: false
+    host: ""
+    port: 587
+    user: ""
+    from: "SkillCanon <no-reply@example.com>"
+    # password goes in .Values.secrets.smtpPass
+  github:
+    # Optional token to raise the unauthenticated 60/hour GitHub API rate
+    # limit used by external skill import (013-skill-import-and-external-registries).
+    # token goes in .Values.secrets.githubToken
+    enabled: false
+
+# ── Secrets ──────────────────────────────────────────────────────────────
+# Real credentials. Left as empty, required placeholders (matching
+# .env.example's REPLACE_ME convention) rather than filled dev defaults —
+# an operator must supply real values before this is safe to run.
+# `helm template`/`helm lint` will still succeed with these empty (the
+# rendered Secret just has empty string values), but the app itself
+# refuses to start with an empty/placeholder JWT_SECRET
+# (src/shared/config/index.ts's getJwtSecret).
+secrets:
+  jwtSecret: ""
+  appDbPassword: ""
+  authDbPassword: ""
+  # Migration/schema-owner role password. Only meaningful when
+  # database.enabled=true (chart-managed Postgres) or when
+  # externalDatabase.existingSecret is unset. Used by both the app's
+  # MIGRATION_DATABASE_URL env var (parity with docker-compose.yaml) and
+  # the migrationJob below.
+  postgresPassword: ""
+  smtpPass: ""
+  githubToken: ""
+
+# ── Database (PostgreSQL) ───────────────────────────────────────────────
+# Bundled StatefulSet. Plain stock Postgres — database/Dockerfile today
+# only adds an OpenShift-specific arbitrary-UID chown workaround on top
+# of postgres:16-alpine (database/init/ is empty, just a .gitkeep), so
+# there's nothing functionally load-bearing to publish yet. Still a
+# plain overridable value in case database/Dockerfile ever gains real
+# init scripts worth publishing later.
+database:
+  enabled: true
+  image:
+    repository: postgres
+    pullPolicy: IfNotPresent
+    tag: "16-alpine"
+  port: 5432
+  # Bootstraps the Postgres superuser (POSTGRES_USER/POSTGRES_DB) — this
+  # is also the role `pnpm db:migrate` connects as (MIGRATION_DATABASE_URL),
+  # since it owns the schema and is the role that CREATEs the narrower
+  # skillcanon_app/skillcanon_auth roles the first time migrations run
+  # against an empty database (drizzle/migrations/0000_create_schemas.sql).
+  postgresUser: skillcanon
+  postgresDb: skillcanon
+  storage:
+    size: 1Gi
+    storageClassName: ""  # leave empty for cluster default
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+
+# ── External database (used only when database.enabled: false) ────────────
+# Many managed k8s clusters pair with a managed Postgres (RDS, Cloud SQL,
+# Azure Database for PostgreSQL, Neon, etc) instead of a self-hosted
+# StatefulSet. Point at one here.
+externalDatabase:
+  host: ""
+  port: 5432
+  database: skillcanon
+  # Username for the migration/schema-owner role (see database.postgresUser
+  # above for what this role needs to be able to do: CREATEDB-less but able
+  # to CREATE ROLE/SCHEMA and own every bounded context's tables).
+  migrationUser: skillcanon
+  # An operator-managed Secret, pre-populated with the app's three
+  # role-scoped connection strings, as an alternative to letting this
+  # chart assemble them from the individual host/port/db/password values
+  # above and secrets.*DbPassword/postgresPassword. A single generic
+  # DATABASE_URL is NOT sufficient for this app (see
+  # docs/context/database-conventions.md / CLAUDE.md's RLS rollout notes):
+  # login and session/API-key resolution run before any tenant context
+  # exists and need the separate, wider skillcanon_auth role, not the
+  # RLS-scoped skillcanon_app role. Required keys when set:
+  #   database-url, auth-database-url, migration-database-url
+  existingSecret: ""
+
+# ── Migration Job ──────────────────────────────────────────────────────────
+migrationJob:
+  enabled: true
+  image:
+    # Built from the root Dockerfile's `migrator` stage — a separate,
+    # independently-tagged image from app.image (has node_modules/
+    # drizzle-kit/drizzle.config.ts/drizzle/migrations/pnpm on top of it;
+    # the runtime app image deliberately doesn't, per its `.next/
+    # standalone` output). Published by .github/workflows/docker-publish.yml
+    # alongside the app image on every merge to main.
+    repository: ghcr.io/mlopstapus/skillcanon-migrator
+    pullPolicy: IfNotPresent
+    tag: "latest"
+
+# ── Ingress (plain vanilla k8s, networking.k8s.io/v1) ──────────────────────
+ingress:
+  enabled: false
+  # Defaults to "traefik" — k3s ships Traefik as its built-in default
+  # ingress controller, the zero-extra-install path for a small
+  # single-node/homelab k3s cluster. Purely a values default, not baked
+  # into any template — override to "nginx"/anything else for a
+  # non-k3s/cloud cluster.
+  className: "traefik"
+  annotations: {}
+  hosts:
+    - host: skillcanon.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
