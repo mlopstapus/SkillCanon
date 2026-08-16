@@ -33,27 +33,22 @@ Derived value, one of exactly three states — no other value is valid.
 | `minor` | not major, and `PullRequestTitle.type == "feat"` |
 | `patch` | not major, and `PullRequestTitle.type` is any other passing type (or the title failed to parse at all — defensive default) |
 
-## ReleaseVersion
+## SuggestedReleaseVersion
+
+**Descoped 2026-08-15**: this value is now purely informational — it is never written anywhere as repository or registry state (no git tag, no image tag, no committed file). It exists only as text in the pipeline run's job summary.
 
 | Field | Type | Rule |
 |---|---|---|
-| `tag` | string | `vMAJOR.MINOR.PATCH`, e.g. `v1.4.2` |
-| `bare` | string | Same value without the `v` prefix, e.g. `1.4.2` — used for `Chart.yaml`'s unprefixed `version`/`appVersion` fields |
+| `tag` | string | `vMAJOR.MINOR.PATCH`, e.g. `v1.4.2` — the *suggested* value, not a value that gets created |
+| `bare` | string | Same value without the `v` prefix, e.g. `1.4.2` |
 
 Computed as: read the lexicographically-latest `v*` git tag by semver sort (`git tag -l 'v*' --sort=-v:refname | head -n1`), defaulting to `v0.0.0` when no tag exists yet, then applying `BumpType`:
 - `major`: `MAJOR += 1`, `MINOR = 0`, `PATCH = 0`
 - `minor`: `MINOR += 1`, `PATCH = 0`
 - `patch`: `PATCH += 1`
 
-Realized as two artifacts sharing the same `tag` value: an annotated git tag on the merge commit, and a Docker image tag `ghcr.io/mlopstapus/skillcanon:<tag>`.
+Realized as one thing only: a Markdown block appended to `$GITHUB_STEP_SUMMARY` (research.md Decision 9) naming the suggested tag, the classified bump type, and the source PR's number/title, plus an explicit statement that no tag/release was created automatically.
 
-## HelmChartVersionFields
+## HelmChartVersionFields — REMOVED (out of scope)
 
-Only relevant once `charts/skillcanon/Chart.yaml` exists on `main` (it does not today).
-
-| Field | Type | Rule |
-|---|---|---|
-| `version` | string | Set to `ReleaseVersion.bare` |
-| `appVersion` | string | Set to `ReleaseVersion.bare` (quoted in YAML) |
-
-Updated in place via `sed` against the file's existing `version:`/`appVersion:` lines, then committed to `main` in a single bot commit (see research.md Decision 8). No other field in `Chart.yaml` is touched.
+The original design's `HelmChartVersionFields` entity (auto-updating `charts/skillcanon/Chart.yaml`'s `version`/`appVersion`) no longer exists in this feature — descoped along with git-tag/image-tag automation. See spec.md Assumptions: the chart's version sync is left entirely manual, same as the release tag itself.

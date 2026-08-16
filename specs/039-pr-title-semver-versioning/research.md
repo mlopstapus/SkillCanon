@@ -59,19 +59,39 @@
 **Alternatives considered**:
 - *`# shellcheck disable=SC1072,SC1073` inline*: Would silence the check without fixing the actual parseability concern the check exists to catch; the variable form is strictly better since it's both cleaner and lint-clean.
 
-## Decision 7: Chart.yaml field update mechanism
+## Decision 7 (SUPERSEDED): Chart.yaml field update mechanism
+
+**Status**: Superseded 2026-08-15 — the entire chart-bump mechanism was descoped (see spec.md Clarifications). Kept for history only; `release.yml` no longer touches `charts/skillcanon/Chart.yaml` in any way.
+
+<details>
+<summary>Original decision (no longer implemented)</summary>
 
 **Decision**: `sed -i.bak -E 's/^version:.*/version: X.Y.Z/'` / same for `appVersion` (quoted), against `charts/skillcanon/Chart.yaml`, guarded by a `[ -f "$CHART_FILE" ]` existence check that no-ops (with a `::notice::`) rather than failing when the path is absent.
 
-**Rationale**: `charts/skillcanon/Chart.yaml` doesn't exist on `main` today (only the legacy `charts/spechub/` tree does) — confirmed via `find charts -maxdepth 3`. A tool like `yq` isn't confirmed present on `ubuntu-latest` by default for this exact use, and a two-line `sed` against a conventional, hand-authored `Chart.yaml`'s top-level `version:`/`appVersion:` keys is simple, dependency-free, and easy to verify by eye in review. The existence guard directly satisfies FR-008's "skip without failing" requirement and Edge Cases' "chart path doesn't exist yet."
+**Rationale**: `charts/skillcanon/Chart.yaml` doesn't exist on `main` today (only the legacy `charts/spechub/` tree does) — confirmed via `find charts -maxdepth 3`. A tool like `yq` isn't confirmed present on `ubuntu-latest` by default for this exact use, and a two-line `sed` against a conventional, hand-authored `Chart.yaml`'s top-level `version:`/`appVersion:` keys is simple, dependency-free, and easy to verify by eye in review.
 
-**Alternatives considered**:
-- *`yq -i '.version = "X.Y.Z"'`*: More semantically correct YAML editing, but adds a tool dependency to verify/pin; deferred as unnecessary for a two-field, well-known-format file. Worth revisiting once the chart file actually exists and its real structure can be inspected.
+</details>
 
-## Decision 8: Push-back-to-main auth pattern for the chart-bump commit
+## Decision 8 (SUPERSEDED): Push-back-to-main auth pattern for the chart-bump commit
+
+**Status**: Superseded 2026-08-15 — no commit is ever pushed back to `main` by this feature anymore. Kept for history only.
+
+<details>
+<summary>Original decision (no longer implemented)</summary>
 
 **Decision**: `git config user.name "github-actions[bot]"` / matching noreply email, then `git push origin HEAD:main` using the same ambient `GITHUB_TOKEN` already used for GHCR login elsewhere in the job (`permissions: contents: write`). No PAT, no separate secret.
 
-**Rationale**: Matches the Clarifications decision (direct push, fail loudly if rejected) and mirrors this repo's existing convention of every workflow authenticating with the ambient `GITHUB_TOKEN` rather than a custom PAT (`docker-publish.yml`/`helm-publish.yml` both do `echo "${{ secrets.GITHUB_TOKEN }}" | ... login`). If branch protection rejects the push, the step fails and the job shows red — a deliberate, visible signal (per Clarifications) rather than a silent warning, without undoing the tag/image already published earlier in the same run (those steps already completed and are unaffected by a later step's failure).
+**Rationale**: Matches the (now-superseded) Clarifications decision (direct push, fail loudly if rejected) and mirrors this repo's existing convention of every workflow authenticating with the ambient `GITHUB_TOKEN` rather than a custom PAT.
 
-**Alternatives considered**: See spec Clarifications section — non-fatal warning and bot-PR alternatives were explicitly considered and rejected by the maintainer in favor of this option.
+</details>
+
+## Decision 9: Mechanism for the informational version-suggestion note
+
+**Decision**: Write to `$GITHUB_STEP_SUMMARY` (GitHub Actions' built-in job-summary Markdown file) as the sole delivery mechanism — not a PR comment via `gh pr comment`.
+
+**Rationale**: `$GITHUB_STEP_SUMMARY` needs zero extra permissions beyond what the job already has (it's a plain file write, not an API call), renders as formatted Markdown directly on the workflow run page, and is exactly as visible to "whoever's looking at why this push ran" as the run itself — which is the actual audience (the person about to decide whether to cut a release), not the PR's own conversation thread (which is typically already closed/merged and less likely to be revisited specifically to check for a version suggestion). A `gh pr comment` was considered and is genuinely more discoverable *from the PR itself*, but adds a `pull-requests: write` permission grant for a purely cosmetic upgrade over the job summary, and posts a comment on an already-merged PR that has nothing further to review — judged not worth the added permission scope for this descoped, informational-only feature. Revisit if the maintainer finds the job summary insufficiently visible in practice.
+
+**Alternatives considered**:
+- *`gh pr comment` on the merged PR*: More visible in one specific place (the PR thread) but requires `pull-requests: write` (a broader grant than this job otherwise needs) and comments on a PR that's already done being discussed.
+- *Both simultaneously*: Rejected as needless duplication for a single, low-stakes, informational message — one clear channel is enough, and doing both would mean two places that could theoretically say slightly different things if ever touched independently later.
+- *A `::notice::` workflow annotation only*: Considered and rejected as the *sole* channel — annotations are easy to miss among other log noise and don't render as nicely as a summary's Markdown table, though the implementation still emits one alongside the summary for anyone scanning the log directly.

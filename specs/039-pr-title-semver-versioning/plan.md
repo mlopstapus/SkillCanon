@@ -6,7 +6,7 @@
 
 ## Summary
 
-Enforce Conventional Commits PR titles at merge time via a required GitHub Actions status check, then on every push to `main` resolve the merged PR (via the GitHub API, not the merge commit message — this repo's real merge commits carry no PR title, confirmed against actual history) and use its title/body to classify a semver bump (patch/minor/major), compute the next version from the latest git tag, publish that version as a git tag and a Docker image tag alongside the existing `:latest`/`:<sha>` tags, and — once `charts/skillcanon/Chart.yaml` exists on `main` — bump its `version`/`appVersion` fields in a bot commit pushed back to `main`. Ship reference docs (`docs/context/release-versioning.md`) and a PR template reminder so the convention is discoverable both up front (opening a PR) and after the fact (docs).
+Enforce Conventional Commits PR titles at merge time via a required GitHub Actions status check, then on every push to `main` resolve the merged PR (via the GitHub API, not the merge commit message — this repo's real merge commits carry no PR title, confirmed against actual history) and use its title/body to classify a semver bump (patch/minor/major), compute what the next version *would be* from the latest git tag, and surface that as a purely informational note in the pipeline run summary — no git tag, no versioned Docker image tag, no file edit/commit of any kind. **Descoped 2026-08-15**: an earlier iteration of this plan had the pipeline create the tag/versioned-image/Chart.yaml-bump automatically; the maintainer decided that was more automation than wanted and descoped it to informational-only (see spec.md Clarifications). Ship reference docs (`docs/context/release-versioning.md`) and a PR template reminder so the convention is discoverable both up front (opening a PR) and after the fact (docs).
 
 ## Technical Context
 
@@ -14,9 +14,9 @@ Enforce Conventional Commits PR titles at merge time via a required GitHub Actio
 
 **Primary Dependencies**: `amannn/action-semantic-pull-request@v5` (marketplace action, PR-title lint only); GitHub's `gh` CLI (preinstalled on `ubuntu-latest` runners) for the `commits/{sha}/pulls` API lookup and `gh pr view`; `jq` (preinstalled) for JSON parsing; `docker`/`git` (already used by existing workflows).
 
-**Storage**: N/A — state lives in git tags and the GHCR image registry, no database involved.
+**Storage**: N/A — the only durable state is the GHCR image registry's `:latest`/`:<sha>` tags (unchanged from before this feature). The version suggestion is ephemeral, printed text in a single pipeline run — no database, no git tag, no committed file.
 
-**Testing**: No unit-test framework exists for GitHub Actions workflow YAML in this repo (nothing under `docs/context/testing-strategy.md` covers CI config). Verification is `actionlint` (locally installed, confirmed) for static YAML/shellcheck correctness, plus a manual trace of each Technical Context path (merged-PR / no-PR / chart-file-present / chart-file-absent / breaking-change-footer) against real repo data (existing merge commits, existing tags) documented in `quickstart.md`, since there is no way to trigger a real `push`/`pull_request` event locally.
+**Testing**: No unit-test framework exists for GitHub Actions workflow YAML in this repo (nothing under `docs/context/testing-strategy.md` covers CI config). Verification is `actionlint` (locally installed, confirmed) for static YAML/shellcheck correctness, plus a manual trace of each Technical Context path (merged-PR / no-PR / breaking-change-footer) against real repo data (existing merge commits, existing tags) documented in `quickstart.md`, since there is no way to trigger a real `push`/`pull_request` event locally.
 
 **Target Platform**: GitHub Actions (`ubuntu-latest` runners), triggered by GitHub's own `pull_request` and `push` webhook events on this repository.
 
@@ -24,7 +24,7 @@ Enforce Conventional Commits PR titles at merge time via a required GitHub Actio
 
 **Performance Goals**: N/A — a release runs once per merge to `main`; no latency/throughput target applies.
 
-**Constraints**: Must not remove the existing `:latest`/`:<sha>` Docker tags or their current always-publish-on-every-push behavior (FR-007, FR-009). Must not fail the pipeline when no merged PR can be resolved (FR-009) or when `charts/skillcanon/Chart.yaml` doesn't exist yet (FR-008). Chart-bump push failures must fail visibly without retroactively invalidating an already-published tag/image (per Clarifications).
+**Constraints**: Must not remove the existing `:latest`/`:<sha>` Docker tags or their current always-publish-on-every-push behavior (FR-006, FR-008). Must not fail the pipeline when no merged PR can be resolved (FR-008). Must not create any git tag, publish any additional image tag, or edit/commit any file as a side effect of computing the suggestion (FR-007, per the descope decision).
 
 **Scale/Scope**: Two new/changed GitHub Actions workflows, one new docs page, one new PR template. Single-repository scope; no fan-out to other repos or services.
 
@@ -68,8 +68,8 @@ specs/039-pr-title-semver-versioning/
 .github/
 ├── workflows/
 │   ├── pr-title-lint.yml     # NEW — pull_request title check (required status check)
-│   ├── release.yml           # NEW — push-to-main: publish sha/latest/version image tags,
-│   │                         #        create+push git tag, bump Chart.yaml when present
+│   ├── release.yml           # NEW — push-to-main: publish sha/latest image tags (unconditional)
+│   │                         #        + a purely informational next-version note (no tag/commit)
 │   └── docker-publish.yml    # REMOVED — its always-run sha/latest publish is folded into
 │                             #           release.yml to avoid two workflows racing to
 │                             #           `docker build .`/push the same tags on every push
@@ -78,11 +78,9 @@ specs/039-pr-title-semver-versioning/
 
 docs/context/
 └── release-versioning.md     # NEW — convention reference doc, matches existing docs/context/*.md tone
-
-charts/skillcanon/Chart.yaml   # NOT present in this repo/branch today — release.yml's chart-bump
-                                # step targets this path defensively (guarded, no-ops if absent)
-                                # for when a sibling, out-of-scope effort introduces it later
 ```
+
+`charts/skillcanon/Chart.yaml` is out of scope entirely (descoped) — no workflow added by this feature reads or writes it.
 
 **Structure Decision**: Everything lives under `.github/` and `docs/context/` — this is CI/CD configuration and reference documentation, not an application feature, so none of the template's `src/`/`backend//frontend/`/`api/` options apply. No new source directory is created.
 

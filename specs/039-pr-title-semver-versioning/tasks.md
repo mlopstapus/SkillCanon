@@ -110,3 +110,15 @@ T014 and T015 are marked `[P]` against each other (genuinely different files, no
 **MVP = User Story 1 alone** (T001–T004): the title-lint check is the smallest independently valuable increment — it starts protecting PR quality immediately, before the release workflow exists to consume it.
 
 **Incremental delivery**: US1 → US2 → US3, matching spec.md's priority order (P1, P1, P2), though US2 and US3 have no dependency on each other or on US1 and could be done in either order or in parallel by different people.
+
+---
+
+## Descope Addendum (2026-08-15, post-implementation)
+
+After T001–T018 above shipped full automatic versioning (git tag + versioned image tag + Chart.yaml bump-and-commit), the maintainer descoped that to an informational-only suggestion (spec.md Clarifications). The tasks below replaced the now-removed T009/T010/T011 automation with a single informational step, updated every design doc to match, and re-validated.
+
+- [X] T019 [US2] Remove the "create and push git tag," "tag and push version image," "bump Helm chart version," and "commit Chart.yaml version bump" steps from `release.yml` (former T009–T011); replace with a single "post version suggestion" step that writes to `$GITHUB_STEP_SUMMARY` (and a matching `::notice::`) stating the classified bump, suggested next version, and source PR — with no git/docker/file side effects. Narrow `release.yml`'s `permissions:` block accordingly (drop `contents: write`, keep `contents: read` for checkout).
+- [X] T020 [US3] Update `docs/context/release-versioning.md` to describe the pipeline as suggesting a version rather than releasing one.
+- [X] T021 Update `specs/039-pr-title-semver-versioning/{spec,plan,research,data-model,quickstart}.md` and `contracts/release-pipeline.md` to reflect the descope (mark superseded decisions rather than deleting them, per this repo's convention of preserving decision history).
+- [X] T022 Re-run `actionlint` on the simplified `release.yml` and re-trace quickstart.md's steps against current repo state; fix any findings.
+- [X] T023 Commit the descope on `release/pr-title-semver-versioning`.
