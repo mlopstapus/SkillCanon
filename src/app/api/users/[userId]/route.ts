@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { deactivateUser, getUser, updateUser } from "@/bcs/identity-access";
+import { CrossOrgUserAccessError, deactivateUser, getUser, updateUser } from "@/bcs/identity-access";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
 import { notFoundResponse } from "@/shared/api/errors";
@@ -18,10 +18,9 @@ const updateUserSchema = z.object({
 });
 
 /**
- * `getUser` throws a bare, untyped `Error` for "not found" — no
- * `UserNotFoundError` class exists in identity-access (research.md's
- * three-shapes decision). `getUser` has exactly one throw path, so any
- * error from this specific call is treated as USER_NOT_FOUND.
+ * `getUser` throws `CrossOrgUserAccessError` for a nonexistent or
+ * cross-organization user. This route keeps the established external
+ * `USER_NOT_FOUND` response while allowing operational errors to propagate.
  */
 export async function handleGet(
   request: Request,
@@ -33,7 +32,7 @@ export async function handleGet(
     );
     return Response.json(user);
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith("No user found with id")) {
+    if (err instanceof CrossOrgUserAccessError) {
       const mapped = notFoundResponse("USER_NOT_FOUND", "User not found");
       return Response.json(mapped.body, { status: mapped.status });
     }

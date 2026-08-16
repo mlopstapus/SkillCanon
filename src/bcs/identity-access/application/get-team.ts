@@ -1,5 +1,5 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { Team } from "../domain/team";
+import { CrossOrgTeamAccessError, type Team } from "../domain/team";
 import { findByOrgAndId } from "../infrastructure/teams-repo";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -16,7 +16,7 @@ export async function getTeam(
 ): Promise<Team> {
   const row = await findByOrgAndId(db, organizationId, teamId);
   if (!row) {
-    throw new Error(`No team found with id "${teamId}".`);
+    throw new CrossOrgTeamAccessError();
   }
   return row;
 }

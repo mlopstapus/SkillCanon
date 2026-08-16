@@ -5,6 +5,15 @@ import { useEffect, useRef, type ReactNode } from "react";
 const FOCUSABLE_SELECTOR =
   'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+function getVisibleFocusableElements(panel: HTMLElement) {
+  return [...panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
+    (element) =>
+      !element.closest(".hidden") &&
+      !element.closest("[hidden]") &&
+      !element.closest('[aria-hidden="true"]'),
+  );
+}
+
 export interface DrawerProps {
   onClose: () => void;
   /** id of the element (rendered by the caller, inside `children`) that names this drawer for assistive tech. */
@@ -26,23 +35,32 @@ export interface DrawerProps {
  */
 export function Drawer({ onClose, labelledBy, widthClassName = "w-[452px]", children }: DrawerProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement;
     const panel = panelRef.current;
-    const initialFocusTarget = panel?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+    const initialFocusTarget = panel ? getVisibleFocusableElements(panel)[0] : undefined;
     (initialFocusTarget ?? panel)?.focus();
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panel) {
         return;
       }
-      const focusable = panel.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+      const focusable = getVisibleFocusableElements(panel);
       if (focusable.length === 0) {
+        event.preventDefault();
+        if (!panel.contains(document.activeElement)) {
+          panel.focus();
+        }
         return;
       }
       const first = focusable[0];
@@ -63,7 +81,7 @@ export function Drawer({ onClose, labelledBy, widthClassName = "w-[452px]", chil
         previouslyFocused.focus();
       }
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[100]">

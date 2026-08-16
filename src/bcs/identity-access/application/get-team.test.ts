@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withTenantContext } from "@/shared/db/tenant-context";
 import { insert as insertOrg } from "../infrastructure/organizations-repo";
+import { CrossOrgTeamAccessError } from "../domain/team";
 import { getTeam } from "./get-team";
 import { createTeam } from "./create-team";
 
@@ -59,6 +60,6 @@ describe("getTeam", () => {
 
     await expect(
       withTenantContext(testDb.appDb, orgA, (tx) => getTeam(tx, orgA, teamId)),
-    ).rejects.toThrow();
+    ).rejects.toBeInstanceOf(CrossOrgTeamAccessError);
   });
 });

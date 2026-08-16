@@ -17,6 +17,7 @@ import {
   rollbackPrompt,
   scanLocalSkillFolders,
   subscribeSkill,
+  transferSkillOwnership,
   unassignSkillFromProject,
   unsubscribeSkill,
   type ChainStep,
@@ -415,6 +416,24 @@ export async function forkSkillForSelfAction(
       forkSkill(tx, actingUser, sourceSkillId, { ownerType: "user", ownerId: actingUser.id, ...values }),
     );
     revalidatePath("/prompts");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function transferSkillOwnershipAction(
+  skillId: string,
+  promptName: string,
+  params: { newOwnerType: "user" | "team"; newOwnerId: string },
+): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      transferSkillOwnership(tx, actingUser, skillId, params),
+    );
+    revalidatePath("/prompts");
+    revalidatePath(`/prompts/${promptName}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };

@@ -30,6 +30,7 @@ next-env.d.ts
 .cursorindexingignore
 
 # Universal local artifacts
+artifacts/
 .DS_Store
 Thumbs.db
 *.tmp

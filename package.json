@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "demo:ownership-transfer": "node scripts/demo-ownership-transfer.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -47,6 +48,7 @@
     "eslint-config-next": "^16.2.10",
     "eslint-plugin-boundaries": "^7.1.0",
     "happy-dom": "20.8.9",
+    "playwright": "^1.62.1",
     "postcss": "^8.5.22",
     "prettier": "^3.9.6",
     "tailwindcss": "^4.3.3",

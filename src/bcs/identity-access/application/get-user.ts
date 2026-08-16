@@ -1,5 +1,5 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { UserSummary } from "../domain/user";
+import { CrossOrgUserAccessError, type UserSummary } from "../domain/user";
 import { findById, findByOrgAndId } from "../infrastructure/users-repo";
 
 /**
@@ -27,6 +27,9 @@ export async function getUser(
       ? await findById(db, userId)
       : await findByOrgAndId(db, organizationId, userId);
   if (!row) {
+    if (organizationId !== undefined) {
+      throw new CrossOrgUserAccessError();
+    }
     throw new Error(`No user found with id "${userId}".`);
   }
   return {

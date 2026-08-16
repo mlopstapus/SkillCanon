@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getTeam, updateTeam } from "@/bcs/identity-access";
+import { CrossOrgTeamAccessError, getTeam, updateTeam } from "@/bcs/identity-access";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
 import { notFoundResponse } from "@/shared/api/errors";
@@ -17,10 +17,9 @@ const updateTeamSchema = z.object({
 });
 
 /**
- * `getTeam` throws a bare, untyped `Error` for "not found" — no
- * `TeamNotFoundError` class exists in identity-access (research.md's
- * three-shapes decision). Any error from this specific call is treated as
- * TEAM_NOT_FOUND; `getTeam` has exactly one throw path.
+ * `getTeam` throws `CrossOrgTeamAccessError` for a nonexistent or
+ * cross-organization team. This route keeps the established external
+ * `TEAM_NOT_FOUND` response while allowing operational errors to propagate.
  */
 export async function handleGet(
   request: Request,
@@ -32,7 +31,7 @@ export async function handleGet(
     );
     return Response.json(team);
   } catch (err) {
-    if (err instanceof Error && err.message.startsWith("No team found with id")) {
+    if (err instanceof CrossOrgTeamAccessError) {
       const mapped = notFoundResponse("TEAM_NOT_FOUND", "Team not found");
       return Response.json(mapped.body, { status: mapped.status });
     }

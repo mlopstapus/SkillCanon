@@ -1,0 +1,404 @@
+import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { UserSummary } from "@/bcs/identity-access";
+import { withTenantContext } from "@/shared/db/tenant-context";
+import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
+import {
+  CannotTransferToSameOwnerError,
+  CrossOrgTransferError,
+  SkillNotFoundForTransferError,
+  SubscriberNotAuthorizedError,
+} from "../domain/subscription";
+import { getPromptById } from "./get-prompt-by-id";
+import { publishVersion } from "./publish-version";
+import { transferSkillOwnership } from "./transfer-skill-ownership";
+import {
+  createTestSkillOwnedByTeam,
+  createTestSkillOwnedByUser,
+  makeSubscriptionFixtureOrg,
+  querySubscriptionAuditEvents,
+} from "./subscription-test-helpers";
+
+async function addTeamOwnedBy(testDb: TestDb, organizationId: string, ownerId: string): Promise<string> {
+  const id = randomUUID();
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.teams (id, organization_id, name, slug, owner_id)
+    values (${id}, ${organizationId}, ${`Extra team ${id}`}, ${`team-${id}`}, ${ownerId})
+  `);
+  return id;
+}
+
+async function addUnassignedOrgAdmin(testDb: TestDb, organizationId: string): Promise<UserSummary> {
+  const id = randomUUID();
+  const email = `${id}@example.com`;
+  await testDb.ownerDb.execute(sql`
+    insert into identity_access.users (id, organization_id, team_id, username, display_name, email, role, is_active)
+    values (${id}, ${organizationId}, null, ${`admin-${id}`}, 'Unassigned Admin', ${email}, 'admin', true)
+  `);
+  return { id, orgId: organizationId, teamId: null, role: "admin", email };
+}
+
+async function waitForOwnershipUpdate(testDb: TestDb): Promise<void> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const rows = await testDb.ownerDb.execute<{ count: number }>(sql`
+      select count(*)::int as count
+      from pg_stat_activity
+      where datname = current_database()
+        and state = 'active'
+        and pid <> pg_backend_pid()
+        and query ilike '%update "prompt_registry"."prompts"%'
+    `);
+    if (Number(rows[0]?.count) >= 1) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error("Expected an ownership update to be active.");
+}
+
+describe("transferSkillOwnership", () => {
+  let testDb: TestDb;
+
+  beforeAll(async () => {
+    testDb = await startTestDb();
+  }, 120_000);
+
+  afterAll(async () => {
+    await testDb.teardown();
+  });
+
+  it("does not count the ownership-update monitor as an external update", async () => {
+    const rows = await testDb.ownerDb.execute<{ count: number }>(sql`
+      select count(*)::int as count
+      from pg_stat_activity
+      where datname = current_database()
+        and state = 'active'
+        and pid <> pg_backend_pid()
+        and query ilike '%update "prompt_registry"."prompts"%'
+    `);
+
+    expect(Number(rows[0]?.count)).toBe(0);
+  });
+
+  it("moves a user-owned skill to its owner's team and records ownership-only audit snapshots", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByUser(
+      testDb,
+      fixture.organizationId,
+      fixture.team1Owner.id,
+    );
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(
+        tx,
+        fixture.team1Owner,
+        source.id,
+        { newOwnerType: "team", newOwnerId: fixture.team1Id },
+        { transport: "api", sourceIp: "10.0.0.2" },
+      ),
+    );
+
+    expect(transferred).toMatchObject({
+      id: source.id,
+      ownerType: "team",
+      ownerId: fixture.team1Id,
+      activeVersionId: source.activeVersionId,
+      forkedFromSkillId: source.forkedFromSkillId,
+    });
+
+    const events = await testDb.ownerDb.execute<{
+      organization_id: string;
+      actor_user_id: string | null;
+      actor_api_key_id: string | null;
+      action: string;
+      resource_type: string;
+      resource_id: string | null;
+      before: unknown;
+      after: unknown;
+      transport: string;
+      source_ip: string | null;
+    }>(sql`
+      select organization_id, actor_user_id, actor_api_key_id, action, resource_type,
+        resource_id, before, after, transport, source_ip
+      from audit.audit_events
+      where action = 'skill.owner_transferred' and resource_id = ${source.id}
+    `);
+    expect(Array.from(events)).toEqual([
+      {
+        organization_id: fixture.organizationId,
+        actor_user_id: fixture.team1Owner.id,
+        actor_api_key_id: null,
+        action: "skill.owner_transferred",
+        resource_type: "prompt",
+        resource_id: source.id,
+        before: { ownerType: "user", ownerId: fixture.team1Owner.id },
+        after: { ownerType: "team", ownerId: fixture.team1Id },
+        transport: "api",
+        source_ip: "10.0.0.2",
+      },
+    ]);
+  });
+
+  it("allows a team owner to transfer their team's skill to another team they own", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const destinationTeamId = await addTeamOwnedBy(testDb, fixture.organizationId, fixture.team1Owner.id);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        newOwnerType: "team",
+        newOwnerId: destinationTeamId,
+      }),
+    );
+
+    expect(transferred).toMatchObject({ ownerType: "team", ownerId: destinationTeamId });
+  });
+
+  it("allows a team owner to transfer their team's skill to themselves", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        newOwnerType: "user",
+        newOwnerId: fixture.team1Owner.id,
+      }),
+    );
+
+    expect(transferred).toMatchObject({ ownerType: "user", ownerId: fixture.team1Owner.id });
+  });
+
+  it("allows an unassigned organization admin to transfer between unrelated teams", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const admin = await addUnassignedOrgAdmin(testDb, fixture.organizationId);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(tx, admin, source.id, {
+        newOwnerType: "team",
+        newOwnerId: fixture.team2Id,
+      }),
+    );
+
+    expect(transferred).toMatchObject({ ownerType: "team", ownerId: fixture.team2Id });
+  });
+
+  it("allows a non-admin only when they are authorized for both owners", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.team1Owner.id);
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        newOwnerType: "team",
+        newOwnerId: fixture.team1Id,
+      }),
+    );
+
+    expect(transferred).toMatchObject({ ownerType: "team", ownerId: fixture.team1Id });
+  });
+
+  it("rejects a non-admin who is unauthorized for the source owner", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.userB, source.id, {
+          newOwnerType: "user",
+          newOwnerId: fixture.userB.id,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SubscriberNotAuthorizedError);
+  });
+
+  it("rejects a non-admin who is authorized for the source but not the destination", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+          newOwnerType: "team",
+          newOwnerId: fixture.team2Id,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SubscriberNotAuthorizedError);
+  });
+
+  it.each(["team", "user"] as const)("maps a cross-organization %s destination to CrossOrgTransferError", async (newOwnerType) => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+    const newOwnerId = newOwnerType === "team" ? fixture.otherOrgTeamId : fixture.otherOrgUser.id;
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, { newOwnerType, newOwnerId }),
+      ),
+    ).rejects.toBeInstanceOf(CrossOrgTransferError);
+  });
+
+  it.each(["team", "user"] as const)("maps a nonexistent %s destination to CrossOrgTransferError", async (newOwnerType) => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, {
+          newOwnerType,
+          newOwnerId: randomUUID(),
+        }),
+      ),
+    ).rejects.toBeInstanceOf(CrossOrgTransferError);
+  });
+
+  it("rejects the exact same owner before authorization and writes no audit row", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.userB, source.id, {
+          newOwnerType: "team",
+          newOwnerId: fixture.team1Id,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(CannotTransferToSameOwnerError);
+
+    expect(
+      await querySubscriptionAuditEvents(
+        testDb,
+        sql`action = 'skill.owner_transferred' and resource_id = ${source.id}`,
+      ),
+    ).toHaveLength(0);
+  });
+
+  it("maps a nonexistent skill to SkillNotFoundForTransferError", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+
+    await expect(
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.orgAdmin, randomUUID(), {
+          newOwnerType: "team",
+          newOwnerId: fixture.team1Id,
+        }),
+      ),
+    ).rejects.toBeInstanceOf(SkillNotFoundForTransferError);
+  });
+
+  it("changes only ownership while preserving id, active version, and fork lineage", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const lineageSource = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.userA.id);
+    const source = await createTestSkillOwnedByUser(testDb, fixture.organizationId, fixture.team1Owner.id, "transfer-invariants");
+    await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      publishVersion(tx, { organizationId: fixture.organizationId, userId: fixture.team1Owner.id }, {
+        organizationId: fixture.organizationId,
+        promptName: "transfer-invariants",
+        version: "v1",
+        mainFile: { content: "Be helpful." },
+      }),
+    );
+    await testDb.ownerDb.execute(sql`
+      update prompt_registry.prompts
+      set forked_from_skill_id = ${lineageSource.id}
+      where id = ${source.id}
+    `);
+    const before = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      getPromptById(tx, fixture.organizationId, source.id),
+    );
+
+    const transferred = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+      transferSkillOwnership(tx, fixture.team1Owner, source.id, {
+        newOwnerType: "team",
+        newOwnerId: fixture.team1Id,
+      }),
+    );
+
+    expect(transferred).toMatchObject({
+      id: before?.id,
+      activeVersionId: before?.activeVersionId,
+      forkedFromSkillId: before?.forkedFromSkillId,
+      ownerType: "team",
+      ownerId: fixture.team1Id,
+    });
+  });
+
+  it("serializes overlapping transfers and audits each current ownership snapshot", async () => {
+    const fixture = await makeSubscriptionFixtureOrg(testDb);
+    const source = await createTestSkillOwnedByTeam(testDb, fixture.organizationId, fixture.team1Id);
+    const suffix = randomUUID().replaceAll("-", "");
+    const functionName = `hold_ownership_update_${suffix}`;
+    const triggerName = `hold_ownership_update_trigger_${suffix}`;
+    await testDb.ownerDb.execute(sql.raw(`
+      create function ${functionName}() returns trigger language plpgsql as $$
+      begin
+        if new.owner_type is distinct from old.owner_type or new.owner_id is distinct from old.owner_id then
+          perform pg_sleep(1);
+        end if;
+        return new;
+      end;
+      $$
+    `));
+    await testDb.ownerDb.execute(sql.raw(`
+      create trigger ${triggerName}
+      before update of owner_type, owner_id on prompt_registry.prompts
+      for each row execute function ${functionName}()
+    `));
+
+    try {
+      const first = withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, {
+          newOwnerType: "user",
+          newOwnerId: fixture.userA.id,
+        }),
+      );
+      const second = withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        transferSkillOwnership(tx, fixture.orgAdmin, source.id, {
+          newOwnerType: "team",
+          newOwnerId: fixture.team2Id,
+        }),
+      );
+
+      await waitForOwnershipUpdate(testDb);
+      const advisoryLocks = await testDb.ownerDb.execute<{ count: number }>(sql`
+        select count(*)::int as count
+        from pg_locks
+        where locktype = 'advisory'
+          and database = (select oid from pg_database where datname = current_database())
+      `);
+      expect(Number(advisoryLocks[0]?.count)).toBe(0);
+
+      const results = await Promise.all([first, second]);
+      const current = await withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        getPromptById(tx, fixture.organizationId, source.id),
+      );
+      const events = await testDb.ownerDb.execute<{
+        before: { ownerType: "user" | "team"; ownerId: string };
+        after: { ownerType: "user" | "team"; ownerId: string };
+      }>(sql`
+        select before, after
+        from audit.audit_events
+        where action = 'skill.owner_transferred' and resource_id = ${source.id}
+      `);
+      const rootEvents = Array.from(events).filter(
+        (event) =>
+          event.before.ownerType === "team" && event.before.ownerId === fixture.team1Id,
+      );
+
+      expect(results).toHaveLength(2);
+      expect(rootEvents).toHaveLength(1);
+      const chainedEvents = Array.from(events).filter(
+        (event) =>
+          event.before.ownerType === rootEvents[0]?.after.ownerType &&
+          event.before.ownerId === rootEvents[0]?.after.ownerId,
+      );
+      expect(chainedEvents).toHaveLength(1);
+      expect({ ownerType: current?.ownerType, ownerId: current?.ownerId }).toEqual(
+        chainedEvents[0]?.after,
+      );
+    } finally {
+      await testDb.ownerDb.execute(sql.raw(`drop trigger ${triggerName} on prompt_registry.prompts`));
+      await testDb.ownerDb.execute(sql.raw(`drop function ${functionName}()`));
+    }
+  });
+});

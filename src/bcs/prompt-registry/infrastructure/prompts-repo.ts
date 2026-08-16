@@ -45,6 +45,24 @@ export async function findPromptByOrgAndId(tx: Tx, organizationId: string, promp
   return row ?? null;
 }
 
+/**
+ * Row-locking ownership read for a transfer. Must run inside the audited
+ * transaction so a caller cannot authorize one owner and overwrite a newer
+ * owner committed before the transfer update.
+ */
+export async function findPromptByOrgAndIdForUpdate(
+  tx: Tx,
+  organizationId: string,
+  promptId: string,
+) {
+  const [row] = await tx
+    .select()
+    .from(prompts)
+    .where(and(eq(prompts.organizationId, organizationId), eq(prompts.id, promptId)))
+    .for("update");
+  return row ?? null;
+}
+
 export async function listPromptsByOrg(tx: Tx, organizationId: string) {
   return tx.select().from(prompts).where(eq(prompts.organizationId, organizationId)).orderBy(asc(prompts.name));
 }
@@ -122,6 +140,8 @@ export async function updatePrompt(
     isDeprecated: boolean;
     activeVersionId: string | null;
     description: string | null;
+    ownerType: PromptOwnerType;
+    ownerId: string;
   }>,
 ) {
   const [row] = await tx

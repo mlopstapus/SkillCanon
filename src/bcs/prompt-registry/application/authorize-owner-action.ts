@@ -1,5 +1,9 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { getTeam, type UserSummary } from "@/bcs/identity-access";
+import {
+  CrossOrgTeamAccessError,
+  getTeam,
+  type UserSummary,
+} from "@/bcs/identity-access";
 import {
   CrossOrgSubscriberError,
   SubscriberNotAuthorizedError,
@@ -26,7 +30,8 @@ type Tx = PostgresJsDatabase<Record<string, never>>;
  * identity-access's exported `getTeam`, never its internals (tenet D1).
  * `getTeam` is itself organization-scoped, so a team id that resolves in a
  * different organization (or doesn't exist at all) is indistinguishable
- * from an unauthorized team — both surface as `CrossOrgSubscriberError`.
+ * from an unauthorized team — its typed absence error surfaces as
+ * `CrossOrgSubscriberError`, while operational lookup failures propagate.
  *
  * For `ownerType: "project"` (023-prompt-registry-views-ui, new): resolves
  * the project via this BC's own `getProject`, then delegates to the `"team"`
@@ -59,8 +64,11 @@ export async function assertAuthorizedForOwner(
   let team;
   try {
     team = await getTeam(tx, actingUser.orgId, ownerId);
-  } catch {
-    throw new CrossOrgSubscriberError();
+  } catch (error) {
+    if (error instanceof CrossOrgTeamAccessError) {
+      throw new CrossOrgSubscriberError();
+    }
+    throw error;
   }
 
   if (actingUser.role !== "admin" && team.ownerId !== actingUser.id) {

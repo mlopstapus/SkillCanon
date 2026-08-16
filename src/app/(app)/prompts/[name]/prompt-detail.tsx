@@ -11,6 +11,7 @@ import {
   reactivatePromptAction,
   rollbackPromptAction,
   subscribeSkillAction,
+  transferSkillOwnershipAction,
   unsubscribeSkillAction,
 } from "../actions";
 import { CopySkillDrawer } from "./copy-skill-drawer";
@@ -22,6 +23,7 @@ import {
   type PromptDetailTab,
 } from "./prompt-detail-view";
 import { ShareDrawer } from "./share-drawer";
+import { TransferOwnershipDrawer } from "./transfer-ownership-drawer";
 import { VersionHistoryDrawer } from "./version-history-drawer";
 
 export interface PromptDetailProps {
@@ -50,6 +52,7 @@ export function PromptDetail({ data }: PromptDetailProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [copyOpen, setCopyOpen] = useState(false);
   const [copyTargetName, setCopyTargetName] = useState<string | null>(null);
+  const [transferOwnershipOpen, setTransferOwnershipOpen] = useState(false);
   const [chainRunsPage, setChainRunsPage] = useState(data.chainRuns);
   const [runStepsByRunId, setRunStepsByRunId] = useState<Record<string, ChainRunStepView[] | undefined>>({});
 
@@ -111,6 +114,7 @@ export function PromptDetail({ data }: PromptDetailProps) {
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}
         onOpenShare={() => setShareOpen(true)}
+        onOpenTransferOwnership={() => setTransferOwnershipOpen(true)}
         onFork={() => setCopyOpen(true)}
       />
       {versionHistoryOpen ? (
@@ -224,6 +228,21 @@ export function PromptDetail({ data }: PromptDetailProps) {
               await subscribeSkillAction(data.id, data.name, { subscriberType: "project", subscriberId: projectId });
             }
             router.refresh();
+          }}
+        />
+      ) : null}
+      {transferOwnershipOpen ? (
+        <TransferOwnershipDrawer
+          promptName={data.name}
+          currentOwnerLabel={data.ownerLabel}
+          candidates={data.transferCandidates}
+          onClose={() => setTransferOwnershipOpen(false)}
+          onConfirm={async (params) => {
+            const result = await transferSkillOwnershipAction(data.id, data.name, params);
+            if (result.ok) {
+              router.refresh();
+            }
+            return result;
           }}
         />
       ) : null}
