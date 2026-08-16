@@ -1,0 +1,186 @@
+name: Release
+
+# Runs on every push to main (i.e. after a PR merges). Supersedes the old
+# docker-publish.yml: it still unconditionally builds/pushes the :<sha> and
+# :latest image tags on every push exactly as that workflow did. On top of
+# that, when the push corresponds to a merged PR, it posts a purely
+# informational "here's what the next version would be" note — see
+# specs/039-pr-title-semver-versioning/spec.md Clarifications. This workflow
+# never creates a git tag, never publishes a Docker image tag beyond
+# :latest/:<sha>, and never edits or commits any file. The maintainer creates
+# the actual release (tag, versioned image, any chart bump) by hand, on their
+# own schedule — this was a deliberate descope from an earlier fully-automatic
+# design (research.md Decisions 7/8, marked superseded).
+#
+# Bump detection reads the *merged PR's* title/body via the GitHub API
+# (`GET /repos/{owner}/{repo}/commits/{sha}/pulls`), not the merge commit
+# message. Verified against this repo's actual history: merges here produce a
+# plain "Merge pull request #N from owner/branch" commit with no PR title in
+# the body at all (confirmed via `git log --format=%B` on recent merges), so a
+# commit-message-parsing approach would never work here. The commits/pulls API
+# is the GitHub-documented way to resolve "which PR did this commit belong
+# to" and works for both merge-commit and squash-merge repos. See
+# specs/039-pr-title-semver-versioning/research.md Decision 1.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE: ghcr.io/mlopstapus/skillcanon
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build image
+        run: docker build -t "${IMAGE}:${{ github.sha }}" -t "${IMAGE}:latest" .
+
+      - name: Push image (sha + latest)
+        run: |
+          docker push "${IMAGE}:${{ github.sha }}"
+          docker push "${IMAGE}:latest"
+
+      # Everything below is a read-only, informational version *suggestion*
+      # on top of the always-run sha/latest publish above — no git/docker/file
+      # state is ever changed by these steps. Skipped (not failed) when this
+      # push didn't come from a merged PR — e.g. a direct admin push to main.
+      - name: Resolve merged PR and bump type
+        id: pr
+        run: |
+          set -euo pipefail
+          REPO="${{ github.repository }}"
+          SHA="${{ github.sha }}"
+
+          PR_JSON=$(gh api "repos/${REPO}/commits/${SHA}/pulls" --jq '[.[] | select(.merged_at != null)]')
+          PR_COUNT=$(echo "${PR_JSON}" | jq 'length')
+
+          if [ "${PR_COUNT}" -eq 0 ]; then
+            echo "::notice::No merged PR found for commit ${SHA} (direct push to main?) — no version suggestion to post."
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Prefer the PR whose merge_commit_sha exactly matches this push,
+          # falling back to the first merged PR the API returned (covers the
+          # rare case where GitHub associates more than one PR with a commit).
+          PR_NUMBER=$(echo "${PR_JSON}" | jq -r --arg sha "${SHA}" \
+            '(map(select(.merge_commit_sha == $sha)) | .[0].number) // .[0].number')
+
+          TITLE=$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json title -q .title)
+          BODY=$(gh pr view "${PR_NUMBER}" --repo "${REPO}" --json body -q .body)
+
+          echo "Resolved PR #${PR_NUMBER}: ${TITLE}"
+
+          # Conventional Commits title: type(scope)!: subject
+          # pr-title-lint.yml already enforces this on the PR before merge;
+          # this parse is defensive (e.g. an admin merge that bypassed
+          # required checks) and falls back to a patch-level suggestion on no
+          # match, rather than failing the whole run.
+          TYPE="fix"
+          BANG=""
+          CONVENTIONAL_TITLE_RE='^([a-zA-Z]+)(\([^)]*\))?(!)?:\ .+'
+          if [[ "${TITLE}" =~ ${CONVENTIONAL_TITLE_RE} ]]; then
+            TYPE="${BASH_REMATCH[1]}"
+            TYPE="${TYPE,,}"
+            BANG="${BASH_REMATCH[3]}"
+          else
+            echo "::warning::PR title '${TITLE}' doesn't match Conventional Commits format — defaulting to a patch-level suggestion."
+          fi
+
+          BREAKING="false"
+          if [ -n "${BANG}" ]; then
+            BREAKING="true"
+          fi
+          if echo "${BODY}" | grep -qiE '^BREAKING[ -]CHANGE:'; then
+            BREAKING="true"
+          fi
+
+          if [ "${BREAKING}" = "true" ]; then
+            BUMP="major"
+          elif [ "${TYPE}" = "feat" ]; then
+            BUMP="minor"
+          else
+            BUMP="patch"
+          fi
+
+          echo "Bump type: ${BUMP} (conventional type=${TYPE}, breaking=${BREAKING})"
+
+          {
+            echo "found=true"
+            echo "number=${PR_NUMBER}"
+            echo "title=${TITLE}"
+            echo "bump=${BUMP}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Compute suggested next version
+        id: version
+        if: steps.pr.outputs.found == 'true'
+        run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          LATEST_TAG=$(git tag -l 'v*' --sort=-v:refname | head -n1)
+          if [ -z "${LATEST_TAG}" ]; then
+            LATEST_TAG="v0.0.0"
+          fi
+          echo "Latest tag: ${LATEST_TAG}"
+
+          VERSION="${LATEST_TAG#v}"
+          IFS='.' read -r MAJOR MINOR PATCH <<< "${VERSION}"
+
+          case "${{ steps.pr.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor)
+              MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch)
+              PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "tag=v${MAJOR}.${MINOR}.${PATCH}" >> "$GITHUB_OUTPUT"
+
+      - name: Post version suggestion
+        if: steps.pr.outputs.found == 'true'
+        # PR_TITLE is untrusted, attacker-influenceable text: pr-title-lint.yml's
+        # subjectPattern only rejects an empty or period-ending subject, not shell
+        # metacharacters. Passing it via `env:` and referencing it as a quoted
+        # shell variable ($PR_TITLE) — never inlining `${{ steps.pr.outputs.title }}`
+        # directly into the run: script — avoids GitHub Actions' well-documented
+        # script-injection footgun (the template engine substitutes `${{ }}`
+        # into the script text before bash runs it, so an inlined value could
+        # break out of its quoting and execute arbitrary commands in this job,
+        # which holds `packages: write`).
+        env:
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          BUMP: ${{ steps.pr.outputs.bump }}
+          NEXT_TAG: ${{ steps.version.outputs.tag }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### 📦 Next release suggestion"
+            echo ""
+            echo "**${BUMP}** version bump suggested: \`${NEXT_TAG}\`"
+            echo ""
+            echo "Based on merged PR #${PR_NUMBER}'s title: \"${PR_TITLE}\""
+            echo ""
+            echo "No tag or release was created automatically — this is informational only. Create the release by hand (git tag, versioned image tag, and any chart bump) when you're ready."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          echo "::notice::Next release suggestion: ${BUMP} version bump (${NEXT_TAG}), based on merged PR #${PR_NUMBER}'s title '${PR_TITLE}'. No tag/release was created automatically."
