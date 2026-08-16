@@ -1,4 +1,4 @@
-# Hosting Options for SkillCanon: Personal Self-Host Now, Cloud Multi-Tenant Later
+# Hosting Options for SkillCanon: Self-Host Now, Cloud Multi-Tenant Later
 
 **Status:** Research — not yet decided (no infra provisioned, no PDR filed)
 **Written:** 2026-08-15
@@ -6,19 +6,19 @@
 
 ## Why this doc exists
 
-The current, real need is much smaller than "deploy to the cloud": **Ben wants to self-host a personal instance of SkillCanon for his own single-tenant use**, most likely on a home NUC he already owns, running a single-node k3s cluster. No cloud spend, no multi-tenant concerns, no autoscaling — just getting `charts/skillcanon` (currently mid-rework from its old OpenShift-specific shape to plain vanilla Kubernetes) running reliably on hardware he already has, plus a sane way to reach it from outside his home network. That's the primary content of this doc now.
+The current, real need is much smaller than "deploy to the cloud": **self-hosting a single-tenant instance of SkillCanon on hardware a self-hoster already owns** — typically an on-prem box, home server, or similar always-on machine — running a single-node k3s cluster. No cloud spend, no multi-tenant concerns, no autoscaling — just getting `charts/skillcanon` (currently mid-rework from its old OpenShift-specific shape to plain vanilla Kubernetes) running reliably on existing hardware, plus a sane way to reach it from outside the local network it sits on. That's the primary content of this doc now.
 
-A multi-tenant, paid cloud SaaS offering is a **possible future direction only** — worth having researched once, in case this product gets real traction, but not something to act on now. That research is kept below, clearly separated, so it doesn't get lost, but the personal-NUC section is what to actually act on today.
+A multi-tenant, paid cloud SaaS offering is a **possible future direction only** — worth having researched once, in case this product gets real traction, but not something to act on now. That research is kept below, clearly separated, so it doesn't get lost, but the self-host section is what to actually act on today.
 
-**Chart portability is a separate concern from multi-tenancy, and it already exists today.** The k3s-specific values described below (`ingress.className: "traefik"`, `app.service.type: ClusterIP`, `database.storage.storageClassName: ""` picking up `local-path`) are just `values.yaml` defaults tuned for this homelab use case — nothing is hardcoded. The same chart can be pointed at EKS/GKE/AKS/any conformant cluster today by overriding those values (`ingressClassName`, `storageClassName`, external Postgres connection, resource requests/limits, replica count, `imagePullSecrets`), independent of whether this ever becomes a multi-tenant paid offering. Portability is a property of the chart now; multi-tenancy is a separate, later business decision covered in the "Future" section below.
+**Chart portability is a separate concern from multi-tenancy, and it already exists today.** The k3s-specific values described below (`ingress.className: "traefik"`, `app.service.type: ClusterIP`, `database.storage.storageClassName: ""` picking up `local-path`) are just `values.yaml` defaults tuned for this homelab/self-host use case — nothing is hardcoded. The same chart can be pointed at EKS/GKE/AKS/any conformant cluster today by overriding those values (`ingressClassName`, `storageClassName`, external Postgres connection, resource requests/limits, replica count, `imagePullSecrets`), independent of whether this ever becomes a multi-tenant paid offering. Portability is a property of the chart now; multi-tenancy is a separate, later business decision covered in the "Future" section below.
 
 ## Bottom line up front
 
-**Primary recommendation, right now: k3s on your own NUC**, reached from outside via **Cloudflare Tunnel**. Zero additional infrastructure cost (you already own the hardware) beyond a domain name if you want one. `charts/skillcanon`'s defaults are already shaped for exactly this case — `ingress.className: "traefik"` and `app.service.type: ClusterIP` both exist specifically because bare-metal/homelab k3s is the deployment target its author had in mind. Full walkthrough below.
+**Primary recommendation, right now: self-hosted single-node k3s**, reached from outside via **Cloudflare Tunnel**. Zero additional infrastructure cost beyond a domain name if desired, since it runs on hardware already available to the self-hoster. `charts/skillcanon`'s defaults are already shaped for exactly this case — `ingress.className: "traefik"` and `app.service.type: ClusterIP` both exist specifically because bare-metal/homelab k3s is the deployment target its author had in mind. Full walkthrough below.
 
 **If this ever becomes a paid multi-tenant product:** see the "Future" section near the bottom — short version, DigitalOcean DOKS for realistic small-scale managed Kubernetes (~$24–39/mo), with k3s-on-Hetzner as a cheaper self-managed runner-up (~$5–10/mo). None of that is relevant to today's task; it's parked there for later.
 
-## Primary recommendation: k3s on your own NUC
+## Primary recommendation: self-hosted single-node k3s
 
 ### Installing k3s
 
@@ -35,18 +35,18 @@ The chart's `app.service.type` default (`ClusterIP`, not `LoadBalancer`) matches
 
 ### Getting a kubeconfig onto your workstation
 
-k3s writes its kubeconfig to `/etc/rancher/k3s/k3s.yaml` (root-only) on the NUC. From your workstation:
+k3s writes its kubeconfig to `/etc/rancher/k3s/k3s.yaml` (root-only) on the host running it. From a separate workstation:
 
 ```
-scp nuc-user@nuc-hostname:/etc/rancher/k3s/k3s.yaml ~/.kube/skillcanon-nuc.yaml
+scp host-user@host-hostname:/etc/rancher/k3s/k3s.yaml ~/.kube/skillcanon.yaml
 ```
 
-Edit the `server:` line inside it — it defaults to `https://127.0.0.1:6443`, which only resolves correctly when run locally on the NUC itself — and point it at the NUC's real address instead:
+Edit the `server:` line inside it — it defaults to `https://127.0.0.1:6443`, which only resolves correctly when run locally on the k3s host itself — and point it at the host's real address instead:
 
-- Its LAN IP/hostname (`https://192.168.x.x:6443`) if your workstation is always on the same home network.
-- Its Tailscale IP/MagicDNS name (`https://nuc.your-tailnet.ts.net:6443`), if you set up Tailscale per the section below — the more robust choice, since it works identically whether you're home or away with no "am I on the LAN right now" branching.
+- Its LAN IP/hostname (`https://192.168.x.x:6443`) if the workstation is always on the same local network.
+- Its Tailscale IP/MagicDNS name (`https://skillcanon-host.your-tailnet.ts.net:6443`), if Tailscale is set up per the section below — the more robust choice, since it works identically on- or off-network with no "am I on the LAN right now" branching.
 
-Then either `export KUBECONFIG=~/.kube/skillcanon-nuc.yaml`, or merge it into your default `~/.kube/config` as its own context and `kubectl config use-context skillcanon-nuc`.
+Then either `export KUBECONFIG=~/.kube/skillcanon.yaml`, or merge it into the default `~/.kube/config` as its own context and `kubectl config use-context skillcanon`.
 
 ### `helm install charts/skillcanon`
 
@@ -59,43 +59,43 @@ helm install skillcanon charts/skillcanon \
   --set secrets.authDbPassword=... \
   --set secrets.postgresPassword=... \
   --set ingress.enabled=true \
-  --set ingress.hosts[0].host=skillcanon.yourdomain.com \
-  --set app.env.appBaseUrl=https://skillcanon.yourdomain.com
+  --set ingress.hosts[0].host=skillcanon.example.com \
+  --set app.env.appBaseUrl=https://skillcanon.example.com
 ```
 
-Two gaps already documented in `charts/skillcanon/README.md`'s "Open assumptions" section matter specifically for a real NUC install, not just local `helm template` validation:
+Two gaps already documented in `charts/skillcanon/README.md`'s "Open assumptions" section matter specifically for a real self-host install, not just local `helm template` validation:
 
-1. **No Postgres image is published anywhere yet** — `database.image.repository` defaults to a placeholder (`ghcr.io/mlopstapus/skillcanon-database`) that doesn't exist in the registry. Simplest fix on a personal NUC: build `database/Dockerfile` locally and import it straight into k3s's own containerd, skipping a registry round-trip entirely:
+1. **No Postgres image is published anywhere yet** — `database.image.repository` defaults to a placeholder (`ghcr.io/mlopstapus/skillcanon-database`) that doesn't exist in the registry. Simplest fix for a self-managed single-node host: build `database/Dockerfile` locally and import it straight into k3s's own containerd, skipping a registry round-trip entirely:
    ```
    docker build -t skillcanon-database database/
    docker save skillcanon-database | sudo k3s ctr images import -
    ```
-   then set `database.image.repository=skillcanon-database`, `database.image.pullPolicy=Never`. (Or push it to your own `ghcr.io` package first, if you'd rather pull it normally — either works.)
-2. **The migration Job can't run against the published app image** (the root `Dockerfile`'s `output: "standalone"` runtime stage has no `drizzle-kit`/`drizzle/migrations`) — `migrationJob.enabled` defaults to `false` for exactly this reason. Run `pnpm db:migrate` by hand from a full source checkout, `MIGRATION_DATABASE_URL` pointed at the NUC (via a `kubectl port-forward` to the Postgres Service, or its LAN/Tailscale address) — the same self-host operator workflow `CLAUDE.md` already documents for `docker-compose.yaml`.
+   then set `database.image.repository=skillcanon-database`, `database.image.pullPolicy=Never`. (Or push it to a `ghcr.io` package first, if pulling it normally is preferred — either works.)
+2. **The migration Job can't run against the published app image** (the root `Dockerfile`'s `output: "standalone"` runtime stage has no `drizzle-kit`/`drizzle/migrations`) — `migrationJob.enabled` defaults to `false` for exactly this reason. Run `pnpm db:migrate` by hand from a full source checkout, `MIGRATION_DATABASE_URL` pointed at the host (via a `kubectl port-forward` to the Postgres Service, or its LAN/Tailscale address) — the same self-host operator workflow `CLAUDE.md` already documents for `docker-compose.yaml`.
 
 ### ghcr.io image pulls on k3s
 
-Public GHCR images pull with no `imagePullSecret` in general, but **k3s specifically** has had reported (version-dependent, not universal) cases where containerd's anonymous-token exchange with GHCR fails even for genuinely public images (k3s-io/k3s#2401). Cheap insurance: create a `read:packages`-scoped GitHub PAT and set `imagePullSecrets` in `values.yaml` regardless of whether the anonymous pull works on your particular k3s version — two minutes of setup that removes the uncertainty entirely.
+Public GHCR images pull with no `imagePullSecret` in general, but **k3s specifically** has had reported (version-dependent, not universal) cases where containerd's anonymous-token exchange with GHCR fails even for genuinely public images (k3s-io/k3s#2401). Cheap insurance: create a `read:packages`-scoped GitHub PAT and set `imagePullSecrets` in `values.yaml` regardless of whether the anonymous pull works on the k3s version in use — two minutes of setup that removes the uncertainty entirely.
 
-## Reaching it from outside your home network
+## Reaching it from outside the local network
 
-A NUC behind a home router almost certainly has no static public IP, and many residential ISPs now run CGNAT (carrier-grade NAT) — there may not even *be* a public IP to forward a port to, let alone a stable one. None of the cloud-managed "just get a LoadBalancer IP" story applies here. Three real options, in order of recommendation:
+A self-hosted box behind a home/office router almost certainly has no static public IP, and many residential ISPs now run CGNAT (carrier-grade NAT) — there may not even *be* a public IP to forward a port to, let alone a stable one. None of the cloud-managed "just get a LoadBalancer IP" story applies here. Three real options, in order of recommendation:
 
 ### Cloudflare Tunnel (`cloudflared`) — recommended default
 
-Free, opens **zero** inbound ports on your router/firewall (the NUC makes an outbound-only connection to Cloudflare's edge — nothing to scan or port-forward into), and works even behind CGNAT since no inbound connection is ever needed. Rough shape:
+Free, opens **zero** inbound ports on the router/firewall (the host makes an outbound-only connection to Cloudflare's edge — nothing to scan or port-forward into), and works even behind CGNAT since no inbound connection is ever needed. Rough shape:
 
-1. `cloudflared tunnel login` + `cloudflared tunnel create skillcanon`, then `cloudflared tunnel route dns skillcanon skillcanon.yourdomain.com` (needs your domain's nameservers on Cloudflare — free tier is fine).
-2. Run `cloudflared` as a Deployment inside the k3s cluster (official `cloudflare/cloudflared` image) with an `ingress` rule mapping `skillcanon.yourdomain.com` → the in-cluster Traefik Ingress/Service — no change to `charts/skillcanon` itself needed, `cloudflared` is just another workload reaching the existing Ingress from inside the cluster.
-3. You still get a real domain and valid TLS in the browser with **zero open inbound ports**: Cloudflare terminates public TLS at their edge, and cert-manager's Cloudflare DNS-01 challenge (a `ClusterIssuer` using a scoped Cloudflare API token) can still issue a real Let's Encrypt cert *on the origin* for "Full (strict)" mode — DNS-01 only needs outbound access to Cloudflare's API to prove domain ownership, unlike HTTP-01 it never needs anything to reach back into your network.
+1. `cloudflared tunnel login` + `cloudflared tunnel create skillcanon`, then `cloudflared tunnel route dns skillcanon skillcanon.example.com` (needs the domain's nameservers on Cloudflare — free tier is fine).
+2. Run `cloudflared` as a Deployment inside the k3s cluster (official `cloudflare/cloudflared` image) with an `ingress` rule mapping `skillcanon.example.com` → the in-cluster Traefik Ingress/Service — no change to `charts/skillcanon` itself needed, `cloudflared` is just another workload reaching the existing Ingress from inside the cluster.
+3. This still gets a real domain and valid TLS in the browser with **zero open inbound ports**: Cloudflare terminates public TLS at their edge, and cert-manager's Cloudflare DNS-01 challenge (a `ClusterIssuer` using a scoped Cloudflare API token) can still issue a real Let's Encrypt cert *on the origin* for "Full (strict)" mode — DNS-01 only needs outbound access to Cloudflare's API to prove domain ownership, unlike HTTP-01 it never needs anything to reach back into the network the cluster sits on.
 
-### Tailscale (or Tailscale Funnel) — if you only want access from your own devices
+### Tailscale (or Tailscale Funnel) — for access limited to a fixed set of devices
 
-If public internet access was never really the goal — just reaching the app from your own laptop/phone wherever you are — Tailscale is simpler and more private than a tunnel: install it on the NUC (or run it as a k8s subnet router), join your tailnet, and reach the app directly via its Tailscale IP/MagicDNS name from any device on that tailnet, no public exposure at all. **Tailscale Funnel** is the middle ground — it *can* expose a specific service to the public internet (Let's Encrypt TLS handled automatically through Tailscale), functionally similar to Cloudflare Tunnel but scoped to Tailscale's own infrastructure. Worth it only if you're already using Tailscale for other reasons; Cloudflare Tunnel is the more common/battle-tested choice if the goal is a real public domain.
+If public internet access was never really the goal — just reaching the app from a handful of known devices, wherever they are — Tailscale is simpler and more private than a tunnel: install it on the k3s host (or run it as a k8s subnet router), join a tailnet, and reach the app directly via its Tailscale IP/MagicDNS name from any device on that tailnet, no public exposure at all. **Tailscale Funnel** is the middle ground — it *can* expose a specific service to the public internet (Let's Encrypt TLS handled automatically through Tailscale), functionally similar to Cloudflare Tunnel but scoped to Tailscale's own infrastructure. Worth it mainly if already using Tailscale for other reasons; Cloudflare Tunnel is the more common/battle-tested choice if the goal is a real public domain.
 
 ### Port-forwarding + DDNS — works, not recommended
 
-Forwarding a router port straight to the NUC plus a dynamic-DNS client (e.g. `ddclient`) to track your IP technically works with no third-party tunnel involved — but isn't recommended: it's direct inbound exposure of your home network with nothing absorbing scans/abuse first, your ISP may not even hand out a forwardable public IP if you're behind CGNAT, and a changed IP has a propagation lag DDNS never fully eliminates.
+Forwarding a router port straight to the k3s host plus a dynamic-DNS client (e.g. `ddclient`) to track the IP technically works with no third-party tunnel involved — but isn't recommended: it's direct inbound exposure of the local network with nothing absorbing scans/abuse first, the ISP may not even hand out a forwardable public IP if it's behind CGNAT, and a changed IP has a propagation lag DDNS never fully eliminates.
 
 ---
 
