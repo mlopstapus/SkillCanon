@@ -157,16 +157,30 @@ jobs:
 
       - name: Post version suggestion
         if: steps.pr.outputs.found == 'true'
+        # PR_TITLE is untrusted, attacker-influenceable text: pr-title-lint.yml's
+        # subjectPattern only rejects an empty or period-ending subject, not shell
+        # metacharacters. Passing it via `env:` and referencing it as a quoted
+        # shell variable ($PR_TITLE) — never inlining `${{ steps.pr.outputs.title }}`
+        # directly into the run: script — avoids GitHub Actions' well-documented
+        # script-injection footgun (the template engine substitutes `${{ }}`
+        # into the script text before bash runs it, so an inlined value could
+        # break out of its quoting and execute arbitrary commands in this job,
+        # which holds `packages: write`).
+        env:
+          PR_TITLE: ${{ steps.pr.outputs.title }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          BUMP: ${{ steps.pr.outputs.bump }}
+          NEXT_TAG: ${{ steps.version.outputs.tag }}
         run: |
           set -euo pipefail
           {
             echo "### 📦 Next release suggestion"
             echo ""
-            echo "**${{ steps.pr.outputs.bump }}** version bump suggested: \`${{ steps.version.outputs.tag }}\`"
+            echo "**${BUMP}** version bump suggested: \`${NEXT_TAG}\`"
             echo ""
-            echo "Based on merged PR #${{ steps.pr.outputs.number }}'s title: \"${{ steps.pr.outputs.title }}\""
+            echo "Based on merged PR #${PR_NUMBER}'s title: \"${PR_TITLE}\""
             echo ""
             echo "No tag or release was created automatically — this is informational only. Create the release by hand (git tag, versioned image tag, and any chart bump) when you're ready."
           } >> "$GITHUB_STEP_SUMMARY"
 
-          echo "::notice::Next release suggestion: ${{ steps.pr.outputs.bump }} version bump (${{ steps.version.outputs.tag }}), based on merged PR #${{ steps.pr.outputs.number }}'s title '${{ steps.pr.outputs.title }}'. No tag/release was created automatically."
+          echo "::notice::Next release suggestion: ${BUMP} version bump (${NEXT_TAG}), based on merged PR #${PR_NUMBER}'s title '${PR_TITLE}'. No tag/release was created automatically."
