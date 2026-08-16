@@ -33,10 +33,10 @@ This rework:
   Postgres (`externalDatabase.*`) — see below for why that's a secret
   with three connection strings, not one.
 - **The migration Job pattern is kept** (`templates/migration-job.yaml`),
-  retargeted at the unified app image and `MIGRATION_DATABASE_URL`
-  instead of the old Python image and `alembic upgrade head`. It's
-  **disabled by default** — see "Open assumptions" below, this is the
-  one piece that doesn't actually work yet against the published image.
+  retargeted at a dedicated `migrator` image (built from a new
+  root-`Dockerfile` stage) and `MIGRATION_DATABASE_URL`, instead of the
+  old Python image and `alembic upgrade head`. Enabled by default — see
+  "Resolved since the initial rework" below.
 - **`values.yaml`/`secret.yaml`/`configmap.yaml`/`_helpers.tpl`** rewritten
   around the real env var set this app uses (`src/shared/config/index.ts`,
   `.env.example`), not the old Python backend's `DATABASE_URL`/
@@ -113,42 +113,44 @@ k3s/Traefik-specific is hardcoded into any template:
   nothing hardcodes a single-node assumption into a template; bump
   `replicaCount`/resources via values for a multi-node enterprise cluster.
 
+## Resolved since the initial rework
+
+- **Migration Job.** The root `Dockerfile` now has a `migrator` build
+  stage (after `build`, sibling to `runtime`) that keeps `node_modules`,
+  `drizzle.config.ts`, `drizzle/migrations/`, `tsconfig.json`,
+  `src/shared/db/`, and `src/bcs/` (drizzle-kit needs the latter to
+  resolve `drizzle.config.ts`'s `./src/bcs/*/infrastructure/schema.ts`
+  glob) on top of the `build` stage, with `CMD ["pnpm", "db:migrate"]`.
+  Published as `ghcr.io/mlopstapus/skillcanon-migrator` by
+  `.github/workflows/docker-publish.yml` alongside the app image, on its
+  own independent tag (`migrationJob.image.*`, separate from
+  `app.image.*`). `migrationJob.enabled` now defaults to `true`. Verified
+  end-to-end locally: `docker build --target migrator` + `docker run`
+  against a throwaway Postgres actually applies all migrations and
+  creates the `skillcanon_app`/`skillcanon_auth` roles.
+- **Postgres image.** `database.image` now defaults to plain
+  `postgres:16-alpine` — `database/Dockerfile` today only adds an
+  OpenShift-specific arbitrary-UID chown workaround on top of that same
+  base image and has an empty `init/` (just `.gitkeep`), so there's
+  nothing functionally load-bearing to build/publish yet. Still a plain
+  overridable value (`database.image.repository`/`tag`) in case
+  `database/Dockerfile` ever gains real init scripts worth publishing
+  later.
+- **Health check.** `src/app/api/health/route.ts` is a real, dependency-
+  free liveness endpoint (no auth, no DB round-trip — `{"status":"ok"}`).
+  `deployment.yaml`'s liveness/readiness probes now use `httpGet
+  /api/health` instead of a bare `tcpSocket` check.
+
 ## Open assumptions / questions
 
-1. **The migration Job cannot succeed against the published app image
-   today, so `migrationJob.enabled` defaults to `false`.** The root
-   `Dockerfile`'s runtime stage (`output: "standalone"`) only copies
-   `public/`, `.next/standalone`, and `.next/static` into the final
-   image — no `drizzle-kit`, no `drizzle.config.ts`, no
-   `drizzle/migrations/`, and no `pnpm`/`corepack` binary. Until the
-   image gains a migration-capable stage (or a separate migration image
-   is built), run `pnpm db:migrate` from a full source checkout against
-   `MIGRATION_DATABASE_URL`, same as the documented self-host operator
-   workflow. **Question for you:** do you want a small Dockerfile change
-   (e.g. a `migrate` build target that keeps `node_modules`/
-   `drizzle.config.ts`/`drizzle/migrations`) so this Job can actually
-   run, or is "operator runs `pnpm db:migrate` by hand" an acceptable
-   permanent story for self-hosted k8s installs?
-2. **No Postgres image is published by CI.** `docker-publish.yml` only
-   builds/pushes `ghcr.io/mlopstapus/skillcanon`; nothing publishes
-   `database/Dockerfile` anywhere. `database.image.repository` defaults
-   to a placeholder (`ghcr.io/mlopstapus/skillcanon-database`) that
-   doesn't exist in the registry yet. Either build/push that image
-   yourself (and maybe add it to `docker-publish.yml`), or set
-   `database.enabled: false` and use `externalDatabase` for anything
-   beyond local chart testing.
-3. **No semver release tags exist yet.** `docker-publish.yml` only tags
-   `latest` and `<git-sha>`. `app.image.tag` defaults to `"latest"`
-   rather than `.Chart.AppVersion` (the old chart's convention) since no
-   image tagged with this chart's `appVersion` will ever exist until a
-   real release pipeline lands. Pin to a `<git-sha>` tag for anything
-   beyond local/dev use.
-4. **No dedicated health-check route exists** (`src/app/api` has none).
-   `deployment.yaml`'s liveness/readiness probes use a plain `tcpSocket`
-   check on the app port rather than an `httpGet`, since no path is safe
-   to assume works unauthenticated. Switch to `httpGet` if/when a real
-   health endpoint is added.
-5. **Secrets default to empty placeholders**, matching `.env.example`'s
+1. **No semver release tags exist yet.** `docker-publish.yml` only tags
+   `latest` and `<git-sha>` (for both the app and migrator images).
+   `app.image.tag`/`migrationJob.image.tag` default to `"latest"` rather
+   than `.Chart.AppVersion` (the old chart's convention) since no image
+   tagged with this chart's `appVersion` will ever exist until a real
+   release pipeline lands. Pin to a `<git-sha>` tag for anything beyond
+   local/dev use.
+2. **Secrets default to empty placeholders**, matching `.env.example`'s
    `REPLACE_ME` convention, not filled dev defaults — `helm lint`/`helm
    template` succeed with the bare defaults, but the app itself refuses
    to start with an empty/placeholder `JWT_SECRET`
@@ -163,14 +165,13 @@ helm template charts/skillcanon
 ```
 
 To exercise the optional toggles (ingress, SMTP, GitHub token, external
-DB via an existing secret, the migration Job):
+DB via an existing secret):
 
 ```sh
 helm template charts/skillcanon \
   --set ingress.enabled=true \
   --set ingress.className=nginx \
-  --set app.smtp.enabled=true \
-  --set migrationJob.enabled=true
+  --set app.smtp.enabled=true
 
 helm template charts/skillcanon \
   --set database.enabled=false \

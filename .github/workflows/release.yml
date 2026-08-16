@@ -56,6 +56,14 @@ jobs:
           docker push "${IMAGE}:${{ github.sha }}"
           docker push "${IMAGE}:latest"
 
+      - name: Build migrator image
+        run: docker build --target migrator -t "${IMAGE}-migrator:${{ github.sha }}" -t "${IMAGE}-migrator:latest" .
+
+      - name: Push migrator image
+        run: |
+          docker push "${IMAGE}-migrator:${{ github.sha }}"
+          docker push "${IMAGE}-migrator:latest"
+
       # Everything below is a read-only, informational version *suggestion*
       # on top of the always-run sha/latest publish above — no git/docker/file
       # state is ever changed by these steps. Skipped (not failed) when this

@@ -70,25 +70,26 @@ secrets:
   authDbPassword: ""
   # Migration/schema-owner role password. Only meaningful when
   # database.enabled=true (chart-managed Postgres) or when
-  # externalDatabase.existingSecret is unset — see migrationJob below for
-  # why this Job is disabled by default.
+  # externalDatabase.existingSecret is unset. Used by both the app's
+  # MIGRATION_DATABASE_URL env var (parity with docker-compose.yaml) and
+  # the migrationJob below.
   postgresPassword: ""
   smtpPass: ""
   githubToken: ""
 
 # ── Database (PostgreSQL) ───────────────────────────────────────────────
-# Bundled StatefulSet, built from this repo's own database/Dockerfile.
+# Bundled StatefulSet. Plain stock Postgres — database/Dockerfile today
+# only adds an OpenShift-specific arbitrary-UID chown workaround on top
+# of postgres:16-alpine (database/init/ is empty, just a .gitkeep), so
+# there's nothing functionally load-bearing to publish yet. Still a
+# plain overridable value in case database/Dockerfile ever gains real
+# init scripts worth publishing later.
 database:
   enabled: true
   image:
-    # NOTE: unlike app.image, this is NOT currently published by any CI
-    # workflow (.github/workflows/docker-publish.yml only builds/pushes
-    # ghcr.io/mlopstapus/skillcanon). Build and push database/Dockerfile
-    # yourself before relying on this default, or set database.enabled:
-    # false and point externalDatabase at a managed Postgres instead.
-    repository: ghcr.io/mlopstapus/skillcanon-database
+    repository: postgres
     pullPolicy: IfNotPresent
-    tag: "latest"
+    tag: "16-alpine"
   port: 5432
   # Bootstraps the Postgres superuser (POSTGRES_USER/POSTGRES_DB) — this
   # is also the role `pnpm db:migrate` connects as (MIGRATION_DATABASE_URL),
@@ -134,15 +135,17 @@ externalDatabase:
 
 # ── Migration Job ──────────────────────────────────────────────────────────
 migrationJob:
-  # Disabled by default — see README.md's "Open assumptions" section.
-  # The published app image's runtime stage (root Dockerfile, `output:
-  # "standalone"`) does not bundle drizzle-kit, drizzle.config.ts, or
-  # drizzle/migrations, so this Job cannot succeed against
-  # ghcr.io/mlopstapus/skillcanon as published today. Kept in the chart
-  # (per the existing migration-job.yaml pattern) and wired at the
-  # correct image/env for when that gap closes, or for a custom image
-  # that does bundle migration support.
-  enabled: false
+  enabled: true
+  image:
+    # Built from the root Dockerfile's `migrator` stage — a separate,
+    # independently-tagged image from app.image (has node_modules/
+    # drizzle-kit/drizzle.config.ts/drizzle/migrations/pnpm on top of it;
+    # the runtime app image deliberately doesn't, per its `.next/
+    # standalone` output). Published by .github/workflows/docker-publish.yml
+    # alongside the app image on every merge to main.
+    repository: ghcr.io/mlopstapus/skillcanon-migrator
+    pullPolicy: IfNotPresent
+    tag: "latest"
 
 # ── Ingress (plain vanilla k8s, networking.k8s.io/v1) ──────────────────────
 ingress:
