@@ -5,7 +5,7 @@ provider: github
 base_branch: main
 
 ## Stack
-Unified pnpm-managed Next.js/TypeScript application at the repo root (`src/`) — App Router, bounded-context folders under `src/bcs/` plus `src/shared/{db,ui,config,logging}`, per `context/repo-structure.md`. Plus a standalone `cli/` package (the `skillcanon` CLI). Postgres database (`database/`); schema creation is owned by Drizzle migrations (`pnpm db:migrate`), not a pre-baked init script. Docker Compose for local dev/self-host. A Helm chart exists (`charts/spechub/`) but still describes an older split backend/frontend deployment shape and has not been reworked for the unified app — don't treat it as current.
+Unified pnpm-managed Next.js/TypeScript application at the repo root (`src/`) — App Router, bounded-context folders under `src/bcs/` plus `src/shared/{db,ui,config,logging}`, per `context/repo-structure.md`. Plus a standalone `cli/` package (the `skillcanon` CLI). Postgres database (`database/`); schema creation is owned by Drizzle migrations (`pnpm db:migrate`), not a pre-baked init script. Docker Compose for local dev/self-host. A Helm chart also exists (`charts/skillcanon/`, renamed and reworked from `charts/spechub/`) — K8s-native, single Deployment/Service/Ingress for the unified app plus a Postgres StatefulSet or external-managed-Postgres toggle. See `charts/skillcanon/README.md` for what changed and its open assumptions.
 
 Note: the previous split Python/FastAPI backend and Next.js 14 frontend (`legacy/backend/`, `legacy/frontend/`) were the pre-rewrite implementation, fully ported over epic by epic and deleted 2026-08-12. If an older note anywhere in this repo's docs mentions `legacy/`, it's describing history from before that deletion.
 

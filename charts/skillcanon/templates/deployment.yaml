@@ -1,0 +1,108 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillcanon.app.fullname" . }}
+  labels:
+    {{- include "skillcanon.labels" . | nindent 4 }}
+    {{- include "skillcanon.app.selectorLabels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.app.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "skillcanon.app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "skillcanon.app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: app
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: {{ include "skillcanon.app.fullname" . }}
+          env:
+            {{- if .Values.externalDatabase.existingSecret }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: database-url
+            - name: AUTH_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: auth-database-url
+            - name: MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: migration-database-url
+            {{- else }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: database-url
+            - name: AUTH_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: auth-database-url
+            # Present for parity with docker-compose.yaml's app service (it
+            # lets an operator `kubectl exec` in and run `pnpm db:migrate`
+            # by hand the same way `docker compose exec app pnpm db:migrate`
+            # works today) — not used by the app's own runtime code paths.
+            - name: MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: migration-database-url
+            {{- end }}
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: jwt-secret
+            {{- if .Values.app.smtp.enabled }}
+            - name: SMTP_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: smtp-pass
+            {{- end }}
+            {{- if .Values.app.github.enabled }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: github-token
+            {{- end }}
+          livenessProbe:
+            # No dedicated health-check route exists yet (grepped
+            # src/app/api for one — none found); a TCP check on the
+            # Next.js standalone server's port is the safe default that
+            # makes no assumption about auth/redirect behavior on any
+            # particular path. Switch to httpGet once a real endpoint exists.
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- with .Values.app.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}

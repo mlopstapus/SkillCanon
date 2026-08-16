@@ -1,1 +1,0 @@
-{{/* ConfigMap is no longer used — env vars are set inline on each deployment */}}

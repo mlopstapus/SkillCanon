@@ -1,0 +1,54 @@
+{{- if .Values.migrationJob.enabled }}
+# NOTE: as of the root Dockerfile's current runtime stage (output:
+# "standalone"), the ghcr.io/mlopstapus/skillcanon image published by
+# .github/workflows/docker-publish.yml only contains `public/`,
+# `.next/standalone`, and `.next/static` — no drizzle-kit, no
+# drizzle.config.ts, no drizzle/migrations, and no pnpm/corepack in the
+# runtime stage. This Job will fail against that image today. It's kept
+# here (retargeted at the unified app image + MIGRATION_DATABASE_URL, per
+# the pre-existing migration-job.yaml pattern) for when the image gains
+# migration support, or for a custom image that bundles it. Until then,
+# run `pnpm db:migrate` from a full source checkout against
+# MIGRATION_DATABASE_URL, matching CLAUDE.md's documented operator
+# workflow — which is also why migrationJob.enabled defaults to false.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "skillcanon.fullname" . }}-migrate
+  labels:
+    {{- include "skillcanon.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "skillcanon.app.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: "{{ .Values.app.image.repository }}:{{ .Values.app.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.app.image.pullPolicy }}
+          command: ["pnpm", "db:migrate"]
+          env:
+            {{- if .Values.externalDatabase.existingSecret }}
+            - name: MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.externalDatabase.existingSecret }}
+                  key: migration-database-url
+            {{- else }}
+            - name: MIGRATION_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillcanon.app.fullname" . }}
+                  key: migration-database-url
+            {{- end }}
+{{- end }}
