@@ -33,7 +33,7 @@ describe("audit event domain metadata", () => {
   });
 
   it("keeps each canonical verb mapped to a UI color and exposes the four transports", () => {
-    expect(AUDIT_TRANSPORTS).toEqual(["web", "api", "cli", "system"]);
+    expect(AUDIT_TRANSPORTS).toEqual(["web", "api", "mcp", "cli", "system"]);
     for (const verb of AUDIT_ACTION_VERBS) {
       expect(AUDIT_ACTION_VERB_COLORS[verb]).toMatch(/^(green|blue|red|violet|neutral)$/);
     }
