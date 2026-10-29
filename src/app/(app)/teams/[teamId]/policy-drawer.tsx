@@ -94,6 +94,8 @@ export function PolicyDrawer({ scopeLabel, mode, initialValues, onClose, onSubmi
                   key={value}
                   type="button"
                   onClick={() => setEnforcementType(value)}
+                  aria-pressed={enforcementType === value}
+                  aria-label={`${value}: ${MODE_DESCRIPTIONS[value]}`}
                   className={`rounded-control border p-2.5 text-left font-mono ${
                     enforcementType === value ? "border-a bg-a-soft text-a" : "border-border-2 bg-surface text-dim"
                   }`}
