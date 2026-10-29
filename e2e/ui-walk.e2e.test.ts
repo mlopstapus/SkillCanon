@@ -479,7 +479,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       .toBe(true);
   });
 
-  it.fails(
+  it(
     "loads the audit log without a hydration error (015/007)",
     async () => {
       newPageErrors();
