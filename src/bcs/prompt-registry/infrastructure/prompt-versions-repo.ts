@@ -1,7 +1,7 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { ChainStep } from "../domain/skill-chain";
-import type { PromptVersionSummary } from "../domain/prompt";
+import { normalizeVersionLabel, type PromptVersionSummary } from "../domain/prompt";
 import { listFilesByVersionIds } from "./prompt-version-files-repo";
 import { promptVersions } from "./schema";
 
@@ -51,10 +51,13 @@ export async function findVersionByPromptAndLabel(
   promptId: string,
   version: string,
 ): Promise<PromptVersionSummary | null> {
-  const [row] = await tx
+  const label = normalizeVersionLabel(version);
+  // Also match a legacy "v"-prefixed row the migration left alone (label collision).
+  const rows = await tx
     .select()
     .from(promptVersions)
-    .where(and(eq(promptVersions.promptId, promptId), eq(promptVersions.version, version)));
+    .where(and(eq(promptVersions.promptId, promptId), inArray(promptVersions.version, [label, `v${label}`])));
+  const row = rows.find((r) => r.version === label) ?? rows[0];
   if (!row) {
     return null;
   }

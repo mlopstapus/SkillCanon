@@ -218,6 +218,13 @@
       "when": 1786360000000,
       "tag": "0030_prompt_registry_skill_source_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1793313891666,
+      "tag": "0031_prompt_registry_normalise_version_labels",
+      "breakpoints": true
     }
   ]
 }

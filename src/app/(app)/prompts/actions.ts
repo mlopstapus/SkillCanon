@@ -44,11 +44,11 @@ async function requireActingUser() {
 /** Next free "vN" label for a prompt, following the mockup's own numbering scheme. */
 function nextVersionLabel(versions: Array<{ version: string }>): string {
   const numbers = versions
-    .map((v) => /^v(\d+)$/.exec(v.version)?.[1])
+    .map((v) => /^v?(\d+)$/.exec(v.version)?.[1])
     .filter((n): n is string => n !== undefined)
     .map(Number);
   const next = numbers.length ? Math.max(...numbers) + 1 : 1;
-  return `v${next}`;
+  return String(next);
 }
 
 /**
@@ -116,7 +116,7 @@ export async function importExternalSkillsAction(
           await publishVersion(tx, actor, {
             promptName: skill.name,
             organizationId: actingUser.orgId,
-            version: "v1",
+            version: "1",
             mainFile: { content: skill.mainFile.content },
             supportingFiles: skill.supportingFiles,
             tags: [],
@@ -213,7 +213,7 @@ export async function runLocalSkillImportBatch(
         await publishVersion(tx, actor, {
           promptName: skill.name,
           organizationId: actingUser.orgId,
-          version: "v1",
+          version: "1",
           mainFile: { content: skill.mainFile.content },
           supportingFiles: skill.supportingFiles,
           tags: [],

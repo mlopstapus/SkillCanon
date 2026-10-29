@@ -75,7 +75,7 @@ export function MetricsPageView({ data }: { data: MetricsPageData }) {
                 <div key={`${skill.promptId}:${skill.promptVersion}`} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-3 rounded-card border border-border bg-surface px-3.5 py-3">
                   <div className="min-w-0">
                     <div className="truncate font-mono text-[13px] font-semibold">{skill.name}</div>
-                    <div className="font-mono text-[11px] text-faint">v{skill.promptVersion} last used {skill.lastUsedAt}</div>
+                    <div className="font-mono text-[11px] text-faint">{skill.promptVersion} last used {skill.lastUsedAt}</div>
                   </div>
                   <span className="font-mono text-[11.5px] text-dim">{skill.runCount} runs</span>
                   <span className="font-mono text-[11.5px] text-green">{skill.successCount} ok</span>
