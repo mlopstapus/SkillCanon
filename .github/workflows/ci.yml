@@ -98,7 +98,12 @@ jobs:
             sleep 2
           done
           exit 1
+      # The browser runs in a non-UTC zone so locale-dependent rendering matches
+      # a developer's machine; on a UTC runner the audit-log hydration defect
+      # (015/007, an it.fails marker) would otherwise never show.
       - run: pnpm test:e2e
+        env:
+          TZ: America/New_York
       - name: Compose logs
         if: failure()
         run: docker compose logs
