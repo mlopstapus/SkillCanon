@@ -364,8 +364,8 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await goto("/settings/api-keys");
     await page.getByRole("button", { name: "Issue key" }).first().click();
     await drawer().getByPlaceholder("CI deploy key").fill("e2e key");
-    await drawer().getByText("prompts:read").click();
-    await drawer().getByText("workflows:run").click();
+    await drawer().getByText("skills:read").click();
+    await drawer().getByText("chains:run").click();
     await drawer().getByRole("button", { name: "Generate key" }).click();
     await expect
       .poll(() => page.getByText("Key created").isVisible())

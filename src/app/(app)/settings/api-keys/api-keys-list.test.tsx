@@ -45,7 +45,7 @@ describe("ApiKeysListView", () => {
 
     expect(markup).toContain("CI deploy key");
     expect(markup).toContain("sk_live_a3f1");
-    expect(markup).toContain("prompts:read");
+    expect(markup).toContain("skills:read");
     expect(markup).toContain("active");
     expect(markup).not.toMatch(/sk_live_a3f1[a-zA-Z0-9_-]{10,}/);
   });
