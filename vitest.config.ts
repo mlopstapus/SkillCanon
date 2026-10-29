@@ -18,6 +18,7 @@ export default defineConfig({
       "build/**",
       "coverage/**",
       "dist/**",
+      "e2e/**",
       "legacy/**",
       "node_modules/**",
     ],
