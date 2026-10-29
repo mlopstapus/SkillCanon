@@ -91,7 +91,13 @@ jobs:
       - run: pnpm exec playwright install --with-deps chromium
       - run: docker compose up -d --build
       - name: Wait for the app
-        run: curl -fsS --retry 30 --retry-delay 2 --retry-connrefused http://localhost:3000/api/health
+        # curl's own --retry skips connection resets (exit 56) while the app boots.
+        run: |
+          for _ in $(seq 60); do
+            curl -fsS http://localhost:3000/api/health && exit 0
+            sleep 2
+          done
+          exit 1
       - run: pnpm test:e2e
       - name: Compose logs
         if: failure()
