@@ -18,6 +18,19 @@ services:
       timeout: 5s
       retries: 10
 
+  # One-shot: applies Drizzle migrations (schemas, skillcanon_app/skillcanon_auth
+  # roles) before the app starts. A no-op on an already-migrated volume.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER:-skillcanon}:${POSTGRES_PASSWORD:-skillcanon}@database:5432/${POSTGRES_DB:-skillcanon}
+    depends_on:
+      database:
+        condition: service_healthy
+    restart: "no"
+
   app:
     build: .
     ports:
@@ -38,6 +51,8 @@ services:
     depends_on:
       database:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
