@@ -418,7 +418,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       "mcp-session-id": init.headers.get("mcp-session-id") ?? "",
       "mcp-protocol-version": "2025-06-18",
     };
-    const call = async (name: string, args: object) => {
+    const callRaw = async (name: string, args: object) => {
       const res = await fetch(`${BASE}/mcp`, {
         method: "POST",
         headers: session,
@@ -429,10 +429,25 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
           params: { name, arguments: args },
         }),
       });
-      return (await res.json()).result.content[0].text as string;
+      return (await res.json()).result as {
+        content: { text: string }[];
+        isError?: boolean;
+      };
     };
+    const call = async (name: string, args: object) =>
+      (await callRaw(name, args)).content[0].text;
     expect(await call("sh-list", {})).toContain(SKILL);
     expect(await call("sh-run", { name: SKILL })).toContain(POLICY.content);
+    // sh-search names are runnable, bare or with the old sh- prefix.
+    const search = await call("sh-search", { query: SKILL });
+    expect(search).toContain(`- ${SKILL}:`);
+    expect(search).not.toContain(`sh-${SKILL}`);
+    expect(await call("sh-run", { name: `sh-${SKILL}` })).toContain(
+      POLICY.content,
+    );
+    const missing = await callRaw("sh-run", { name: "no-such-skill" });
+    expect(missing.isError).toBe(true);
+    expect(missing.content[0].text).toContain("not found");
   });
 
   it("revokes the API key", async () => {

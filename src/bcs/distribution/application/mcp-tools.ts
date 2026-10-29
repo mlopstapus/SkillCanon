@@ -35,10 +35,10 @@ export type McpToolName = (typeof MCP_TOOL_NAMES)[number];
 
 export const toolInputSchemas = {
   "sh-list": {},
-  "sh-search": { query: z.string().describe("Search term to match against prompt names, descriptions, and tags.") },
+  "sh-search": { query: z.string().describe("Search term to match against skill names, descriptions, and tags.") },
   "sh-context": { project_id: z.string().optional().describe("Optional UUID of the project to layer on top.") },
   "sh-run": {
-    name: z.string().describe("The prompt name to run."),
+    name: z.string().describe("The skill name to run."),
     project: z.string().optional().describe("Optional project UUID to scope objective resolution."),
   },
   "sh-workflow-list": {},
@@ -49,12 +49,12 @@ export const toolInputSchemas = {
 } as const;
 
 export const toolDescriptions: Record<McpToolName, string> = {
-  "sh-list": "List all available prompts in the SkillCanon registry.",
-  "sh-search": "Search prompts by name or tag.",
+  "sh-list": "List all available skills (including chains) in the SkillCanon registry.",
+  "sh-search": "Search skills by name or tag. Returned names can be passed to sh-run.",
   "sh-context": "Show effective policies and objectives for the authenticated user.",
-  "sh-run": "Run a prompt by name. Use sh-list or sh-search to discover available prompts.",
-  "sh-workflow-list": "List all workflows accessible to the authenticated user.",
-  "sh-workflow-run": "Run a workflow by name. Each step's output is automatically passed to the next step.",
+  "sh-run": "Run a skill by name. Use sh-list or sh-search to discover available skills.",
+  "sh-workflow-list": "List all chains (multi-step skills) accessible to the authenticated user.",
+  "sh-workflow-run": "Run a chain by name. Each step's output is automatically passed to the next step.",
 };
 
 export interface McpToolContext {
@@ -68,6 +68,9 @@ export interface McpToolContext {
 function actorFromCaller(caller: McpCaller): PromptActor {
   return { organizationId: caller.user.orgId, userId: caller.user.id };
 }
+
+/** A tool-level failure the caller can act on; surfaced as `isError: true`, not a transport error. */
+export class McpToolError extends Error {}
 
 export function textResult(text: string): CallToolResult {
   return { content: [{ type: "text", text }] };
@@ -120,8 +123,17 @@ async function activeVersionForPrompt(
   return versions[versions.length - 1] ?? null;
 }
 
-function tagsFor(version: PromptVersionSummary | null): string[] {
-  return Array.isArray(version?.tags) ? version.tags.filter((tag): tag is string => typeof tag === "string") : [];
+// Tags live on versions, not skills: a skill's tags are the union across its versions.
+function tagsFor(versions: PromptVersionSummary[]): string[] {
+  const tags = versions.flatMap((version) =>
+    Array.isArray(version.tags) ? version.tags.filter((tag): tag is string => typeof tag === "string") : [],
+  );
+  return [...new Set(tags)];
+}
+
+// sh-search used to print `sh-<name>`; keep accepting that form so copied names still run.
+function bareName(name: string): string {
+  return name.startsWith("sh-") ? name.slice(3) : name;
 }
 
 export async function maybeInjectSessionContext(ctx: McpToolContext): Promise<string | null> {
@@ -191,13 +203,12 @@ export async function shSearch(args: { query: string }, ctx: McpToolContext): Pr
     const query = args.query.toLowerCase();
     const matches: string[] = [];
     for (const prompt of prompts) {
-      const version = await activeVersionForPrompt(tx, actor, prompt);
-      const tags = tagsFor(version);
+      const tags = tagsFor(await listVersions(tx, actor, prompt.name));
       const nameMatch = prompt.name.toLowerCase().includes(query);
       const descMatch = Boolean(prompt.description?.toLowerCase().includes(query));
       const tagMatch = tags.some((tag) => tag.toLowerCase().includes(query));
       if (nameMatch || descMatch || tagMatch) {
-        matches.push(`  - sh-${prompt.name}: ${prompt.description ?? "No description"} [tags: ${tags.length > 0 ? tags.join(", ") : "none"}]`);
+        matches.push(`  - ${prompt.name}: ${prompt.description ?? "No description"} [tags: ${tags.length > 0 ? tags.join(", ") : "none"}]`);
       }
     }
     if (matches.length === 0) {
@@ -213,7 +224,7 @@ export async function shContext(args: { project_id?: string }, ctx: McpToolConte
   const contextBlock = await maybeInjectSessionContext(ctx);
   const projectId = parseUuidOrNull(args.project_id);
   if (args.project_id && !projectId) {
-    return formatWithSessionContext(contextBlock, "Error: invalid project_id UUID.");
+    throw new McpToolError("invalid project_id UUID.");
   }
 
   const actor = actorFromCaller(ctx.caller);
@@ -270,13 +281,16 @@ export async function shRun(args: { name: string; project?: string }, ctx: McpTo
 
   const result = await withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
     const accessible = await listPrompts(tx, actor, projectId ? { projectId } : {});
-    if (!accessible.some((prompt) => prompt.name === args.name)) {
-      return `Error: prompt '${args.name}' not found or not shared with you.`;
+    const exact = accessible.some((prompt) => prompt.name === args.name);
+    if (!exact && accessible.some((prompt) => prompt.name === bareName(args.name))) {
+      args = { ...args, name: bareName(args.name) };
+    } else if (!exact) {
+      throw new McpToolError(`skill '${args.name}' not found or not shared with you.`);
     }
 
     const version = await fetchExpandableVersion(tx, ctx.caller.user.orgId, args.name);
     if (!version || version.kind === "chain") {
-      return `Error: prompt '${args.name}' not found.`;
+      throw new McpToolError(`skill '${args.name}' not found.`);
     }
 
     try {
@@ -320,7 +334,7 @@ export async function shRun(args: { name: string; project?: string }, ctx: McpTo
       return parts.join("\n\n");
     } catch (err) {
       if (err instanceof ExpansionSourceNotFoundError) {
-        return `Error: prompt '${args.name}' not found.`;
+        throw new McpToolError(`skill '${args.name}' not found.`);
       }
       throw err;
     }
@@ -358,16 +372,16 @@ export async function shWorkflowRun(args: { name: string; input: string }, ctx: 
     const prompts = await listPrompts(tx, actor);
     const match = prompts.find((prompt) => prompt.name.toLowerCase() === args.name.toLowerCase());
     if (!match) {
-      return `Error: workflow '${args.name}' not found.`;
+      throw new McpToolError(`chain '${args.name}' not found.`);
     }
     const version = await activeVersionForPrompt(tx, actor, match);
     if (version?.kind !== "chain") {
-      return `Error: workflow '${args.name}' not found.`;
+      throw new McpToolError(`chain '${args.name}' not found.`);
     }
 
     const run = await startSkillChainRun(tx, actor, match.name, undefined, ctx.auditContext).catch(() => null);
     if (!run) {
-      return `Error: failed to run workflow '${args.name}'.`;
+      throw new McpToolError(`failed to run chain '${args.name}'.`);
     }
 
     const steps = version.steps ?? [];
@@ -386,6 +400,20 @@ export async function shWorkflowRun(args: { name: string; input: string }, ctx: 
 }
 
 export async function invokeMcpTool(name: McpToolName, args: unknown, ctx: McpToolContext): Promise<CallToolResult> {
+  try {
+    return await dispatchMcpTool(name, args, ctx);
+  } catch (err) {
+    if (err instanceof McpToolError) {
+      return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+    }
+    if (err instanceof z.ZodError) {
+      return { content: [{ type: "text", text: `Error: invalid arguments: ${err.message}` }], isError: true };
+    }
+    throw err;
+  }
+}
+
+async function dispatchMcpTool(name: McpToolName, args: unknown, ctx: McpToolContext): Promise<CallToolResult> {
   switch (name) {
     case "sh-list":
       return textResult(await shList(ctx));
