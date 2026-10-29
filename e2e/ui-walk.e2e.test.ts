@@ -435,7 +435,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       };
     };
     const call = async (name: string, args: object) =>
-      (await callRaw(name, args)).content[0].text;
+      (await callRaw(name, args)).content[0]?.text ?? "";
     expect(await call("sh-list", {})).toContain(SKILL);
     expect(await call("sh-run", { name: SKILL })).toContain(POLICY.content);
     // sh-search names are runnable, bare or with the old sh- prefix.
@@ -447,7 +447,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     );
     const missing = await callRaw("sh-run", { name: "no-such-skill" });
     expect(missing.isError).toBe(true);
-    expect(missing.content[0].text).toContain("not found");
+    expect(missing.content[0]?.text).toContain("not found");
   });
 
   it("revokes the API key", async () => {
