@@ -27,11 +27,25 @@ function checkAssertion(a: unknown): string | null {
   return `unknown assertion type "${type}"`;
 }
 
+export type EvalAssertion =
+  | { type: "contains"; value: string }
+  | { type: "regex"; value: string }
+  | { type: "json_schema"; value: Record<string, unknown> };
+
+/** A validated eval case: deterministic `assert`s or a judge `rubric`, never both. */
+export interface EvalCase {
+  /** `name` when given, else `case-N` (1-based). */
+  id: string;
+  input: string;
+  assert?: EvalAssertion[];
+  rubric?: string;
+}
+
 /**
- * Validates `evals/cases.yaml`'s shape. Throws `InvalidVersionFilesError`
+ * Parses and validates `evals/cases.yaml`. Throws `InvalidVersionFilesError`
  * (mapped to 422) naming the first problem; never executes anything.
  */
-export function validateEvalCases(content: string): void {
+export function parseEvalCases(content: string): EvalCase[] {
   const fail = (msg: string): never => {
     throw new InvalidVersionFilesError(`${EVAL_CASES_FILE_NAME}: ${msg}.`);
   };
@@ -45,6 +59,7 @@ export function validateEvalCases(content: string): void {
     return fail("must be a mapping with a non-empty `cases` list");
   }
   const names = new Set<string>();
+  const parsed: EvalCase[] = [];
   doc.cases.forEach((c: unknown, i: number) => {
     const label = `case ${i + 1}`;
     if (!isRecord(c)) return fail(`${label} must be a mapping`);
@@ -56,8 +71,10 @@ export function validateEvalCases(content: string): void {
     const hasAssert = c.assert !== undefined;
     const hasRubric = c.rubric !== undefined;
     if (hasAssert === hasRubric) return fail(`${label} needs exactly one of \`assert\` or \`rubric\``);
+    const id = typeof c.name === "string" ? c.name : `case-${i + 1}`;
     if (hasRubric) {
       if (!isText(c.rubric)) return fail(`${label} rubric must be a non-empty string`);
+      parsed.push({ id, input: c.input, rubric: c.rubric });
       return;
     }
     if (!Array.isArray(c.assert) || c.assert.length === 0) return fail(`${label} assert must be a non-empty list`);
@@ -65,5 +82,19 @@ export function validateEvalCases(content: string): void {
       const problem = checkAssertion(a);
       if (problem) return fail(`${label}: ${problem}`);
     }
+    parsed.push({
+      id,
+      input: c.input,
+      assert: (c.assert as Record<string, unknown>[]).map((a) => {
+        const [type, value] = Object.entries(a)[0]!;
+        return { type, value } as EvalAssertion;
+      }),
+    });
   });
+  return parsed;
+}
+
+/** Shape check only (publish time); see `parseEvalCases`. */
+export function validateEvalCases(content: string): void {
+  parseEvalCases(content);
 }

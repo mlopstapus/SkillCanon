@@ -1,7 +1,7 @@
 ---
 epic: 012-mcp-admin-tools
 feature: 001-admin-and-metrics-mcp-tools
-status: open
+status: done
 dependencies: ["backlog/002-identity-access/EPIC.md", "backlog/005-governance/EPIC.md", "backlog/003-audit-compliance/EPIC.md"]
 ---
 
@@ -11,11 +11,13 @@ Placeholder for a future MCP server exposing governance/configuration mutation a
 
 ## Requirements
 
-- [ ] Not yet scoped — see Open Questions
+- [x] Extra tools on `/mcp`: team policy and objective list/create/update/delete (`sh-admin-*`) and org usage metrics (`sh-metrics-summary`), per the defaults below (spec `specs/045-admin-metrics-mcp-tools`).
 
 ## Acceptance Criteria
 
-- [ ] Not yet scoped — see Open Questions
+- [x] Each tool needs its API-key scope; a missing scope, a non-privileged actor, unknown ids and bad arguments return `isError` with no change.
+- [x] Mutations go through the governance functions REST uses and record audit events with transport `mcp`.
+- [x] Teams, users and API keys are not exposed.
 
 ## Open Questions
 
@@ -24,6 +26,13 @@ Placeholder for a future MCP server exposing governance/configuration mutation a
 - Should this land as a second MCP server/mount point, or as additional tools on the same `/mcp` mount `008-distribution/002-mcp-server-and-tools.md` specs, if that ever gets built?
 - Is MCP even the right transport, or would documented admin REST routes (portable from `008-distribution/001-rest-api-core-routes.md`) serve the same need without standing up a second protocol surface?
 - Which entities are in scope first — governance (policies/objectives/teams) only, or also identity-access (API keys, users) and audit-compliance (usage/audit reads)?
+
+## Questions for Ben (wave 5) — building to these defaults
+
+1. CRUD surface: **default** policies + objectives get create/update/delete (team scope); reads for effective policies/objectives and org usage metrics. Teams, users and API keys are NOT exposed over MCP (an AI client must not mint credentials).
+2. Auth: **default** the existing API key. Tools need a `governance:write` / `governance:read` / `metrics:read` scope on the key; the user's real role still decides what governance allows (non-admins are refused by the same functions REST uses).
+3. Mount: **default** extra tools on the existing `/mcp` mount, named `sh-admin-*` and `sh-metrics-*`; wrap the same governance/metrics application functions as the REST routes.
+4. Paid-tier gating: **default** none for now (billing is deferred); no entitlement flag is added.
 
 ## Dependencies
 

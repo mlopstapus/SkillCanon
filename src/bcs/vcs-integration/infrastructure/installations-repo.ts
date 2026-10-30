@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { installations, prChecks, repoLinks, webhookDeliveries } from "./schema";
 
@@ -133,4 +133,45 @@ export async function listPrChecksForLink(db: Db, organizationId: string, repoLi
     .from(prChecks)
     .where(and(eq(prChecks.organizationId, organizationId), eq(prChecks.repoLinkId, repoLinkId), eq(prChecks.prNumber, prNumber)))
     .orderBy(desc(prChecks.evaluatedAt));
+}
+
+export interface ProjectPrCheckRow extends PrCheckRow {
+  repoFullName: string;
+}
+
+/** Latest evaluation of each PR across every repo ever linked to the project (history survives unlinking), newest first. */
+export async function listLatestPrChecksForProject(db: Db, organizationId: string, projectId: string, limit: number): Promise<ProjectPrCheckRow[]> {
+  const rows = await db
+    .selectDistinctOn([prChecks.repoLinkId, prChecks.prNumber], { check: prChecks, repoFullName: repoLinks.repoFullName })
+    .from(prChecks)
+    .innerJoin(repoLinks, eq(repoLinks.id, prChecks.repoLinkId))
+    .where(and(eq(prChecks.organizationId, organizationId), eq(repoLinks.projectId, projectId)))
+    .orderBy(prChecks.repoLinkId, prChecks.prNumber, desc(prChecks.evaluatedAt));
+  return rows
+    .map((r) => ({ ...r.check, repoFullName: r.repoFullName }))
+    .sort((a, b) => b.evaluatedAt.getTime() - a.evaluatedAt.getTime())
+    .slice(0, limit);
+}
+
+export async function countPrChecksByStatus(
+  db: Db,
+  organizationId: string,
+  projectId: string,
+  since?: Date,
+): Promise<Record<"pass" | "fail" | "neutral", number>> {
+  const rows = await db
+    .select({ status: prChecks.status, n: count() })
+    .from(prChecks)
+    .innerJoin(repoLinks, eq(repoLinks.id, prChecks.repoLinkId))
+    .where(
+      and(
+        eq(prChecks.organizationId, organizationId),
+        eq(repoLinks.projectId, projectId),
+        since ? gte(prChecks.evaluatedAt, since) : sql`true`,
+      ),
+    )
+    .groupBy(prChecks.status);
+  const out = { pass: 0, fail: 0, neutral: 0 };
+  for (const r of rows) out[r.status] = Number(r.n);
+  return out;
 }

@@ -16,7 +16,7 @@ Everything before this epic (identity, governance resolution, prompt registry, d
 
 - [ ] [001 - GitHub App Registration & Installation](001-github-app-registration-and-installation.md)
 - [x] [002 - Repo-Project Linking](archive/002-repo-project-linking.md)
-- [ ] [003 - Required-Skill Governance Policy](003-required-skill-governance-policy.md)
+- [x] [003 - Required-Skill Governance Policy](archive/003-required-skill-governance-policy.md)
 - [x] [004 - CLI Git-Context Tagging & Usage Query API](archive/004-cli-git-context-tagging-and-usage-query-api.md)
 - [ ] [005 - PR Evaluation & GitHub Check Runs](005-pr-evaluation-and-github-check-runs.md)
 - [ ] [006 - VCS Integration Dashboard UI](006-vcs-integration-dashboard-ui.md)
