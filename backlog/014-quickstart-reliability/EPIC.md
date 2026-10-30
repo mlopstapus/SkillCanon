@@ -15,7 +15,7 @@ Typecheck, lint, the CLI suite and the Testcontainers suite were all green at th
 - [x] [001 - Run Migrations in Compose](archive/001-run-migrations-in-compose.md)
 - [ ] [002 - End-to-End Smoke Test](002-end-to-end-smoke-test.md)
 - [ ] [003 - Installable CLI](003-installable-cli.md)
-- [ ] [004 - Move pnpm Settings Out of package.json](004-pnpm-settings.md)
+- [x] [004 - Move pnpm Settings Out of package.json](archive/004-pnpm-settings.md)
 
 _Completed features are moved to `archive/` and checked off here._
 
