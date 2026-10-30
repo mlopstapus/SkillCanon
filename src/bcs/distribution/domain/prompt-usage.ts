@@ -70,3 +70,45 @@ export interface PromptUsageSummaryForOrganization {
   }>;
   dailyCounts: Array<{ day: string; count: number }>;
 }
+
+/**
+ * Canonical form of a git remote so a clone over SSH and over HTTPS of the
+ * same repo compare equal: `host/owner/repo`, lower-cased, no scheme, no
+ * credentials, no `.git`, no trailing slash. Returns null for anything that is
+ * not a recognizable remote (git context is best-effort, never an error).
+ * Covers GitHub's scp-style (`git@host:owner/repo`), `ssh://`, `git://` and
+ * `http(s)://` forms; other hosts normalize the same way (PDR-013).
+ */
+export function normalizeGitRemoteUrl(raw: string | null | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  let host: string;
+  let path: string;
+  const scp = /^(?:[^@/\s]+@)?([^:/\s]+):(?!\/\/)(.+)$/.exec(value);
+  if (scp) {
+    [, host, path] = scp as unknown as [string, string, string];
+  } else {
+    try {
+      const url = new URL(value);
+      if (!["http:", "https:", "ssh:", "git:"].includes(url.protocol)) return null;
+      host = url.hostname;
+      path = url.pathname;
+    } catch {
+      return null;
+    }
+  }
+  path = path.replace(/^\/+|\/+$/g, "").replace(/\.git$/i, "");
+  if (!host || !path.includes("/")) return null;
+  return `${host}/${path}`.toLowerCase();
+}
+
+/** One usage row as returned to VCS evaluation: only what correlating to commits needs. */
+export interface CommitUsage {
+  id: string;
+  promptId: string;
+  promptVersion: string;
+  userId: string | null;
+  gitCommitSha: string;
+  gitBranch: string | null;
+  createdAt: Date;
+}
