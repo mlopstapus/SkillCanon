@@ -253,6 +253,13 @@
       "when": 1793377588047,
       "tag": "0035_distribution_feedback_addressed",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1793383533752,
+      "tag": "0036_vcs_integration_installations",
+      "breakpoints": true
     }
   ]
 }

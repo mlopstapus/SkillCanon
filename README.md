@@ -106,6 +106,19 @@ Response:
 
 Available tools: `sh-list` (list skills), `sh-search` (search by name/tag), `sh-context` (show effective policies/objectives for the caller), `sh-run` (run a skill by name).
 
+## GitHub integration
+
+Off by default. To connect SkillCanon to GitHub, register a GitHub App once (a manual step) and give the instance its settings:
+
+1. In GitHub: **Settings → Developer settings → GitHub Apps → New GitHub App**.
+2. Repository permissions: **Checks: read & write**, **Pull requests: read**, **Contents: read**, **Metadata: read**. Subscribe to the **Installation**, **Installation repositories** and **Pull request** events.
+3. Webhook URL: `https://<your-host>/api/webhooks/github` (must be reachable from GitHub), with a webhook secret you choose. Setup URL / callback: `https://<your-host>/api/integrations/github/callback`.
+4. Generate a private key (PEM) for the App.
+5. Set `GITHUB_APP_ID`, `GITHUB_APP_SLUG` (the App's URL name), `GITHUB_APP_PRIVATE_KEY` and `GITHUB_APP_WEBHOOK_SECRET` in the environment (`.env` next to `docker-compose.yaml` works) and restart.
+6. An org admin opens **Settings → Integrations → GitHub** (`/settings/integrations/github`) and chooses **Install SkillCanon on GitHub**.
+
+Until all four settings are present the page says the App is not configured and the webhook endpoint answers 503. The private key and installation tokens are never stored or logged; uninstalling on GitHub soft-deletes the installation so check history stays readable.
+
 ## Governance Model
 
 SkillCanon uses a recursive team hierarchy for governance:

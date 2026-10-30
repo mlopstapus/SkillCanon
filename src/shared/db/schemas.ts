@@ -7,6 +7,7 @@ export const SCHEMAS = {
   billing: "billing",
   audit: "audit",
   distribution: "distribution",
+  vcsIntegration: "vcs_integration",
 } as const;
 
 export type SchemaName = (typeof SCHEMAS)[keyof typeof SCHEMAS];
@@ -19,3 +20,4 @@ export const promptRegistrySchema = pgSchema(SCHEMAS.promptRegistry);
 export const billingSchema = pgSchema(SCHEMAS.billing);
 export const auditSchema = pgSchema(SCHEMAS.audit);
 export const distributionSchema = pgSchema(SCHEMAS.distribution);
+export const vcsIntegrationSchema = pgSchema(SCHEMAS.vcsIntegration);
