@@ -22,7 +22,7 @@ What does not change:
 
 ## Features
 
-- [ ] [001 - Remove the Marketing Site](001-remove-marketing-site.md)
+- [x] [001 - Remove the Marketing Site](archive/001-remove-marketing-site.md)
 - [ ] [002 - One Tribe Organization](002-one-tribe-organization.md)
 - [ ] [003 - Tribe Visual Identity](003-tribe-visual-identity.md)
 - [ ] [004 - Copy in the Tribe Voice](004-tribe-voice-copy.md)

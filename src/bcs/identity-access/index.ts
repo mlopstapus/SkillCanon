@@ -1,3 +1,4 @@
+export { isInstanceSetUp } from "./application/is-instance-set-up";
 export { getOrganization } from "./application/get-organization";
 export { getUser } from "./application/get-user";
 export { createUser } from "./application/create-user";

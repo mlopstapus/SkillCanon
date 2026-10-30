@@ -83,21 +83,21 @@ afterAll(async () => {
 });
 
 describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
-  it("serves the landing page and sends a signed-out visitor to sign-in", async () => {
+  it("has no landing page: / redirects a visitor to first-run setup, and protected pages to sign-in", async () => {
+    const root = await fetch(`${BASE}/`, { redirect: "manual" });
+    expect(root.status).toBeGreaterThanOrEqual(300);
+    expect(root.status).toBeLessThan(400);
+    expect(root.headers.get("location") ?? "").toMatch(/\/register$/);
     await goto("/");
-    await expect
-      .poll(() => page.getByRole("heading", { level: 1 }).textContent())
-      .toMatch(/Govern every/);
+    await page.waitForURL("**/register");
     await goto("/dashboard");
     await page.waitForURL("**/login");
   });
 
-  it("toggles the landing page theme", async () => {
-    await goto("/");
-    const isLight = () => page.locator('[data-theme="light"]').count();
-    const before = await isLight();
-    await page.getByRole("button", { name: "Toggle theme" }).click();
-    await expect.poll(isLight).not.toBe(before);
+  it("asks search engines to stay away", async () => {
+    expect(await (await fetch(`${BASE}/robots.txt`)).text()).toMatch(/Disallow: \//);
+    await goto("/login");
+    expect(await page.locator('meta[name="robots"]').getAttribute("content")).toMatch(/noindex/);
   });
 
   it("creates the instance through first-run setup", async () => {
@@ -628,7 +628,9 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await page.getByRole("button", { name: "Log out" }).click();
     await page.waitForURL(/\/(login)?$/);
 
-    await goto("/login");
+    // Once the instance is set up, a signed-out visitor at / lands on sign-in.
+    await goto("/");
+    await page.waitForURL("**/login");
     await page.getByLabel("Email").fill(ADMIN.email);
     await page.locator('input[type="password"]').fill("not-the-password");
     await page.getByRole("button", { name: "Sign in" }).click();
