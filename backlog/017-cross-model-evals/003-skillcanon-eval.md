@@ -11,18 +11,21 @@ Rewritten for [PDR-020](../../docs/pdr/020-where-evals-run.md) (D4): evals run *
 
 ## Requirements
 
-Delivered in two parts so each PR stays reviewable.
+Delivered in parts so each PR stays reviewable: **1a** job tables, queue semantics, submit/read API, org opt-in (this PR); **1b** the separate worker process; **1c** admin page for the provider pool and the Anthropic and OpenAI providers; **2** CLI and API-key scope.
 
-**Part 1: runner and job storage**
-- [ ] An eval run is a stored job for one skill version: `{id, skillVersionId, contentDigest, models[], status: queued|running|succeeded|failed, requestedBy, createdAt, finishedAt}`, with one result row per case × model: `{runId, model, caseId, passed, score, latencyMs, tokens, error?}`. Model ids are `<provider>/<model-id>` (PDR-020).
-- [ ] `POST /api/skills/{name}/versions/{version}/evals` submits a run (body: `models`, optional `judge`) and returns the run id immediately; `GET .../evals/{runId}` returns status and results. The server rejects a model that is not in the provider pool with a 422, and a version with no valid `evals/cases.yaml` with a 422.
-- [ ] A runner executes queued jobs: it expands the version through the governed `expand()` path, runs each case on each model, scores deterministic `assert` checks locally and `rubric` cases with the judge model, and stores results. It enforces limits: concurrent jobs, per-job time cap, per-job token cap. A failing case or provider error is recorded on its row and does not fail the whole run.
-- [ ] Results are stored against the version's content digest (016/001) and are never compared across different digests.
+**Part 1: queue, job storage, worker**
+- [x] An eval run is a stored job for one skill version: `{id, skillVersionId, contentDigest, models[], status: queued|running|succeeded|failed, requestedBy, createdAt, finishedAt}`, with one result row per case × model: `{runId, model, caseId, passed, score, latencyMs, tokens, error?}`. Model ids are `<provider>/<model-id>` (PDR-020).
+- [x] `POST /api/skills/{name}/versions/{version}/evals` submits a run (body: `models`, optional `judge`) and returns the run id immediately; `GET .../evals/{runId}` returns status and results. The server rejects a model that is not in the provider pool with a 422, and a version with no valid `evals/cases.yaml` with a 422.
+- [x] A runner executes queued jobs: it expands the version through the governed `expand()` path, runs each case on each model, scores deterministic `assert` checks locally and `rubric` cases with the judge model, and stores results. It enforces limits: concurrent jobs (4), per-job time cap, per-job token cap. A failing case or provider error is recorded on its row and does not fail the whole run.
+- [x] Results are stored against the version's content digest (016/001) and are never compared across different digests.
 
-**Part 2: provider pool and CLI**
-- [ ] The operator configures the provider pool (providers, credentials, allowed models, default judge). Credentials are server-side secrets, never returned by any API, never logged. With no pool configured, submitting a run returns a clear 409 and the UI says evals are not configured.
+**Part 2: provider pool admin page and CLI**
+- [ ] An admin configures the provider pool on an admin page (Anthropic and OpenAI; credentials, allowed models, default judge). Credentials are server-side secrets, never returned by any API, never logged. With no pool configured, submitting a run returns a clear 409 and the UI says evals are not configured.
 - [ ] `skillcanon eval <slug> [--version N] --models <provider/model,...> [--judge <provider/model>] [--wait]` submits a run, optionally polls to completion, and prints the pass rate per model. It reads no provider environment variables and sends no keys.
+- [ ] An org must opt in to evals (admin action, audited) before any run is accepted; this is also consent to send skill content to the providers.
 - [ ] Submitting and reading runs is audited and limited by an API-key scope.
+
+Part 1a shipped in `specs/046-central-eval-runner/` (migration 0036, `executeEvalRun`, REST submit/read, org opt-in; default pool empty so submit is 409). The worker (1b), pool admin page (1c) and CLI (2) remain; this file stays open.
 
 ## Acceptance Criteria
 
@@ -30,13 +33,14 @@ Delivered in two parts so each PR stays reviewable.
 - A model outside the pool, a version without a valid cases file, or an unconfigured pool each fail with a distinct, documented error.
 - The CLI has no code path that reads a provider key.
 
-## Open Questions (for Ben)
+## Decisions (Ben, 2026-10-30)
 
-- Where does the operator configure the pool: instance environment/config file (proposed default, simplest, no UI) or an admin settings page?
-- Which providers first? Proposed default: Anthropic only, with the pool interface kept provider-agnostic.
-- Runner placement: in the Next.js app process (proposed default, simplest for self-host) or a separate worker container?
-- Default limits (proposed: 2 concurrent jobs, 10 minutes and 200k tokens per job)?
-- Eval inputs (skill content and case data) go to third-party providers: is that acceptable for every org by default, or is a per-org opt-in needed?
+1. Provider pool is configured on an **admin page** (not env/config).
+2. Providers: **Anthropic and OpenAI** from the start.
+3. Runner is a **separate worker process** with a **queue** between the app and the worker. The app only stores a queued job; the worker claims and runs it.
+4. Limits: **4 concurrent jobs**, 10 minutes and 200k tokens per run.
+5. Third-party data send is a **per-org opt-in**; opting in to evals is that opt-in.
+10. **Editors and reviewers** may start runs. Only `admin` and `member` roles exist today, so there is no reviewer role yet; until one is added, any org member with access to the skill may start a run. Smallest way to add reviewers: add `reviewer` to the user role enum and allow it to start runs and read results but not publish.
 
 ## Dependencies
 

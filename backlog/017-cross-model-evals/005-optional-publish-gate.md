@@ -13,7 +13,7 @@ Rewritten for D4: "prior to any sort of merge of that skill update, we need the 
 
 - [ ] A per-skill gate setting: models that must be evaluated and a minimum pass rate. When the gate is on, publishing a new version creates it as a candidate and does **not** make it active; the previous active version keeps serving.
 - [ ] Publishing a version with the gate on automatically submits an eval run for the gate's models (003). When the run succeeds and every named model meets the threshold, the candidate becomes active; if any model falls short, or the run fails, it stays a candidate and the owner sees why.
-- [ ] A candidate can also be activated manually only by an org admin, with the override recorded in the audit log with the reason.
+- [ ] A candidate can also be activated manually by an org admin or the skill owner, with the override recorded in the audit log with the reason.
 - [ ] The gate compares only results for the candidate's own content digest.
 - [ ] If the provider pool is not configured, a skill with the gate on cannot activate new versions through the gate, and the owner is told to configure the pool or switch the gate off. Existing active versions keep working.
 - [ ] Gate off is the default for skills that have no `evals/cases.yaml`; the setting is visible and editable on the skill page.
@@ -26,11 +26,11 @@ Rewritten for D4: "prior to any sort of merge of that skill update, we need the 
 - Gate off: publishing behaves exactly as today.
 - Admin override activates a candidate and writes an audit event with the reason.
 
-## Open Questions (for Ben)
+## Decisions (Ben, 2026-10-30)
 
-- Default for new skills: proposed default is gate off until a skill has an `evals/cases.yaml` and the pool is configured. Should it instead be on by default org-wide (strict reading of "any merge")?
-- Should a team owner, not only an org admin, be able to override the gate?
-- What happens to a candidate nobody activates: keep indefinitely (proposed) or expire?
+- Gate default: **off until the skill has eval cases and a provider pool exists** (and the org has opted in to evals).
+- Override: an **org admin or the skill's owner** may activate a candidate manually; the override and its reason are audited.
+- A candidate nobody activates is **kept**.
 
 ## Dependencies
 

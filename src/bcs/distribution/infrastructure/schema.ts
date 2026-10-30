@@ -1,4 +1,4 @@
-import { index, integer, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, integer, jsonb, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { id, organizationId } from "@/shared/db/columns";
 import { distributionSchema } from "@/shared/db/schemas";
 
@@ -63,3 +63,41 @@ export const feedback = distributionSchema.table(
     index("feedback_serve_id_index").on(table.serveId),
   ],
 );
+
+/**
+ * A model-drafted improvement of one skill version, built from its open
+ * feedback notes (016/004). Pending until the owner accepts (publishes a new
+ * version) or dismisses it.
+ */
+export const feedbackDrafts = distributionSchema.table(
+  "feedback_drafts",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    promptId: uuid("prompt_id").notNull(),
+    baseVersionId: uuid("base_version_id").notNull(),
+    status: text("status", { enum: ["pending", "accepted", "dismissed"] }).notNull().default("pending"),
+    proposedContent: text("proposed_content").notNull(),
+    rationale: text("rationale").notNull().default(""),
+    sourceFeedbackIds: jsonb("source_feedback_ids").$type<string[]>().notNull(),
+    model: text("model").notNull(),
+    createdBy: uuid("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    decidedBy: uuid("decided_by"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    acceptedVersionId: uuid("accepted_version_id"),
+  },
+  (table) => [index("feedback_drafts_organization_id_prompt_id_index").on(table.organizationId, table.promptId)],
+);
+
+/**
+ * Per-organization consent to send skill content and feedback text to the
+ * operator-configured third-party model provider (Ben #1697 q5). Absent row =
+ * not opted in. Shared by any feature that makes model calls.
+ */
+export const thirdPartyOptIn = distributionSchema.table("third_party_opt_in", {
+  organizationId: organizationId().primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  updatedBy: uuid("updated_by"),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
