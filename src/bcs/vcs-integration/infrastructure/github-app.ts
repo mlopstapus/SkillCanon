@@ -113,3 +113,87 @@ export async function listInstallationRepositories(token: string, fetchImpl: Fet
   }
   return repos;
 }
+
+const REPO_PATH = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
+
+async function tokenRequest(token: string, path: string, init: RequestInit, fetchImpl: FetchLike) {
+  const response = await fetchImpl(`${GITHUB_API}${path}`, {
+    ...init,
+    headers: {
+      accept: "application/vnd.github+json",
+      "x-github-api-version": "2022-11-28",
+      authorization: `Bearer ${token}`,
+      ...(init.body ? { "content-type": "application/json" } : {}),
+    },
+  });
+  if (!response.ok) throw new GithubApiError(response.status);
+  return response.json() as Promise<Record<string, unknown>>;
+}
+
+/** Commit shas of a pull request (GitHub caps this listing at 250 commits). */
+export async function listPullRequestCommitShas(
+  token: string,
+  repoFullName: string,
+  prNumber: number,
+  fetchImpl: FetchLike = fetch,
+): Promise<string[]> {
+  if (!REPO_PATH.test(repoFullName)) throw new GithubApiError(400);
+  const shas: string[] = [];
+  for (let page = 1; page <= 3; page += 1) {
+    const response = await fetchImpl(`${GITHUB_API}/repos/${repoFullName}/pulls/${prNumber}/commits?per_page=100&page=${page}`, {
+      headers: { accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new GithubApiError(response.status);
+    const batch = (await response.json()) as Array<{ sha: string }>;
+    shas.push(...batch.map((c) => c.sha));
+    if (batch.length < 100) break;
+  }
+  return shas;
+}
+
+export interface CheckRunInput {
+  name: string;
+  headSha: string;
+  conclusion: "success" | "failure" | "neutral";
+  title: string;
+  summary: string;
+}
+
+/** Creates a completed check run on a commit; returns its id. Never configured as a required check, so it cannot block a merge. */
+export async function createCheckRun(token: string, repoFullName: string, input: CheckRunInput, fetchImpl: FetchLike = fetch): Promise<number> {
+  if (!REPO_PATH.test(repoFullName)) throw new GithubApiError(400);
+  const body = await tokenRequest(
+    token,
+    `/repos/${repoFullName}/check-runs`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: input.name,
+        head_sha: input.headSha,
+        status: "completed",
+        conclusion: input.conclusion,
+        output: { title: input.title, summary: input.summary },
+      }),
+    },
+    fetchImpl,
+  );
+  if (typeof body.id !== "number") throw new GithubApiError(502);
+  return body.id;
+}
+
+export async function updateCheckRun(token: string, repoFullName: string, checkRunId: number, input: CheckRunInput, fetchImpl: FetchLike = fetch): Promise<void> {
+  if (!REPO_PATH.test(repoFullName)) throw new GithubApiError(400);
+  await tokenRequest(
+    token,
+    `/repos/${repoFullName}/check-runs/${checkRunId}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "completed",
+        conclusion: input.conclusion,
+        output: { title: input.title, summary: input.summary },
+      }),
+    },
+    fetchImpl,
+  );
+}

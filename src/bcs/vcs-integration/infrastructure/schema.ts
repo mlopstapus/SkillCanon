@@ -1,4 +1,4 @@
-import { bigint, index, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { bigint, index, integer, jsonb, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { id, organizationId } from "@/shared/db/columns";
 import { vcsIntegrationSchema } from "@/shared/db/schemas";
@@ -66,5 +66,33 @@ export const repoLinks = vcsIntegrationSchema.table(
       .where(sql`${table.unlinkedAt} is null`),
     index("repo_links_organization_id_project_id_index").on(table.organizationId, table.projectId),
     index("repo_links_github_repo_id_index").on(table.githubRepoId),
+  ],
+);
+
+/**
+ * One evaluation of a PR's required skills per (repo link, PR, head sha),
+ * upserted when the same head is evaluated again. Real compliance history:
+ * never truncated or rolled up (OWNERSHIP.md). `error` is set only for a
+ * `neutral` (evaluation itself failed) row.
+ */
+export const prChecks = vcsIntegrationSchema.table(
+  "pr_checks",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    repoLinkId: uuid("repo_link_id")
+      .notNull()
+      .references(() => repoLinks.id),
+    prNumber: integer("pr_number").notNull(),
+    headSha: text("head_sha").notNull(),
+    evaluatedAt: timestamp("evaluated_at", { withTimezone: true }).notNull().defaultNow(),
+    results: jsonb("results").$type<Array<{ skillName: string; satisfied: boolean; matchedCommitSha: string | null }>>().notNull(),
+    status: text("status", { enum: ["pass", "fail", "neutral"] }).notNull(),
+    githubCheckRunId: bigint("github_check_run_id", { mode: "number" }),
+    error: text("error"),
+  },
+  (table) => [
+    uniqueIndex("pr_checks_link_pr_head_unique").on(table.repoLinkId, table.prNumber, table.headSha),
+    index("pr_checks_organization_id_evaluated_at_index").on(table.organizationId, table.evaluatedAt),
   ],
 );

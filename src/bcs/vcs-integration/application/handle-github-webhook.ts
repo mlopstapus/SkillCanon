@@ -4,8 +4,10 @@ import { getGithubAppConfig, verifyWebhookSignature } from "../infrastructure/gi
 import {
   claimDelivery,
   findByGithubInstallationId,
+  listLiveLinksForGithubRepo,
   updateInstallation,
 } from "../infrastructure/installations-repo";
+import { evaluatePullRequestForLink, type PullRequestDeps } from "./evaluate-pull-request";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
@@ -28,6 +30,7 @@ export async function handleGithubWebhook(
   db: Db,
   params: { rawBody: string; signatureHeader: string | null; deliveryId: string | null; eventName: string | null },
   env?: Record<string, string | undefined>,
+  pullRequestDeps?: Omit<PullRequestDeps, "config">,
 ): Promise<WebhookOutcome> {
   const config = getGithubAppConfig(env);
   if (!config) return { status: "rejected", reason: "not-configured" };
@@ -45,8 +48,11 @@ export async function handleGithubWebhook(
 
   return db.transaction(async (tx) => {
     if (!(await claimDelivery(tx, params.deliveryId as string))) return { status: "duplicate" } as const;
-    if (params.eventName !== "installation") return { status: "ignored" } as const; // pull_request: feature 005
-    return handleInstallationEvent(tx, payload);
+    if (params.eventName === "installation") return handleInstallationEvent(tx, payload);
+    if (params.eventName === "pull_request" && pullRequestDeps) {
+      return handlePullRequestEvent(tx, payload, { ...pullRequestDeps, config });
+    }
+    return { status: "ignored" } as const;
   });
 }
 
@@ -83,5 +89,38 @@ async function handleInstallationEvent(
     after: { action, ...set },
     transport: "system",
   });
+  return { status: "handled" };
+}
+
+const EVALUATED_ACTIONS = ["opened", "synchronize", "reopened"];
+
+/**
+ * The organization comes only from the stored repo link the GitHub repo id
+ * maps to (and the payload's installation id must be that link's
+ * installation), never from anything else in the payload. A repo no project
+ * links to is a quiet no-op.
+ */
+async function handlePullRequestEvent(
+  tx: Parameters<Parameters<Db["transaction"]>[0]>[0],
+  payload: Record<string, unknown>,
+  deps: PullRequestDeps,
+): Promise<WebhookOutcome> {
+  const repo = payload.repository as { id?: unknown; full_name?: unknown } | undefined;
+  const pull = payload.pull_request as { number?: unknown; head?: { sha?: unknown } } | undefined;
+  const githubInstallationId = (payload.installation as { id?: unknown } | undefined)?.id;
+  if (
+    !EVALUATED_ACTIONS.includes(String(payload.action)) ||
+    typeof repo?.id !== "number" ||
+    typeof repo.full_name !== "string" ||
+    typeof pull?.number !== "number" ||
+    typeof pull.head?.sha !== "string"
+  ) {
+    return { status: "ignored" };
+  }
+
+  const links = (await listLiveLinksForGithubRepo(tx, repo.id)).filter((l) => l.githubInstallationId === githubInstallationId);
+  if (links.length === 0) return { status: "ignored" };
+  const pr = { repoFullName: repo.full_name, prNumber: pull.number, headSha: pull.head.sha };
+  for (const link of links) await evaluatePullRequestForLink(deps, link, pr, links.length);
   return { status: "handled" };
 }

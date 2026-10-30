@@ -8,6 +8,8 @@ export {
 } from "./application/installations";
 export { linkRepo, listAccessibleRepos, listRepoLinks, unlinkRepo } from "./application/repo-links";
 export type { RepoLinkListItem, VcsActor } from "./application/repo-links";
+export { getPrCheck } from "./application/evaluate-pull-request";
+export type { PullRequestDeps } from "./application/evaluate-pull-request";
 export { getGithubAppConfig } from "./infrastructure/github-app";
 export type { GithubAppConfig } from "./infrastructure/github-app";
 export {

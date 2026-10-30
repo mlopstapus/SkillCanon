@@ -1,6 +1,6 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { installations, repoLinks, webhookDeliveries } from "./schema";
+import { installations, prChecks, repoLinks, webhookDeliveries } from "./schema";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 export type InstallationRow = typeof installations.$inferSelect;
@@ -76,4 +76,61 @@ export async function listLiveRepoLinks(db: Db, organizationId: string, projectI
 
 export async function markRepoLinkUnlinked(db: Db, id: string, at: Date): Promise<void> {
   await db.update(repoLinks).set({ unlinkedAt: at }).where(eq(repoLinks.id, id));
+}
+
+export interface LiveLinkForRepo extends RepoLinkRow {
+  githubInstallationId: number;
+}
+
+/** Live links for a GitHub repo id whose installation is active; used by the webhook, which has no org yet. */
+export async function listLiveLinksForGithubRepo(db: Db, githubRepoId: number): Promise<LiveLinkForRepo[]> {
+  const rows = await db
+    .select({ link: repoLinks, githubInstallationId: installations.githubInstallationId })
+    .from(repoLinks)
+    .innerJoin(installations, eq(installations.id, repoLinks.installationId))
+    .where(
+      and(
+        eq(repoLinks.githubRepoId, githubRepoId),
+        isNull(repoLinks.unlinkedAt),
+        isNull(installations.deletedAt),
+        isNull(installations.suspendedAt),
+      ),
+    );
+  return rows.map((r) => ({ ...r.link, githubInstallationId: r.githubInstallationId }));
+}
+
+export type PrCheckRow = typeof prChecks.$inferSelect;
+
+export async function findPrCheck(db: Db, repoLinkId: string, prNumber: number, headSha: string): Promise<PrCheckRow | undefined> {
+  const [row] = await db
+    .select()
+    .from(prChecks)
+    .where(and(eq(prChecks.repoLinkId, repoLinkId), eq(prChecks.prNumber, prNumber), eq(prChecks.headSha, headSha)));
+  return row;
+}
+
+export async function upsertPrCheck(db: Db, values: typeof prChecks.$inferInsert): Promise<PrCheckRow> {
+  const [row] = await db
+    .insert(prChecks)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [prChecks.repoLinkId, prChecks.prNumber, prChecks.headSha],
+      set: {
+        evaluatedAt: values.evaluatedAt ?? new Date(),
+        results: values.results,
+        status: values.status,
+        githubCheckRunId: values.githubCheckRunId,
+        error: values.error ?? null,
+      },
+    })
+    .returning();
+  return row as PrCheckRow;
+}
+
+export async function listPrChecksForLink(db: Db, organizationId: string, repoLinkId: string, prNumber: number): Promise<PrCheckRow[]> {
+  return db
+    .select()
+    .from(prChecks)
+    .where(and(eq(prChecks.organizationId, organizationId), eq(prChecks.repoLinkId, repoLinkId), eq(prChecks.prNumber, prNumber)))
+    .orderBy(desc(prChecks.evaluatedAt));
 }
