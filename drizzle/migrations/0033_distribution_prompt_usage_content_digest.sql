@@ -1,0 +1,1 @@
+ALTER TABLE "distribution"."prompt_usage" ADD COLUMN "content_digest" text;

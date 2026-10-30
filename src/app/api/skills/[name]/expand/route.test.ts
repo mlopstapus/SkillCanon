@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { getPromptUsageSummaryForOrganization } from "@/bcs/distribution";
+import { computeContentDigest, getPromptUsageSummaryForOrganization } from "@/bcs/distribution";
+import { createPolicy } from "@/bcs/governance";
 import { createPrompt, publishVersion, type PromptActor } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
@@ -90,6 +91,44 @@ describe("/api/skills/[name]/expand", () => {
       }),
     ]);
     expect(summary.averageLatencyMs).toEqual(expect.any(Number));
+  });
+
+  it("returns serveId, version and a stable contentDigest; adding a policy changes the digest", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
+    const name = `skill-${randomUUID()}`;
+    await publishTemplateSkill(seeded, name);
+    const expandOnce = async () => {
+      const response = await route()(
+        new Request(`http://x/api/skills/${name}/expand`, {
+          method: "POST",
+          headers: { cookie, "content-type": "application/json" },
+          body: JSON.stringify({}),
+        }),
+        { params: Promise.resolve({ name }) },
+      );
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+
+    const first = await expandOnce();
+    const second = await expandOnce();
+    expect(first.version).toBe("1.0.0");
+    expect(first.contentDigest).toBe(computeContentDigest(first.content));
+    expect(second.contentDigest).toBe(first.contentDigest);
+    expect(second.serveId).not.toBe(first.serveId);
+
+    await withTenantContext(testDb.appDb, seeded.organizationId, (tx) =>
+      createPolicy(
+        tx,
+        { organizationId: seeded.organizationId, userId: seeded.adminUserId },
+        { teamId: seeded.teamId, name: "cite-sources", enforcementType: "append", content: "Always cite sources.", priority: 1 },
+        { teamBelongsToOrganization: async () => true },
+      ),
+    );
+    const third = await expandOnce();
+    expect(third.content).toContain("Always cite sources.");
+    expect(third.contentDigest).not.toBe(first.contentDigest);
   });
 
   it("records failed telemetry when expansion fails after a visible version is resolved", async () => {

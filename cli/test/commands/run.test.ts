@@ -3,12 +3,20 @@ import { createServer, type Server, type IncomingMessage, type ServerResponse } 
 import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runAdvance, runRun } from "../../src/commands/run.js";
+import { runAdvance, runRun, runRunWithServe } from "../../src/commands/run.js";
+import { readSyncManifest } from "../../src/config/sync-manifest.js";
 import { AuthError, NetworkError, NotFoundError } from "../../src/http/skillcanon-client.js";
 
 let server: Server;
 let baseUrl: string;
-let expandResponse: { content: string; appliedPolicies: string[]; objectives: string[] };
+let expandResponse: {
+  content: string;
+  appliedPolicies: string[];
+  objectives: string[];
+  serveId?: string;
+  version?: string;
+  contentDigest?: string;
+};
 
 function handler(req: IncomingMessage, res: ServerResponse) {
   if (req.url === "/api/skills/release-notes/expand") {
@@ -68,6 +76,22 @@ describe("runRun", () => {
   it("prints the resolved content, nothing else", async () => {
     const text = await runRun(dir, "release-notes");
     expect(text).toBe("Resolved skill content.");
+  });
+
+  it("remembers the serve in the sync manifest and reports a serve line, leaving the text untouched", async () => {
+    expandResponse = { ...expandResponse, serveId: "serve-1", version: "2", contentDigest: "ab".repeat(32) };
+    const { text, serveLine } = await runRunWithServe(dir, "release-notes");
+    expect(text).toBe("Resolved skill content.");
+    expect(serveLine).toBe(`[Serve serve-1 · version 2 · digest ${"ab".repeat(32)}]`);
+    expect(readSyncManifest(dir).serves).toEqual({
+      "release-notes": { serveId: "serve-1", version: "2", contentDigest: "ab".repeat(32) },
+    });
+  });
+
+  it("writes no serve when the server did not return one (older server)", async () => {
+    const { serveLine } = await runRunWithServe(dir, "release-notes");
+    expect(serveLine).toBeUndefined();
+    expect(readSyncManifest(dir).serves).toBeUndefined();
   });
 
   it("reflects a change in the server's response on the very next call (no caching)", async () => {

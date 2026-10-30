@@ -22,6 +22,8 @@ export const promptUsage = distributionSchema.table(
     gitRemoteUrl: text("git_remote_url"),
     gitBranch: text("git_branch"),
     gitCommitSha: text("git_commit_sha"),
+    /** SHA-256 (hex) of the exact composed text served; null for failed serves and pre-016 rows. */
+    contentDigest: text("content_digest"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

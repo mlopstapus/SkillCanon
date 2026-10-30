@@ -1,6 +1,7 @@
 import type { Command } from "commander";
 import { readProjectLink } from "../config/project-link.js";
 import { readCredentials } from "../config/credentials.js";
+import { readSyncManifest, writeSyncManifest } from "../config/sync-manifest.js";
 import {
   abandonChainRun,
   advanceChainRun,
@@ -49,11 +50,23 @@ async function isChain(options: SkillCanonClientOptions, slug: string): Promise<
  * refuses it (404, or 409/422 once the server names the chain-runs route).
  */
 export async function runRun(repoRoot: string, slug: string): Promise<string> {
+  return (await runRunWithServe(repoRoot, slug)).text;
+}
+
+/** Like `runRun`, but also reports the serve line (stderr text) and remembers the serve in the sync manifest. */
+export async function runRunWithServe(repoRoot: string, slug: string): Promise<{ text: string; serveLine?: string }> {
   const link = readProjectLink(repoRoot);
   const credentials = readCredentials(repoRoot);
   const options = { server: link.server, apiKey: credentials.apiKey };
   try {
-    return formatExpansion(await expandSkill(options, slug));
+    const result = await expandSkill(options, slug);
+    const text = formatExpansion(result);
+    if (!result.serveId || !result.contentDigest) return { text };
+    const version = result.version ?? "unknown";
+    const manifest = readSyncManifest(repoRoot);
+    manifest.serves = { ...manifest.serves, [slug]: { serveId: result.serveId, version, contentDigest: result.contentDigest } };
+    writeSyncManifest(repoRoot, manifest);
+    return { text, serveLine: `[Serve ${result.serveId} · version ${version} · digest ${result.contentDigest}]` };
   } catch (err) {
     const refused = err instanceof NotFoundError || (err instanceof ApiError && (err.status === 409 || err.status === 422));
     if (!refused) throw err;
@@ -61,7 +74,7 @@ export async function runRun(repoRoot: string, slug: string): Promise<string> {
     const chain = await isChain(options, slug).catch(() => false);
     if (!chain) throw err;
     const { runId, ...progress } = await startChainRun(options, slug);
-    return formatChainStep(runId, progress as ChainProgress);
+    return { text: formatChainStep(runId, progress as ChainProgress) };
   }
 }
 
@@ -81,7 +94,10 @@ export function registerRunCommand(program: Command): void {
     .description("Resolve and print one governed skill's current content (a chain skill starts a run and prints step 1).")
     .argument("<slug>", "the skill's slug, e.g. release-notes")
     .action(async (slug: string) => {
-      process.stdout.write(`${await runRun(process.cwd(), slug)}\n`);
+      const { text, serveLine } = await runRunWithServe(process.cwd(), slug);
+      process.stdout.write(`${text}\n`);
+      // stderr, so the synced stub's stdout stays exactly the skill text.
+      if (serveLine) process.stderr.write(`${serveLine}\n`);
     });
 
   program

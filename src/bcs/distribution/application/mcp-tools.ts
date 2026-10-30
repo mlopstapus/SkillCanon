@@ -26,6 +26,7 @@ import {
 import { resolveEffectiveObjectives, resolveEffectivePolicies } from "@/bcs/governance";
 import { withAudit, withTenantContext } from "@/shared/db";
 import { assertCoreFeaturesEnabled } from "@/bcs/identity-access";
+import { computeContentDigest } from "../domain/prompt-usage";
 import { recordPromptUsage } from "./record-prompt-usage";
 import { type McpCaller, type McpSessionManager, mcpSessionManager } from "./mcp-session";
 
@@ -345,14 +346,17 @@ export async function shRunWithFiles(args: { name: string; project?: string }, c
             userId: ctx.caller.user.id,
             projectId,
           });
-          await recordPromptUsage(auditTx, {
+          const contentDigest = computeContentDigest(expanded.content);
+          const serveId = await recordPromptUsage(auditTx, {
             organizationId: ctx.caller.user.orgId,
             promptId: version.promptId,
             promptVersionId: version.id,
+            promptVersion: version.version,
             projectId: projectId ?? null,
             userId: ctx.caller.user.id,
+            contentDigest,
           });
-          return expanded;
+          return { ...expanded, serveId, contentDigest };
         },
         (auditTx) =>
           record(auditTx, {
@@ -373,6 +377,7 @@ export async function shRunWithFiles(args: { name: string; project?: string }, c
       if (expansion.appliedPolicies.length > 0) {
         parts.push(`[Policies Applied]\n${expansion.appliedPolicies.join(", ")}`);
       }
+      parts.push(`[Serve ${expansion.serveId} · version ${version.version} · digest ${expansion.contentDigest}]`);
       return { text: parts.join("\n\n"), files: expansion.files };
     } catch (err) {
       if (err instanceof ExpansionSourceNotFoundError) {

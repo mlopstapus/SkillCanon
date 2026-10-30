@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { recordPromptUsage } from "@/bcs/distribution";
+import { computeContentDigest, recordPromptUsage } from "@/bcs/distribution";
 import { expand, fetchExpandableVersion } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
@@ -44,7 +44,8 @@ export async function handlePost(
     );
 
     if (versionToRecord && versionToRecord.kind === "template") {
-      await withTenantContext(db, caller.organizationId, (tx) =>
+      const contentDigest = computeContentDigest(result.content);
+      const serveId = await withTenantContext(db, caller.organizationId, (tx) =>
         recordPromptUsage(tx, {
           organizationId: caller.organizationId,
           promptId: versionToRecord.promptId,
@@ -52,6 +53,7 @@ export async function handlePost(
           promptVersion: versionToRecord.version,
           projectId: body.projectId ?? null,
           userId: caller.actingUser.id,
+          contentDigest,
           statusCode: 200,
           latencyMs: Date.now() - startedAt,
           gitRemoteUrl: body.gitRemoteUrl ?? null,
@@ -59,6 +61,7 @@ export async function handlePost(
           gitCommitSha: body.gitCommitSha ?? null,
         }),
       );
+      return Response.json({ ...result, serveId, version: versionToRecord.version, contentDigest });
     }
 
     return Response.json(result);

@@ -232,6 +232,13 @@
       "when": 1793313991666,
       "tag": "0032_audit_compliance_mcp_transport",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1793377131878,
+      "tag": "0033_distribution_prompt_usage_content_digest",
+      "breakpoints": true
     }
   ]
 }

@@ -1,13 +1,13 @@
 import { and, asc, count, eq, gte, lte, max, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { RecordPromptUsageParams } from "../domain/prompt-usage";
+import type { RecordPromptUsageParams, Serve } from "../domain/prompt-usage";
 import { promptUsage } from "./schema";
 
 export async function insert<TSchema extends Record<string, unknown>>(
   tx: PostgresJsDatabase<TSchema>,
   params: RecordPromptUsageParams,
-): Promise<void> {
-  await tx.insert(promptUsage).values({
+): Promise<string> {
+  const [row] = await tx.insert(promptUsage).values({
     organizationId: params.organizationId,
     promptId: params.promptId,
     promptVersionId: params.promptVersionId,
@@ -19,7 +19,32 @@ export async function insert<TSchema extends Record<string, unknown>>(
     gitRemoteUrl: params.gitRemoteUrl ?? null,
     gitBranch: params.gitBranch ?? null,
     gitCommitSha: params.gitCommitSha ?? null,
-  });
+    contentDigest: params.contentDigest ?? null,
+  }).returning({ id: promptUsage.id });
+  if (!row) throw new Error("prompt_usage insert returned no row.");
+  return row.id;
+}
+
+export async function findById<TSchema extends Record<string, unknown>>(
+  tx: PostgresJsDatabase<TSchema>,
+  organizationId: string,
+  serveId: string,
+): Promise<Serve | null> {
+  const [row] = await tx
+    .select()
+    .from(promptUsage)
+    .where(and(eq(promptUsage.organizationId, organizationId), eq(promptUsage.id, serveId)));
+  if (!row) return null;
+  return {
+    serveId: row.id,
+    promptId: row.promptId,
+    promptVersionId: row.promptVersionId,
+    version: row.promptVersion,
+    contentDigest: row.contentDigest,
+    userId: row.userId,
+    projectId: row.projectId,
+    createdAt: row.createdAt,
+  };
 }
 
 export async function countTotalForProject<TSchema extends Record<string, unknown>>(

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 export interface RecordPromptUsageParams {
   organizationId: string;
   promptId: string;
@@ -10,6 +12,24 @@ export interface RecordPromptUsageParams {
   gitRemoteUrl?: string | null;
   gitBranch?: string | null;
   gitCommitSha?: string | null;
+  contentDigest?: string | null;
+}
+
+/** One recorded serve (a `prompt_usage` row), as exposed by `getServe`. */
+export interface Serve {
+  serveId: string;
+  promptId: string;
+  promptVersionId: string;
+  version: string;
+  contentDigest: string | null;
+  userId: string | null;
+  projectId: string | null;
+  createdAt: Date;
+}
+
+/** Lowercase hex SHA-256 of the exact text served, policies included. */
+export function computeContentDigest(content: string): string {
+  return createHash("sha256").update(content, "utf8").digest("hex");
 }
 
 export interface PromptUsageSummaryForProject {

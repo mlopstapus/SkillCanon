@@ -30,6 +30,10 @@ export interface ExpansionResult {
   content: string;
   appliedPolicies: string[];
   objectives: string[];
+  /** Present on a genuine serve (016/001); absent from older servers. */
+  serveId?: string;
+  version?: string;
+  contentDigest?: string;
 }
 
 export interface SkillCanonClientOptions {
