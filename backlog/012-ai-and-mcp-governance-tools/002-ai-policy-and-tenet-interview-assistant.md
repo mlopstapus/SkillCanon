@@ -11,12 +11,12 @@ Placeholder for a paid-tier feature that helps a team turn a loose, conversation
 
 ## Requirements
 
-- [x] Chat panel on the team Governance page that proposes draft policies/objectives; a human reviews each in the normal create drawer (spec `specs/046-ai-policy-interview`).
+- [x] Chat panel on the team Governance page that proposes draft policies/objectives; a human reviews each in the normal create drawer (spec `specs/046-ai-policy-interview`). (#121)
 
 ## Acceptance Criteria
 
-- [x] Nothing is created without a human submitting the create drawer; refusals (no opt-in, no provider, non-admin) make no model call.
-- [x] Uses the eval provider pool and the per-org eval opt-in; no second key store.
+- [x] Nothing is created without a human submitting the create drawer; refusals (no opt-in, no provider, non-admin) make no model call. (#121)
+- [x] Uses the eval provider pool and the per-org eval opt-in; no second key store. (#121)
 - [ ] Verified live against a real Anthropic/OpenAI provider — **needs Ben**: add a provider key in the provider-pool admin page (lane H part 1c) and opt the org in.
 
 ## Open Questions

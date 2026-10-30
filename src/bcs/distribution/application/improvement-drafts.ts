@@ -1,8 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DEFAULT_WEB_AUDIT_CONTEXT, record, type AuditContext } from "@/bcs/audit-compliance";
-import { NotAuthorizedError } from "@/bcs/identity-access";
-import { getPromptById, getPromptVersion, listVersions, publishVersion } from "@/bcs/prompt-registry";
+import { getEvalsEnabled, getPromptById, getPromptVersion, listVersions, publishVersion } from "@/bcs/prompt-registry";
 import { withAudit } from "@/shared/db";
 import {
   DRAFT_TIMEOUT_MS,
@@ -21,46 +20,13 @@ import { listForPrompt } from "../infrastructure/feedback-repo";
 import {
   decideDraft,
   findDraft,
-  getOptIn,
   insertDraft,
   listDraftsForPrompt,
   markNotesAddressed,
-  upsertOptIn,
 } from "../infrastructure/feedback-drafts-repo";
 import { assertCanTriageSkill, type FeedbackTriager } from "./assert-can-triage-skill";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
-
-export async function getThirdPartyOptIn(db: Db, organizationId: string): Promise<boolean> {
-  return getOptIn(db, organizationId);
-}
-
-/** Admin-only: consent to send skill text and feedback to the configured third-party model provider. */
-export async function setThirdPartyOptIn(
-  db: Db,
-  actor: FeedbackTriager,
-  enabled: boolean,
-  auditContext: AuditContext = DEFAULT_WEB_AUDIT_CONTEXT,
-): Promise<void> {
-  if (actor.role !== "admin") throw new NotAuthorizedError();
-  await withAudit(
-    db,
-    (tx) => upsertOptIn(tx, actor.organizationId, enabled, actor.userId),
-    (tx) =>
-      record(tx, {
-        organizationId: actor.organizationId,
-        actorUserId: actor.userId,
-        actorApiKeyId: null,
-        action: "third_party_opt_in.updated",
-        resourceType: "third_party_opt_in",
-        resourceId: actor.organizationId,
-        before: null,
-        after: { enabled },
-        transport: auditContext.transport,
-        sourceIp: auditContext.sourceIp ?? null,
-      }),
-  );
-}
 
 export function listImprovementDrafts(db: Db, organizationId: string, promptId: string) {
   return listDraftsForPrompt(db, organizationId, promptId);
@@ -87,7 +53,7 @@ export async function requestImprovementDraft(
   await assertCanTriageSkill(db, actor, prompt);
 
   if (!drafter) throw new DraftingUnavailableError("no model provider is configured.");
-  if (!(await getOptIn(db, actor.organizationId))) {
+  if (!(await getEvalsEnabled(db, actor.organizationId))) {
     throw new DraftingUnavailableError("an admin has not allowed sending skill text to the model provider.");
   }
   const mainFile = version.kind === "template" ? version.files.find((f) => f.isMain) : undefined;

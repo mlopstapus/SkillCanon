@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
   title: "SkillCanon",
   description: "Self-hosted prompt registry distributed via MCP",
+  robots: { index: false, follow: false },
 };
 
 export default function RootLayout({

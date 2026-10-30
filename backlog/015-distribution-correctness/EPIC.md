@@ -1,7 +1,7 @@
 # Epic 015: Distribution Correctness
 
 **Priority:** 2
-**Status:** not-started
+**Status:** in-progress
 **Goal:** Every way a skill leaves SkillCanon (REST, CLI-synced file, `skillcanon run`, MCP) hands the consumer the same complete, governed content.
 
 ## Overview

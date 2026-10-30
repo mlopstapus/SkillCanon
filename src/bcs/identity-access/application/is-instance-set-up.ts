@@ -1,9 +1,10 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { count } from "../infrastructure/organizations-repo";
 
-type Db = PostgresJsDatabase<Record<string, never>>;
-
-/** True once the instance's organization exists; first-run setup is closed from then on (018/002). */
-export async function isInstanceSetUp(db: Db): Promise<boolean> {
+/**
+ * True once first-run setup has created the instance's organization. Needs the
+ * credential-resolution connection (`authDb`): no organization context exists yet.
+ */
+export async function isInstanceSetUp(db: PostgresJsDatabase<Record<string, never>>): Promise<boolean> {
   return (await count(db)) > 0;
 }

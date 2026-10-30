@@ -12,19 +12,19 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 ## Requirements
 
 - [ ] **Needs Ben:** A GitHub App is registered (manually, once, by the maintainer; steps in the README) with permissions `checks:write`, `pull_requests:read`, `contents:read`, `metadata:read`, subscribed to `installation`, `installation_repositories`, and `pull_request` webhook events.
-- [x] The App's private key is stored as an env-var secret (`GITHUB_APP_PRIVATE_KEY` or equivalent), never committed — same convention as every other credential in this repo (SMTP, Sentry DSN, Postgres creds).
-- [x] An "Install SkillCanon on GitHub" flow in the web UI redirects to GitHub's App installation page and handles the callback, creating an `Installation` row (`vcs_integration.installations`) on success.
-- [x] `installation` webhook events (`created`, `deleted`, `suspend`, `unsuspend`) update the corresponding `Installation` row's `suspendedAt` field or remove it.
-- [x] Installation access tokens are minted on demand from the App's private key per GitHub's standard exchange, never persisted beyond the request that used them.
-- [x] `listInstallations(orgId)` is implemented and exposed per `CONTRACT.md`.
-- [x] Every `InstallationCreated`/`InstallationSuspended`/`InstallationDeleted` writes an audit event via `record()`.
+- [x] The App's private key is stored as an env-var secret (`GITHUB_APP_PRIVATE_KEY` or equivalent), never committed — same convention as every other credential in this repo (SMTP, Sentry DSN, Postgres creds). (#111)
+- [x] An "Install SkillCanon on GitHub" flow in the web UI redirects to GitHub's App installation page and handles the callback, creating an `Installation` row (`vcs_integration.installations`) on success. (#111)
+- [x] `installation` webhook events (`created`, `deleted`, `suspend`, `unsuspend`) update the corresponding `Installation` row's `suspendedAt` field or remove it. (#111)
+- [x] Installation access tokens are minted on demand from the App's private key per GitHub's standard exchange, never persisted beyond the request that used them. (#111)
+- [x] `listInstallations(orgId)` is implemented and exposed per `CONTRACT.md`. (#111)
+- [x] Every `InstallationCreated`/`InstallationSuspended`/`InstallationDeleted` writes an audit event via `record()`. (#111)
 
 ## Acceptance Criteria
 
 - [ ] **Needs Ben (live App):** Installing the App on a test GitHub account (the owner's own account is enough) creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
 - [ ] **Needs Ben (live App):** Suspending the installation in GitHub's UI updates `suspendedAt` within one webhook delivery.
-- [x] Deleting the installation soft-deletes (decision below) the `Installation` row; it removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path.
-- [x] No installation access token or the App private key ever appears in application logs.
+- [x] Deleting the installation soft-deletes (decision below) the `Installation` row; it removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path. (#111)
+- [x] No installation access token or the App private key ever appears in application logs. (#111)
 
 ## Open Questions
 
