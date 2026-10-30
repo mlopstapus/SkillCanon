@@ -32,6 +32,7 @@ export function LoginFormView({ state, action }: LoginFormViewProps) {
           type="email"
           autoComplete="email"
           required
+          defaultValue={state.email}
           icon={<EmailIcon className="h-4 w-4" />}
           placeholder="admin@example.com"
         />

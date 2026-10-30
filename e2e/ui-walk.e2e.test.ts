@@ -528,9 +528,9 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await expect.poll(() => page.url()).toMatch(/\/login/);
     await expect.poll(() => page.getByRole("alert").count()).toBeGreaterThan(0);
 
-    // The form clears the email after a failed attempt (015/007), so wait for that, then refill both.
-    await expect.poll(() => page.getByLabel("Email").inputValue()).toBe("");
-    await page.getByLabel("Email").fill(ADMIN.email);
+    // A failed attempt keeps the email (015/007) and clears the password; wait for the reset, retype only the password.
+    await expect.poll(() => page.locator('input[type="password"]').inputValue()).toBe("");
+    expect(await page.getByLabel("Email").inputValue()).toBe(ADMIN.email);
     await page.locator('input[type="password"]').fill(ADMIN.password);
     await page.getByRole("button", { name: "Sign in" }).click();
     await page.waitForURL("**/dashboard");
