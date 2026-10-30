@@ -48,6 +48,11 @@ export interface ExpansionResult {
    * successfully resolved template-kind version.
    */
   content: string;
+  /**
+   * The top-level version's supporting files (everything but the main file),
+   * verbatim and ungoverned. Empty for a legacy-shape version.
+   */
+  files: { name: string; content: string }[];
   /** Policy names actually applied; empty when no acting user or no effective policies. */
   appliedPolicies: string[];
   /** Objective titles resolved; empty when no acting user or no effective objectives. */

@@ -51,7 +51,13 @@ describe("MCP tool behavior", () => {
     };
   }
 
-  async function publishTemplateSkill(seeded: SeededOrg, name: string, content = "Hello.", tags: string[] = []) {
+  async function publishTemplateSkill(
+    seeded: SeededOrg,
+    name: string,
+    content = "Hello.",
+    tags: string[] = [],
+    supportingFiles: { name: string; content: string }[] = [],
+  ) {
     const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
     return withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name });
@@ -60,6 +66,7 @@ describe("MCP tool behavior", () => {
         promptName: name,
         version: "1.0.0",
         mainFile: { content },
+        supportingFiles,
         tags,
       });
     });
@@ -99,6 +106,18 @@ describe("MCP tool behavior", () => {
 
     expect(await shRun({ name }, ctxFor(seeded))).toContain("Body.");
     expect(await shRun({ name: `sh-${name}` }, ctxFor(seeded))).toContain("Body.");
+  });
+
+  it("sh-run sends supporting files as extra content blocks", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const name = `with-files-${randomUUID()}`;
+    await publishTemplateSkill(seeded, name, "Use checklist.md.", [], [{ name: "checklist.md", content: "- item one" }]);
+
+    const result = await invokeMcpTool("sh-run", { name }, ctxFor(seeded));
+
+    expect(result.isError).toBeUndefined();
+    expect(result.content).toHaveLength(2);
+    expect(result.content[1]).toMatchObject({ type: "text", text: "[Supporting file: checklist.md]\n- item one" });
   });
 
   it("invokeMcpTool reports tool failures with isError", async () => {

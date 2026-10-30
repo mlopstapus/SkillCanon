@@ -48,6 +48,21 @@ describe("expand (US1/US2 — new-shape, ungoverned rendering; US4 — legacy-sh
     expect(result.objectives).toEqual([]);
   });
 
+  it("returns supporting files beside the main content, and [] when there are none", async () => {
+    const fixture = await makeExpansionFixtureOrg(testDb);
+    await publishSkill(testDb, fixture, {
+      name: "with-files",
+      content: "See checklist.md.",
+      supportingFiles: [{ name: "checklist.md", content: "- one" }],
+    });
+    await publishSkill(testDb, fixture, { name: "no-files", content: "Plain." });
+
+    expect((await runExpand(fixture, { promptName: "with-files" })).files).toEqual([
+      { name: "checklist.md", content: "- one" },
+    ]);
+    expect((await runExpand(fixture, { promptName: "no-files" })).files).toEqual([]);
+  });
+
   it("rejects a skill with no published version yet, same as a nonexistent skill (AC3)", async () => {
     const fixture = await makeExpansionFixtureOrg(testDb);
     await createUnpublishedSkill(testDb, fixture, "never-published");
