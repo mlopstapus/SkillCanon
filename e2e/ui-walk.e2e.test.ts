@@ -117,6 +117,12 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await page.waitForURL("**/dashboard");
   });
 
+  it("closes /register to a visitor once the instance exists", async () => {
+    const html = await (await fetch(`${BASE}/register`)).text();
+    expect(html).toContain("Access is by invitation");
+    expect(html).not.toContain("Create instance");
+  });
+
   it("opens every page in the navigation without a page error", async () => {
     const pages: [string, RegExp][] = [
       ["Overview", /\/dashboard$/],

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import { RegisterFormView } from "./register-form";
+import { InviteOnlyNotice, RegisterFormView } from "./register-form";
 
 describe("RegisterForm", () => {
   it("renders organization and admin account field groups with password guidance", () => {
@@ -17,5 +17,22 @@ describe("RegisterForm", () => {
     expect(markup).toContain('name="email"');
     expect(markup).toContain('name="password"');
     expect(markup).toContain("Minimum 8 characters");
+  });
+
+  it("defaults the organization name to Tribe", () => {
+    const markup = renderToStaticMarkup(<RegisterFormView state={{ status: "idle" }} action={vi.fn()} />);
+
+    expect(markup).toContain('value="Tribe"');
+  });
+
+  it("shows the invitation-only notice, with no form, once the instance has its organization", () => {
+    for (const markup of [
+      renderToStaticMarkup(<InviteOnlyNotice />),
+      renderToStaticMarkup(<RegisterFormView state={{ status: "blocked" }} action={vi.fn()} />),
+    ]) {
+      expect(markup).toContain("Access is by invitation");
+      expect(markup).toContain("Ask an admin");
+      expect(markup).not.toContain("<form");
+    }
   });
 });

@@ -1,9 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { login, registerFirstRunAdmin } from "@/bcs/identity-access";
+import { login } from "@/bcs/identity-access";
 import { authDb } from "@/shared/db";
 import { setSessionCookie } from "@/app/_lib/session-cookie";
+import { registerInstance } from "./register-instance";
 import { slugify } from "./slugify";
 
 export type RegisterFormState = {
@@ -36,7 +37,7 @@ export async function registerAction(
   }
 
   try {
-    await registerFirstRunAdmin(authDb, {
+    await registerInstance(authDb, {
       organization: { name: orgName, slug: slugify(orgName) },
       team: { name: teamName, slug: slugify(teamName) },
       admin: { username, displayName, email, password },
