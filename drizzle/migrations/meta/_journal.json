@@ -288,6 +288,13 @@
       "when": 1793389265871,
       "tag": "0040_vcs_integration_pr_checks",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1793395526597,
+      "tag": "0041_prompt_registry_eval_provider_configs",
+      "breakpoints": true
     }
   ]
 }
