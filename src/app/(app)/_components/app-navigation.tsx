@@ -20,6 +20,7 @@ const iconPaths: Record<NavKey, string> = {
   metrics: "M4 20V10M10 20V4M16 20v-7M22 20H2",
   apiKeys: "M14 8a5 5 0 1 1-2 4l2 2h3v3h3v3h2v-4l-8-8zM7 9h.01",
   auditLog: "M6 3h12v18H6zM9 8h6M9 12h6M9 16h4",
+  evalProviders: "M4 6h16M4 12h16M4 18h10",
 };
 
 function NavIcon({

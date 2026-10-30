@@ -4,6 +4,7 @@ import {
   index,
   integer,
   jsonb,
+  primaryKey,
   text,
   timestamp,
   unique,
@@ -429,6 +430,22 @@ export const evalResults = promptRegistrySchema.table(
 export const evalSettings = promptRegistrySchema.table("eval_settings", {
   organizationId: organizationId().primaryKey(),
   enabled: boolean("enabled").notNull().default(false),
+  defaultJudge: text("default_judge"),
   updatedBy: uuid("updated_by").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/** Per-org model provider credentials for central evals (017/003 1c). The key is AES-GCM encrypted at rest. */
+export const evalProviderConfigs = promptRegistrySchema.table(
+  "eval_provider_configs",
+  {
+    organizationId: organizationId(),
+    provider: text("provider", { enum: ["anthropic", "openai"] }).notNull(),
+    apiKeyEnc: text("api_key_enc").notNull(),
+    /** Allowed model ids for this provider, without the `<provider>/` prefix. */
+    models: jsonb("models").$type<string[]>().notNull(),
+    updatedBy: uuid("updated_by").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.organizationId, t.provider] })],
+);

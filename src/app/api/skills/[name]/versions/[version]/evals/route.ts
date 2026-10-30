@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { getEvalProviderPool, listEvalRuns, submitEvalRun } from "@/bcs/prompt-registry";
+import { listEvalRuns, resolveEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
 import type { ResolvedCaller } from "@/shared/api/auth";
@@ -20,12 +20,12 @@ export async function handlePost(
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
   const body = submitSchema.parse(await request.json());
-  const run = await withTenantContext(db, caller.organizationId, (tx) =>
+  const run = await withTenantContext(db, caller.organizationId, async (tx) =>
     submitEvalRun(
       tx,
       { organizationId: caller.organizationId, userId: caller.actingUser.id },
       { promptName: params.name, version: params.version, ...body },
-      getEvalProviderPool(),
+      await resolveEvalProviderPool(tx, caller.organizationId),
       caller.auditContext,
     ),
   );
