@@ -1,7 +1,7 @@
 import { getEvalRun } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
-import type { ResolvedCaller } from "@/shared/api/auth";
+import { requireScope, type ResolvedCaller } from "@/shared/api/auth";
 
 interface Params {
   name: string;
@@ -14,6 +14,7 @@ export async function handleGet(
   _request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
+  requireScope(caller, "evals:read", "evals:run");
   const run = await withTenantContext(db, caller.organizationId, (tx) =>
     getEvalRun(
       tx,

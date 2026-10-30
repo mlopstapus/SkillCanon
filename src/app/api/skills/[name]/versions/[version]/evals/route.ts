@@ -2,7 +2,7 @@ import { z } from "zod";
 import { listEvalRuns, resolveEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { withApiRoute, type Db } from "@/shared/api/handler";
-import type { ResolvedCaller } from "@/shared/api/auth";
+import { requireScope, type ResolvedCaller } from "@/shared/api/auth";
 
 interface Params {
   name: string;
@@ -19,6 +19,7 @@ export async function handlePost(
   request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
+  requireScope(caller, "evals:run");
   const body = submitSchema.parse(await request.json());
   const run = await withTenantContext(db, caller.organizationId, async (tx) =>
     submitEvalRun(
@@ -36,6 +37,7 @@ export async function handleGet(
   _request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
+  requireScope(caller, "evals:read", "evals:run");
   const runs = await withTenantContext(db, caller.organizationId, (tx) =>
     listEvalRuns(tx, { organizationId: caller.organizationId, userId: caller.actingUser.id }, params.name, params.version),
   );

@@ -4,7 +4,7 @@ import { createPrompt, publishVersion, setEvalProviderPool } from "@/bcs/prompt-
 import { withTenantContext } from "@/shared/db";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { withApiRoute } from "@/shared/api/handler";
-import { loginAndBuildCookie, seedOrgWithAdmin } from "@/shared/api/test-helpers";
+import { createApiKeyAndBuildAuthHeader, loginAndBuildCookie, seedOrgWithAdmin } from "@/shared/api/test-helpers";
 import { handleGet, handlePost } from "./route";
 import { handleGet as handleGetRun } from "./[runId]/route";
 import { handlePut as handlePutSettings } from "../../../../../evals/settings/route";
@@ -55,7 +55,7 @@ describe("/api/skills/[name]/versions/[version]/evals", () => {
       );
       expect(res.status).toBe(200);
     }
-    return { name, cookie };
+    return { name, cookie, seeded };
   }
 
   const submit = (name: string, cookie: string, body: unknown) =>
@@ -113,5 +113,21 @@ describe("/api/skills/[name]/versions/[version]/evals", () => {
     const res = await submit(name, cookie, { models: ["stub/other"] });
     expect(res.status).toBe(422);
     expect((await res.json()).error.code).toBe("EVAL_MODEL_NOT_ALLOWED");
+  });
+
+  it("enforces API-key scopes: evals:run submits, other scopes get 403, session unaffected", async () => {
+    setEvalProviderPool({ providers: [{ id: "stub", complete: async () => ({ text: "", tokens: 0 }) }], models: ["stub/m1"] });
+    const { name, seeded } = await seed("cases:\n  - input: a\n    assert: [{contains: a}]\n");
+    const user = { id: seeded.adminUserId, orgId: seeded.organizationId, teamId: seeded.teamId, role: "admin" as const, email: seeded.adminEmail };
+    const key = (scopes: string[]) =>
+      withTenantContext(testDb.appDb, seeded.organizationId, (tx) => createApiKeyAndBuildAuthHeader(tx, user, `k-${randomUUID()}`, scopes));
+    const post = (authorization: string) =>
+      withApiRoute(handlePost, deps())(
+        new Request("http://x", { method: "POST", headers: { authorization, "content-type": "application/json" }, body: JSON.stringify({ models: ["stub/m1"] }) }),
+        { params: Promise.resolve({ name, version: "1.0.0" }) },
+      );
+    expect((await post(await key(["prompts:read"]))).status).toBe(403);
+    expect((await post(await key(["evals:read"]))).status).toBe(403);
+    expect((await post(await key(["evals:run"]))).status).toBe(202);
   });
 });
