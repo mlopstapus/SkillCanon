@@ -197,6 +197,7 @@ export function TeamsExplorerView({
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
   const [sidebarView, setSidebarView] = useState<SidebarView>("team");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<UserAccountSummary | null>(null);
 
@@ -209,8 +210,9 @@ export function TeamsExplorerView({
     refresh();
   }
 
-  function onInviteSuccess() {
+  function onInviteSuccess(email: string) {
     setInviteOpen(false);
+    setInviteNotice(`Invitation sent to ${email}.`);
     refresh();
   }
 
@@ -514,6 +516,9 @@ export function TeamsExplorerView({
                   + invite by email
                 </button>
               </div>
+            ) : null}
+            {inviteNotice ? (
+              <p role="status" className="text-[12.5px] text-green">{inviteNotice}</p>
             ) : null}
             {members.length === 0 ? (
               <p role="status" className="text-[12.5px] text-dim">No members on this team yet.</p>
