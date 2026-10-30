@@ -11,6 +11,8 @@ A chain skill (`ship-it`, two steps) is broken outside REST.
 
 ## Requirements
 
-- [ ] CLI: the synced chain stub says "Run `skillcanon run ship-it`", and that command fails with `No skill named "ship-it" exists`. `run` must start a chain run (`POST /api/skills/[name]/chain-runs`) and print step 1, and an `advance` subcommand (or equivalent) must step it on.
+- [x] CLI: the synced chain stub says "Run `skillcanon run ship-it`", and that command fails with `No skill named "ship-it" exists`. `run` must start a chain run (`POST /api/skills/[name]/chain-runs`) and print step 1, and an `advance` subcommand (or equivalent) must step it on.
 - [ ] MCP: `sh-workflow-run` starts a run and returns step `a` with `pendingStep: "a"`, but no MCP tool advances or abandons a run. Add `sh-chain-advance` (and rename the `workflow` tools to `chain`, keeping the old names as aliases for one release).
 - [ ] REST `expand` on a chain returns 404 "nonexistent, unpublished, or deprecated". Return a 409/422 that says it is a chain and names the chain-runs route.
+
+CLI side done: `skillcanon run <chain>` starts a run and prints step 1; `skillcanon advance <runId> <stepIndex>` reports and prints the next step; `skillcanon abandon <runId>` stops it. Archive this item when the MCP and REST bullets land (lane B).
