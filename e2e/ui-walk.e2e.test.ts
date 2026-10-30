@@ -172,6 +172,11 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await drawer()
       .getByPlaceholder(/Describe the rule/)
       .fill(POLICY.content);
+    // Enforcement choices are named buttons (015/007).
+    await drawer().getByRole("button", { name: /^append:/ }).click();
+    await expect
+      .poll(() => drawer().getByRole("button", { name: /^append:/ }).getAttribute("aria-pressed"))
+      .toBe("true");
     await drawer().getByRole("button", { name: "Create policy" }).click();
     await expect
       .poll(() => page.getByText(POLICY.name, { exact: true }).isVisible())
