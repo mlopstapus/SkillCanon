@@ -26,6 +26,8 @@ export interface SkillVersion {
   files: SkillVersionFile[];
 }
 
+import type { GitContext } from "../git-context.js";
+
 export interface ExpansionResult {
   content: string;
   appliedPolicies: string[];
@@ -128,11 +130,13 @@ export async function getSkillVersions(options: SkillCanonClientOptions, slug: s
 export async function expandSkill(
   options: SkillCanonClientOptions,
   slug: string,
+  gitContext: Partial<GitContext> = {},
 ): Promise<ExpansionResult> {
   const response = await request(options, `/api/skills/${encodeURIComponent(slug)}/expand`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({}),
+    // Only the fields that were actually read; the server treats absent as null.
+    body: JSON.stringify(Object.fromEntries(Object.entries(gitContext).filter(([, v]) => v))),
   });
   if (!response.ok) throwForStatus(response, slug);
   return (await response.json()) as ExpansionResult;
