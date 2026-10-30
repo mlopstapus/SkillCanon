@@ -89,6 +89,11 @@ export interface PublishVersionFileInput {
   content: string;
 }
 
+/** Canonical version label: no leading "v" before a digit ("v1" and "1" are the same version). */
+export function normalizeVersionLabel(label: string): string {
+  return label.trim().replace(/^[vV](?=\d)/, "");
+}
+
 export interface PublishVersionParams {
   promptName: string;
   organizationId: string;

@@ -1,7 +1,7 @@
 FROM node:24-slim AS deps
 WORKDIR /app
 RUN corepack enable
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 FROM node:24-slim AS build
@@ -18,6 +18,7 @@ RUN corepack enable
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=build /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY --from=build /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=build /app/drizzle ./drizzle

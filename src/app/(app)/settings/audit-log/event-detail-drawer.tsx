@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 import type { ResolvedAuditRow } from "@/bcs/audit-compliance";
-import { Drawer } from "@/shared/ui";
+import { Drawer, formatUtcTimestamp } from "@/shared/ui";
 import { diffOf } from "./diff";
 
 export interface EventDetailDrawerProps {
@@ -73,7 +73,7 @@ export function EventDetailDrawer({ row, onClose }: EventDetailDrawerProps) {
               <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-faint">
                 Timestamp
               </div>
-              <div className="font-mono text-[12.5px] text-text">{event.createdAt.toLocaleString()}</div>
+              <div className="font-mono text-[12.5px] text-text">{formatUtcTimestamp(event.createdAt)}</div>
             </div>
           </div>
 

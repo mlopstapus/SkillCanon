@@ -222,8 +222,15 @@
     {
       "idx": 31,
       "version": "7",
-      "when": 1786360100000,
-      "tag": "0031_audit_compliance_mcp_transport",
+      "when": 1793313891666,
+      "tag": "0031_prompt_registry_normalise_version_labels",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1793313991666,
+      "tag": "0032_audit_compliance_mcp_transport",
       "breakpoints": true
     }
   ]
