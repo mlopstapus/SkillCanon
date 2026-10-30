@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import {
   countForksOfSkill,
+  getEvalsEnabled,
   expand,
   getPrompt,
   listPrompts,
@@ -12,11 +13,10 @@ import {
   listVersions,
 } from "@/bcs/prompt-registry";
 import {
-  getThirdPartyOptIn,
   lineDiff,
   listFeedbackForSkill,
   listImprovementDrafts,
-  resolveEnvDrafter,
+  resolveDrafter,
 } from "@/bcs/distribution";
 import { resolveAllPolicies } from "@/bcs/governance";
 import { authenticateSession, listTeams, listUsers } from "@/bcs/identity-access";
@@ -54,7 +54,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       ]);
     const [drafts, draftingOptedIn] = await Promise.all([
       listImprovementDrafts(tx, user.orgId, prompt.id),
-      getThirdPartyOptIn(tx, user.orgId),
+      getEvalsEnabled(tx, user.orgId),
     ]);
 
     const userNameById = new Map(users.map((u) => [u.id, u.displayName]));
@@ -239,7 +239,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
             })
           : [],
         drafting: {
-          configured: resolveEnvDrafter() !== null,
+          configured: resolveDrafter() !== null,
           optedIn: draftingOptedIn,
           canChangeOptIn: user.role === "admin",
         },

@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { DraftStatus, ImprovementDraft } from "../domain/improvement-draft";
-import { feedback, feedbackDrafts, thirdPartyOptIn } from "./schema";
+import { feedback, feedbackDrafts } from "./schema";
 
 type Db<T extends Record<string, unknown>> = PostgresJsDatabase<T>;
 
@@ -94,21 +94,4 @@ export async function markNotesAddressed<T extends Record<string, unknown>>(
     .update(feedback)
     .set({ addressedAt: new Date(), addressedInVersionId: versionId })
     .where(and(eq(feedback.organizationId, organizationId), inArray(feedback.id, feedbackIds)));
-}
-
-export async function getOptIn<T extends Record<string, unknown>>(tx: Db<T>, organizationId: string): Promise<boolean> {
-  const [row] = await tx.select().from(thirdPartyOptIn).where(eq(thirdPartyOptIn.organizationId, organizationId));
-  return row?.enabled ?? false;
-}
-
-export async function upsertOptIn<T extends Record<string, unknown>>(
-  tx: Db<T>,
-  organizationId: string,
-  enabled: boolean,
-  updatedBy: string,
-): Promise<void> {
-  await tx
-    .insert(thirdPartyOptIn)
-    .values({ organizationId, enabled, updatedBy })
-    .onConflictDoUpdate({ target: thirdPartyOptIn.organizationId, set: { enabled, updatedBy, updatedAt: new Date() } });
 }
