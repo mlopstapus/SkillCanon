@@ -35,7 +35,7 @@ import {
   type LocalSkillInvalidFolder,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
-import { resolveEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
+import { activateCandidateVersion, resolveEvalProviderPool, setEvalGate, submitEvalRun } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
@@ -635,6 +635,33 @@ export async function startEvalRunAction(
         await resolveEvalProviderPool(tx, actingUser.orgId),
       ),
     );
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Owner/admin turns the activation gate on or off and sets its models and threshold (017/005). */
+export async function setEvalGateAction(
+  promptName: string,
+  config: { enabled: boolean; models: string[]; minPassPct: number },
+): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) => setEvalGate(tx, actingUser, promptName, config));
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Owner/admin activates a held candidate despite the gate; the reason is audited. */
+export async function activateCandidateAction(promptName: string, version: string, reason: string): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) => activateCandidateVersion(tx, actingUser, promptName, version, reason));
     revalidatePath(`/prompts/${promptName}`);
     return { ok: true };
   } catch (err) {

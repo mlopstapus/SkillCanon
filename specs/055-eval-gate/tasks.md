@@ -3,5 +3,5 @@
 - [x] publish and execute hooks
 - [x] REST routes and error registry
 - [x] Tests
-- [ ] Skill page gate panel (after #132)
+- [x] Skill page gate panel (after #132)
 - [ ] Fresh-instance e2e and CI green

@@ -34,7 +34,7 @@ Rewritten for D4: "prior to any sort of merge of that skill update, we need the 
 
 ## Status
 
-Backend and API shipped in `specs/055-eval-gate/` (migration 0043). Left open: the skill-page gate settings panel and candidate badge (after the results matrix PR lands), so the file stays open.
+Backend, API and the skill-page gate panel (Evals tab: gate toggle, models, threshold, candidate list, override with reason) shipped in `specs/055-eval-gate/` (migration 0043). Still open until the stack merges and CI is green; archive then.
 
 ## Dependencies
 

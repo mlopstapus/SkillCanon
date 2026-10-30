@@ -12,4 +12,4 @@ Backlog: `backlog/017-cross-model-evals/005-optional-publish-gate.md`. Governs: 
 - FR-7 Gate off: publishing is unchanged.
 
 ## Out of scope (follow-up)
-Gate settings panel and candidate badge on the skill page (waiting on the matrix PR #132 to avoid editing the same files). The API is complete: `GET/PUT /api/skills/{name}/eval-gate`.
+Gate settings panel and candidate list on the skill page Evals tab (built after #132 merged). The API: `GET/PUT /api/skills/{name}/eval-gate`.
