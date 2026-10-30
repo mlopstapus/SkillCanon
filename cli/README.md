@@ -67,3 +67,12 @@ Run: npm install -g @mlopstapus/skillcanon@latest
 ```
 
 No network access, no stored credential, or a slow/unreachable registry all degrade silently — the command just runs normally with no notice. Set `SKILLCANON_DISABLE_UPDATE_CHECK=1` to turn the check off entirely (no cache access, no network call) — useful in CI or any non-interactive context.
+
+## Evals
+
+```
+skillcanon eval run <skill> <version> --models anthropic/claude-sonnet-5-5,openai/gpt-5 [--judge <model>] [--wait]
+skillcanon eval show <skill> <version> <runId>
+```
+
+Evals run on the SkillCanon server using the provider keys an admin configured there; you bring no model keys. Your API key needs the `evals:run` scope (`evals:read` to only read results). With `--wait` the command exits 1 if the run fails or any case fails.

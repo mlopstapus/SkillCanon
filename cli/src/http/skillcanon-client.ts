@@ -223,3 +223,53 @@ export async function advanceChainRun(
 export async function abandonChainRun(options: SkillCanonClientOptions, runId: string): Promise<void> {
   await postJson(options, `/api/chain-runs/${encodeURIComponent(runId)}/abandon`, {});
 }
+
+export interface EvalResultRow {
+  model: string;
+  caseId: string;
+  passed: boolean;
+  scorePct: number | null;
+  error: string | null;
+}
+
+export interface EvalRun {
+  id: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  error: string | null;
+  models: string[];
+  results: EvalResultRow[];
+}
+
+const evalsPath = (slug: string, version: string) =>
+  `/api/skills/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/evals`;
+
+async function evalError(response: Response, slug: string): Promise<never> {
+  if (response.status === 404) throw new NotFoundError(slug);
+  if (response.status === 409 || response.status === 422) {
+    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+    throw new Error(body?.error?.message ?? "SkillCanon rejected the eval request.");
+  }
+  throwForStatus(response);
+}
+
+/** Queues a central eval run (PDR-020); the server's worker executes it. No provider keys leave the server. */
+export async function submitEvalRun(
+  options: SkillCanonClientOptions,
+  slug: string,
+  version: string,
+  input: { models: string[]; judge?: string },
+): Promise<EvalRun> {
+  const response = await request(options, evalsPath(slug, version), {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) return evalError(response, slug);
+  return (await response.json()) as EvalRun;
+}
+
+export async function getEvalRun(options: SkillCanonClientOptions, slug: string, version: string, runId: string): Promise<EvalRun> {
+  const response = await request(options, `${evalsPath(slug, version)}/${encodeURIComponent(runId)}`, { method: "GET" });
+  if (!response.ok) return evalError(response, slug);
+  return (await response.json()) as EvalRun;
+}

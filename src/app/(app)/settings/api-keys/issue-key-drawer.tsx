@@ -24,10 +24,10 @@ export type IssueKeyDrawerProps = {
  * security gap.
  */
 function isScopeAllowedForRole(scope: string, role: UserRole): boolean {
-  return role === "admin" || scope.endsWith(":read");
+  return role === "admin" || scope.endsWith(":read") || scope === "evals:run";
 }
 
-const AVAILABLE_SCOPES = ["prompts:read", "prompts:write", "workflows:run"];
+const AVAILABLE_SCOPES = ["prompts:read", "prompts:write", "workflows:run", "evals:read", "evals:run"];
 const EXPIRY_OPTIONS = [
   { label: "Never", value: "" },
   { label: "30 days", value: "30" },
