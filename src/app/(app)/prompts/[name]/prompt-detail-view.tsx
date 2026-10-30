@@ -444,7 +444,7 @@ export function PromptDetailView({
                 <SummaryCard label="Owner" value={data.ownerLabel} />
               </div>
               <div>
-                <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">
+                <div className="mb-2 font-caption text-[10px] tracking-[0.08em] text-faint uppercase">
                   Files in this version
                 </div>
                 <div className="flex flex-col gap-2">
@@ -476,7 +476,7 @@ export function PromptDetailView({
           <div className="flex min-h-[420px] overflow-hidden rounded-card border border-border">
             <div className="flex w-[220px] shrink-0 flex-col gap-4 border-r border-border bg-surface p-3.5">
               <div>
-                <div className="mb-1.5 px-1 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">
+                <div className="mb-1.5 px-1 font-caption text-[9.5px] tracking-[0.1em] text-faint uppercase">
                   Main file
                 </div>
                 {mainFile ? (
@@ -492,7 +492,7 @@ export function PromptDetailView({
                 ) : null}
               </div>
               <div>
-                <div className="mb-1.5 px-1 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">
+                <div className="mb-1.5 px-1 font-caption text-[9.5px] tracking-[0.1em] text-faint uppercase">
                   Supporting ({supportingFiles.length})
                 </div>
                 {supportingFiles.length === 0 ? (
@@ -734,7 +734,7 @@ export function PromptDetailView({
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-card border border-border bg-surface px-4 py-3.5">
-      <div className="mb-1.5 font-mono text-[9.5px] tracking-[0.1em] text-faint uppercase">{label}</div>
+      <div className="mb-1.5 font-caption text-[9.5px] tracking-[0.1em] text-faint uppercase">{label}</div>
       <div className="font-display text-[18px] font-bold">{value}</div>
     </div>
   );

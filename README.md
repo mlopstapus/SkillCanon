@@ -32,7 +32,7 @@ That builds and starts the whole self-hosted stack — the unified Next.js app (
 
 - **Web app:** http://localhost:3000
 - If a build fails with a message mentioning `next/font/google`, that is a network flake fetching Google Fonts: rerun `docker compose up -d --build`.
-- **First-run setup:** on a fresh instance, open http://localhost:3000/register to create the Tribe organization, its root team and the first admin. After that, access is by invitation only.
+- **First-run setup:** there are no seeded users. On a fresh database, http://localhost:3000/ redirects to `/register`: fill in the form (the organization name defaults to "Tribe") and choose *Create instance* to create the organization, its first admin and the root team. Once an organization exists, `/register` is invitation-only and `/` goes to `/login` (or to `/dashboard` when you are signed in); everyone else joins through an admin's invitation.
 
 ### Local dev (without Docker for the app)
 
@@ -44,6 +44,21 @@ pnpm dev
 ```
 
 Requires Node `>=24` and `pnpm`. See `CLAUDE.md` for the full set of dev/lint/typecheck/test commands.
+
+## Tribe brand assets (optional)
+
+Tribe's fonts (TribeSerif, TribeSans, TribeCaption) and logos are licensed and trademarked, so they are not in this repository. Without them the app uses system fonts and the SkillCanon mark. To use Tribe's, mount a private copy of the tribe-design skill's `brand/assets` folder (it must contain `fonts/` and `logos/`) and point `BRAND_ASSETS_DIR` at it, for example in a compose override:
+
+```yaml
+services:
+  app:
+    environment:
+      BRAND_ASSETS_DIR: /brand-assets
+    volumes:
+      - /path/to/tribe-design/brand/assets:/brand-assets:ro
+```
+
+The app serves only `fonts/` and `logos/` from that folder (at `/brand/...`), loads whichever font faces are present, and switches the logo and favicon to the Tribe symbol (`logos/symbol.svg` and `symbol-inverted.svg` must exist). No rebuild is needed.
 
 ## Connect Your AI Tool
 

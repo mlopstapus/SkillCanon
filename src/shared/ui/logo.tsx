@@ -5,19 +5,21 @@ type LogoMarkProps = {
   className?: string;
 };
 
-/** The SkillCanon brand mark: an accent bar plus three descending bars, per the design system. */
+/** The SkillCanon brand mark: an accent bar plus three descending bars, per the design system. Swapped for the Tribe symbol when brand assets are configured. */
 export function LogoMark({ size = 34, className }: LogoMarkProps) {
   const iconSize = Math.round((size * 19) / 34);
   return (
     <span
       aria-hidden="true"
       className={cn(
-        "grid shrink-0 place-items-center rounded-tile border border-border-2 bg-surface-2",
+        "relative grid shrink-0 place-items-center rounded-tile border border-border-2 bg-surface-2",
         className,
       )}
       style={{ width: size, height: size }}
     >
-      <svg width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
+      {/* With BRAND_ASSETS_DIR set, <html data-brand="tribe"> hides this mark and shows Tribe's symbol (see globals.css). */}
+      <span className="brand-symbol absolute inset-[22%]" />
+      <svg className="brand-fallback" width={iconSize} height={iconSize} viewBox="0 0 24 24" fill="none">
         <rect x="3.5" y="3" width="3" height="18" rx="1.5" className="fill-a" />
         <rect x="9" y="4.5" width="11" height="3" rx="1.5" className="fill-text" />
         <rect x="9" y="10.5" width="8" height="3" rx="1.5" className="fill-text" opacity="0.55" />
