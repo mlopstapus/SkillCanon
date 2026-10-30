@@ -51,7 +51,7 @@ export function FeedbackPanel({
   return (
     <div className="flex flex-col gap-5">
       <div className="overflow-hidden rounded-card border border-border">
-        <div className="grid grid-cols-[1fr_70px_70px_70px] gap-2.5 border-b border-border bg-surface px-4 py-2.5 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">
+        <div className="grid grid-cols-[1fr_70px_70px_70px] gap-2.5 border-b border-border bg-surface px-4 py-2.5 font-caption text-[10px] tracking-[0.1em] text-faint uppercase">
           <span>Version</span>
           <span>Up</span>
           <span>Down</span>
@@ -72,7 +72,7 @@ export function FeedbackPanel({
 
       {feedback.draftableVersions.length > 0 || feedback.drafts.length > 0 ? (
         <section aria-label="Drafted improvements" className="flex flex-col gap-3 rounded-card border border-border p-4">
-          <h3 className="font-mono text-[11px] tracking-[0.1em] text-faint uppercase">Drafted improvements</h3>
+          <h3 className="font-caption text-[11px] tracking-[0.1em] text-faint uppercase">Drafted improvements</h3>
           {!drafting.configured ? (
             <p role="status" className="text-[12.5px] text-dim">
               No model provider is configured, so drafts are unavailable. An operator sets ANTHROPIC_API_KEY on the server.

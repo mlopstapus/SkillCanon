@@ -8,12 +8,12 @@ export function BrandRail() {
           <LogoMark size={34} />
           <div>
             <Wordmark className="text-lg" />
-            <p className="font-mono text-[11px] uppercase text-faint">Tribe</p>
+            <p className="font-caption text-[11px] uppercase text-faint">Tribe</p>
           </div>
         </div>
 
         <div className="max-w-xl space-y-5">
-          <p className="font-mono text-xs uppercase text-text">Skills registry</p>
+          <p className="font-caption text-xs uppercase text-text">Skills registry</p>
           <h2 className="font-display text-5xl font-semibold leading-none text-text">
             One home for the skills we ship.
           </h2>

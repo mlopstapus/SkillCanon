@@ -50,7 +50,7 @@ export function AppState({ variant, title, description, action, className }: App
       >
         {styles.icon}
       </div>
-      <p className="mb-2 font-mono text-[10.5px] tracking-[0.12em] text-faint uppercase">
+      <p className="mb-2 font-caption text-[10.5px] tracking-[0.12em] text-faint uppercase">
         {styles.label}
       </p>
       <h2 className="font-display text-[16px] font-semibold text-text">{title}</h2>

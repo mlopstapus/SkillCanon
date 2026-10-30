@@ -44,7 +44,7 @@ export function ApiKeysListView({ currentUser, keys, refresh }: ApiKeysListViewP
     <main className="p-8">
       <div className="mb-1 flex items-start justify-between gap-4">
         <div>
-          <p className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
+          <p className="mb-2 font-caption text-[10.5px] uppercase tracking-[0.12em] text-faint">
             Account settings
           </p>
           <h1 className="font-display text-[21px] font-bold tracking-tight">API Keys</h1>

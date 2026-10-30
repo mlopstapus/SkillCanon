@@ -350,7 +350,7 @@ export function TeamsExplorerView({
         <div className="border-b border-border bg-bg px-6 pt-3.5">
           <div className="flex items-start justify-between gap-3.5">
             <div className="min-w-0">
-              <p className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
+              <p className="mb-2 font-caption text-[10.5px] uppercase tracking-[0.12em] text-faint">
                 Team settings
               </p>
               <div className="flex items-center gap-2.5">

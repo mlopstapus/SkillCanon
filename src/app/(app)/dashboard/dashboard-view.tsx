@@ -20,7 +20,7 @@ export interface DashboardData {
 function SnapshotTile({ label, value, href }: { label: string; value: string; href: string }) {
   return (
     <Link href={href} className="rounded-card border border-border bg-surface px-4 py-3.5 transition hover:border-border-2">
-      <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
+      <div className="mb-2 font-caption text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
       <div className="font-display text-[22px] font-bold">{value}</div>
     </Link>
   );
@@ -31,7 +31,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
   return (
     <main className="p-8" aria-labelledby="overview-title">
-      <p className="font-mono text-[11px] tracking-[0.12em] text-text uppercase">Workspace</p>
+      <p className="font-caption text-[11px] tracking-[0.12em] text-text uppercase">Workspace</p>
       <h1 id="overview-title" className="mt-2 font-display text-[30px] font-semibold tracking-[-0.025em]">
         Overview
       </h1>
