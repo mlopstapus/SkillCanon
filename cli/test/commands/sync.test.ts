@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Command } from "commander";
 import { runInit } from "../../src/commands/init.js";
-import { runSync, registerSyncCommand } from "../../src/commands/sync.js";
+import { describeSync, runSync, registerSyncCommand } from "../../src/commands/sync.js";
 
 /** `kind` deliberately lives only on `MockVersion`, not here — it's a per-version field server-side, not on the skill/prompt row (confirmed against the real API during T030 validation). */
 interface MockSkill {
@@ -133,12 +133,11 @@ describe("runSync (manual invocation parity, US2)", () => {
   it("a manually-invoked sync after init re-confirms (not re-creates) an unchanged prompt, idempotently", async () => {
     await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
     const second = await runSync(dir);
-    // Always re-writes from the live roster (read-fresh, never a no-op
-    // skip) — so an unchanged prompt is reported as "updated" (same
-    // resulting content/hash), never re-"created" and never a conflict.
+    // An unchanged prompt is not reported at all (014/003): no add, no
+    // update, no conflict.
     expect(second).toEqual({
       created: [],
-      updated: [{ slug: "release-notes", filename: "SKILL.md" }],
+      updated: [],
       removed: [],
       conflicts: [],
     });
@@ -346,5 +345,19 @@ describe("runSync (no-content skills keep the pointer stub, US3)", () => {
     expect(existsSync(skillFile(dir, "release-notes", "example.md"))).toBe(false);
     expect(readFileSync(skillFile(dir, "weekly-digest"), "utf8")).toContain("skillcanon run weekly-digest");
     expect(readFileSync(skillFile(dir, "old-skill"), "utf8")).toContain("skillcanon run old-skill");
+  });
+});
+
+describe("describeSync (014/003)", () => {
+  it("lists each change and a count, or says nothing changed", () => {
+    expect(
+      describeSync({
+        created: [{ slug: "a", filename: "SKILL.md" }],
+        updated: [],
+        removed: [{ slug: "b", filename: "SKILL.md" }],
+        conflicts: [],
+      }),
+    ).toBe("added a/SKILL.md\nremoved b/SKILL.md\nSynced: 1 added, 0 updated, 1 removed.");
+    expect(describeSync({ created: [], updated: [], removed: [], conflicts: [] })).toBe("Already up to date.");
   });
 });

@@ -15,6 +15,7 @@ const BASE = (process.env.E2E_BASE_URL ?? "http://localhost:3000").replace(/\/$/
 const ADMIN = { email: "e2e-admin@example.test", password: "e2e-local-password-1" };
 const SLUG = "cli-smoke";
 const BODY = "Greet the reader.";
+const CHAIN = "cli-chain";
 const INCLUDER = "cli-includer";
 const POLICY = "Always cite the CLI smoke ticket number.";
 const CLI = resolve("cli/dist/index.js");
@@ -26,7 +27,7 @@ let projectId = "";
 let apiKey = "";
 
 const cli = (...args: string[]) =>
-  execFileSync("node", [CLI, ...args], { cwd: repo, encoding: "utf8" });
+  execFileSync("node", [CLI, ...args], { cwd: repo, encoding: "utf8", });
 
 async function api(method: string, path: string, body?: unknown) {
   const res = await page.request.fetch(`${BASE}${path}`, {
@@ -63,6 +64,15 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     const teamId = (teams.items ?? teams)[0].id;
     const skill = await api("POST", "/api/skills", { name: SLUG });
     await api("POST", `/api/skills/${SLUG}/versions`, { version: "1.0.0", mainFile: { content: BODY } });
+    // 015/003: a two-step chain over the same skill.
+    await api("POST", "/api/skills", { name: CHAIN });
+    await api("POST", `/api/skills/${CHAIN}/versions`, {
+      version: "1.0.0",
+      steps: [
+        { id: "a", promptName: SLUG, dependsOn: [] },
+        { id: "b", promptName: SLUG, dependsOn: ["a"] },
+      ],
+    });
     // 015/002: a skill that includes another must sync with no template syntax.
     await api("POST", "/api/skills", { name: INCLUDER });
     await api("POST", `/api/skills/${INCLUDER}/versions`, {
@@ -110,6 +120,17 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     expect(existsSync(join(repo, ".skillcanon/project.json"))).toBe(true);
   });
 
+  it("run starts a chain and advance steps it to completion", () => {
+    const first = cli("run", CHAIN);
+    expect(first).toContain("step 1");
+    expect(first).toContain(BODY);
+    const runId = /Chain run (\S+),/.exec(first)?.[1] ?? "";
+    expect(runId).not.toBe("");
+    const second = cli("advance", runId, "0", "--output", "done a");
+    expect(second).toContain("step 2");
+    expect(cli("advance", runId, "1")).toContain("complete");
+  });
+
   it("syncs an including skill with no template syntax and run renders the include", () => {
     const synced = readFileSync(join(repo, ".claude/skills", `skillcanon-${INCLUDER}`, "SKILL.md"), "utf8");
     expect(synced).not.toMatch(/\{\{|\{%/);
@@ -117,7 +138,7 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
   });
 
   it("sync is idempotent", () => {
-    expect(cli("sync")).not.toMatch(/error/i);
+    expect(cli("sync")).toContain("Already up to date.");
   });
 
   it("run resolves the skill live", () => {
