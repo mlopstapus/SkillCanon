@@ -89,6 +89,7 @@ export function ChainStepBuilder({ steps, onChange, accessibleSkillNames }: Chai
                 </span>
                 <div className="flex min-w-0 flex-1 flex-col gap-2">
                   <select
+                    aria-label={`Step ${i + 1} skill`}
                     value={step.promptName}
                     onChange={(e) => updateStep(i, { promptName: e.target.value })}
                     className="w-full rounded-control border border-border-2 bg-bg px-2.5 py-2 font-mono text-[12.5px] text-text outline-none"
@@ -103,6 +104,7 @@ export function ChainStepBuilder({ steps, onChange, accessibleSkillNames }: Chai
                   <input
                     value={step.promptVersion}
                     onChange={(e) => updateStep(i, { promptVersion: e.target.value })}
+                    aria-label={`Step ${i + 1} version`}
                     placeholder="version (blank = latest)"
                     className="w-full rounded-control border border-border-2 bg-bg px-2.5 py-1.5 font-mono text-[11.5px] text-text outline-none"
                   />

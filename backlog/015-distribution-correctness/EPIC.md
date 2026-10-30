@@ -16,7 +16,8 @@ The 2026-10-29 smoke test fetched three skills over REST, the CLI, MCP and a rea
 - [x] [004 - MCP Name and Error Consistency](archive/004-mcp-name-and-error-consistency.md)
 - [x] [005 - Supporting Files Over REST and MCP](archive/005-supporting-files-over-rest-and-mcp.md)
 - [x] [006 - One Model for Project Skills](archive/006-one-model-for-project-skills.md)
-- [ ] [007 - UI Defects Found in the Smoke Test](007-ui-defects.md)
+- [x] [007 - UI Defects Found in the Smoke Test](archive/007-ui-defects.md)
+- [ ] [008 - Invitation Follow-ups](008-invitation-follow-ups.md)
 
 _Completed features are moved to `archive/` and checked off here._
 

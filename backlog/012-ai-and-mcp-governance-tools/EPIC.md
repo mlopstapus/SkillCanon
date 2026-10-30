@@ -17,7 +17,7 @@ This entire epic is paid-tier and depends on `009-billing-entitlements` for gati
 
 ## Features
 
-- [ ] [001 - Admin & Metrics MCP Tools](001-admin-and-metrics-mcp-tools.md)
+- [x] [001 - Admin & Metrics MCP Tools](archive/001-admin-and-metrics-mcp-tools.md)
 - [ ] [002 - AI Policy & Tenet Interview Assistant](002-ai-policy-and-tenet-interview-assistant.md)
 - [ ] [003 - Objective Summarization & Aggregation](003-objective-summarization-and-aggregation.md)
 
