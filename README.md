@@ -58,6 +58,7 @@ Sign in to the web app and go to **Settings → API keys** (`/settings/api-keys`
 npx skillcanon init <project-key> <api-key>   # one-time: links this repo to a SkillCanon project
 npx skillcanon sync                            # pulls the project's governed skills into .claude/skills/
 npx skillcanon run <slug>                      # resolves and prints one skill's current governed content
+                                               # (a chain skill starts a run: follow it with `advance <runId> <stepIndex>`)
 ```
 
 `init` also wires a Claude Code session-start hook, so a linked repo's skills stay in sync automatically.
