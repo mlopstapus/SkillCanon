@@ -43,9 +43,15 @@ Re-syncs `.claude/skills/skillcanon-*/` against the linked project's current pro
 - `--force`: overwrite a stub you've hand-edited (normally left untouched and flagged).
 - `--quiet`: warn instead of erroring on a connectivity/auth failure — used by the automatic hook so a bad network connection never blocks a Claude Code session from starting.
 
-### `skillcanon run <slug> [--input '<json>']`
+### `skillcanon run <slug>`
 
 Resolves one governed prompt live and prints it to stdout. This is what each generated skill stub actually invokes — you normally won't run this by hand either, except to test a prompt directly.
+
+For a **chain** skill, `run` starts a chain run and prints step 1 plus the run id. Do the step, then report it:
+
+### `skillcanon advance <runId> <stepIndex> [--status success|error] [--output <text>] [--error <text>]`
+
+Reports a step's result and prints the next step, or `complete` after the last. `skillcanon abandon <runId>` stops a run.
 
 ## How a synced skill works
 
