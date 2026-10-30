@@ -1,7 +1,7 @@
 # Epic 011: VCS Integration
 
 **Priority:** 9
-**Status:** not-started
+**Status:** in-progress (code complete; live GitHub App registration and webhook test parked, see the open items)
 **Goal:** Tie skill usage to real GitHub activity — which governed skills ran on a branch, surfaced visibly on the PR before merge — the governance capability the product's actual differentiation depends on.
 
 ## Overview

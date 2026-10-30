@@ -44,13 +44,13 @@ vi.mock("@/bcs/identity-access", () => ({
 vi.mock("@/bcs/distribution", () => ({
   listFeedbackForSkill: async () => ({ byVersion: [], notes: [] }),
   listImprovementDrafts: async () => [],
-  getThirdPartyOptIn: async () => false,
-  resolveEnvDrafter: () => null,
+  resolveDrafter: () => null,
   lineDiff: () => [],
 }));
 vi.mock("@/bcs/governance", () => ({ resolveAllPolicies: async () => [] }));
 vi.mock("@/bcs/prompt-registry", () => ({
   countForksOfSkill: async () => 0,
+  getEvalsEnabled: async () => false,
   expand: async () => ({ content: "", appliedPolicies: [] }),
   getPrompt: async () => fixture.prompt,
   listPrompts: async () => [],

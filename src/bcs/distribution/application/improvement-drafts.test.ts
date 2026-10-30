@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { NotAuthorizedError } from "@/bcs/identity-access";
-import { createPrompt, getPromptVersion, listVersions, publishVersion, type PromptActor } from "@/bcs/prompt-registry";
+import { NotAuthorizedError, type UserSummary } from "@/bcs/identity-access";
+import { createPrompt, getPromptVersion, setEvalsEnabled, listVersions, publishVersion, type PromptActor } from "@/bcs/prompt-registry";
 import { withTenantContext } from "@/shared/db";
 import { seedOrgWithAdmin, type SeededOrg } from "@/shared/api/test-helpers";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
@@ -15,7 +15,7 @@ import {
   nextVersionLabel,
   type ImprovementDrafter,
 } from "../domain/improvement-draft";
-import { createAnthropicDrafter, parseDraft } from "../infrastructure/anthropic-drafter";
+import { createAnthropicDrafter, createPoolDrafter, parseDraft, resolveDrafter } from "../infrastructure/anthropic-drafter";
 import type { FeedbackTriager } from "./assert-can-triage-skill";
 import { fileFeedback } from "./file-feedback";
 import { listFeedbackForSkill } from "./list-feedback-for-skill";
@@ -24,9 +24,16 @@ import {
   dismissImprovementDraft,
   listImprovementDrafts,
   requestImprovementDraft,
-  setThirdPartyOptIn,
 } from "./improvement-drafts";
 import { recordPromptUsage } from "./record-prompt-usage";
+
+const asUser = (seeded: SeededOrg, role: "admin" | "member" = "admin"): UserSummary => ({
+  id: seeded.adminUserId,
+  orgId: seeded.organizationId,
+  teamId: seeded.teamId,
+  role,
+  email: seeded.adminEmail,
+});
 
 const stubDrafter: ImprovementDrafter = {
   model: "stub/test-model",
@@ -73,6 +80,33 @@ describe("Anthropic drafter", () => {
 
     const failing = createAnthropicDrafter("k", "m", (async () => new Response("no", { status: 529 })) as unknown as typeof fetch);
     await expect(failing.draft({ skillName: "s", currentContent: "o", notes: ["n"] }, new AbortController().signal)).rejects.toThrow(/HTTP 529/);
+  });
+});
+
+describe("drafter resolution", () => {
+  const poolWith = (text: string) => ({
+    providers: [{ id: "anthropic", complete: vi.fn(async () => ({ text, tokens: 10 })) }],
+    models: ["anthropic/claude-test", "anthropic/claude-other"],
+  });
+
+  it("drafts through the operator pool (first model, or the DRAFTER_MODEL override), else env, else nothing", async () => {
+    const pool = poolWith('{"content":"from pool","rationale":"r"}');
+    const drafter = resolveDrafter(pool, {});
+    expect(drafter?.model).toBe("anthropic/claude-test");
+    expect(await drafter?.draft({ skillName: "s", currentContent: "c", notes: ["n"] }, new AbortController().signal)).toEqual({
+      content: "from pool",
+      rationale: "r",
+    });
+    expect(pool.providers[0]!.complete).toHaveBeenCalledWith(expect.objectContaining({ model: "claude-test" }));
+    expect(resolveDrafter(pool, { DRAFTER_MODEL: "claude-other" })?.model).toBe("anthropic/claude-other");
+
+    expect(resolveDrafter({ providers: [], models: [] }, { ANTHROPIC_API_KEY: "k" })?.model).toBe("anthropic/claude-sonnet-5-5");
+    expect(resolveDrafter({ providers: [], models: [] }, {})).toBeNull();
+  });
+
+  it("fails the draft when the pool provider outlives the abort signal", async () => {
+    const hung = createPoolDrafter({ id: "p", complete: () => new Promise(() => {}) }, "m");
+    await expect(hung.draft({ skillName: "s", currentContent: "c", notes: ["n"] }, AbortSignal.timeout(20))).rejects.toThrow(/timed out/);
   });
 });
 
@@ -129,7 +163,7 @@ describe("improvement drafts", () => {
   it("drafts from the open notes, stores it pending, then accept publishes the next version and addresses the notes", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const { name, promptId, v1 } = await skillWithNotes(seeded);
-    await inOrg(seeded, (tx) => setThirdPartyOptIn(tx, admin(seeded), true));
+    await inOrg(seeded, (tx) => setEvalsEnabled(tx, asUser(seeded), true));
 
     const draft = await inOrg(seeded, (tx) => requestImprovementDraft(tx, admin(seeded), v1.id, stubDrafter));
     expect(draft).toMatchObject({ status: "pending", baseVersionId: v1.id, model: "stub/test-model", rationale: "Addressed 2 note(s)." });
@@ -161,7 +195,7 @@ describe("improvement drafts", () => {
   it("dismiss leaves the skill and its notes unchanged; a decided draft cannot be decided again", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const { name, promptId, v1 } = await skillWithNotes(seeded);
-    await inOrg(seeded, (tx) => setThirdPartyOptIn(tx, admin(seeded), true));
+    await inOrg(seeded, (tx) => setEvalsEnabled(tx, asUser(seeded), true));
     const draft = await inOrg(seeded, (tx) => requestImprovementDraft(tx, admin(seeded), v1.id, stubDrafter));
 
     await inOrg(seeded, (tx) => dismissImprovementDraft(tx, admin(seeded), draft.id));
@@ -181,7 +215,7 @@ describe("improvement drafts", () => {
 
     await expect(request(null)).rejects.toBeInstanceOf(DraftingUnavailableError);
     await expect(request(stubDrafter)).rejects.toThrow(/has not allowed/);
-    await inOrg(seeded, (tx) => setThirdPartyOptIn(tx, admin(seeded), true));
+    await inOrg(seeded, (tx) => setEvalsEnabled(tx, asUser(seeded), true));
     await expect(request(stubDrafter, { ...admin(seeded), userId: randomUUID(), role: "member" })).rejects.toBeInstanceOf(NotAuthorizedError);
 
     const failing: ImprovementDrafter = { model: "stub/fail", draft: async () => { throw new Error("boom"); } };
@@ -198,9 +232,9 @@ describe("improvement drafts", () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const { promptId, v1 } = await skillWithNotes(seeded);
     await expect(
-      inOrg(seeded, (tx) => setThirdPartyOptIn(tx, { ...admin(seeded), role: "member" }, true)),
+      inOrg(seeded, (tx) => setEvalsEnabled(tx, asUser(seeded, "member"), true)),
     ).rejects.toBeInstanceOf(NotAuthorizedError);
-    await inOrg(seeded, (tx) => setThirdPartyOptIn(tx, admin(seeded), true));
+    await inOrg(seeded, (tx) => setEvalsEnabled(tx, asUser(seeded), true));
     await inOrg(seeded, (tx) => requestImprovementDraft(tx, admin(seeded), v1.id, stubDrafter));
 
     const other = await seedOrgWithAdmin(testDb.authDb);

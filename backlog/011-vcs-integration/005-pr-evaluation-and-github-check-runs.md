@@ -11,22 +11,22 @@ The core of the epic: when a PR opens or gets new commits, figure out which requ
 
 ## Requirements
 
-- [x] `handleGithubWebhook()` fully handles `pull_request` events (`opened`, `synchronize`, `reopened`) — for each, finds the matching `RepoLink` (by `githubRepoId`), resolves required skills via Prompt Registry's `listRequiredSkillsForProject(orgId, projectId)` (not a Governance call — see [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)), fetches the PR's full commit list from GitHub, and queries `queryUsageByRepoAndCommits` for matching usage rows.
-- [x] Required-skill matching is by **skill name only** and against **any commit reachable from the PR's branch history**, not exact-head-sha equality only — per `vcs-integration`'s `CONTRACT.md` Stability Guarantees, this specifically covers rebase/squash-merge cases from PDR-013.
-- [x] A `PrCheck` row is written, keyed on `(repoLinkId, prNumber, headSha)` — upserted on webhook redelivery of the same `deliveryId`/head sha, a new row on a new head sha (new `synchronize`).
-- [x] Webhook deliveries are deduped by GitHub's delivery id so a retried delivery doesn't double-process.
-- [x] A GitHub Check Run is posted/updated: `pass` if every required skill is satisfied, `fail` if any is missing (visibility only — **not configured as a required status check**, doesn't block merge), `neutral` if evaluation itself errored (e.g. Governance call threw) — fails loud, not silently.
-- [x] The Check Run's summary text lists which skills ran and which didn't, in plain language a PR author can act on.
-- [x] `PrEvaluated` audit event fires on every evaluation.
+- [x] `handleGithubWebhook()` fully handles `pull_request` events (`opened`, `synchronize`, `reopened`) — for each, finds the matching `RepoLink` (by `githubRepoId`), resolves required skills via Prompt Registry's `listRequiredSkillsForProject(orgId, projectId)` (not a Governance call — see [PDR-016](../../docs/pdr/016-skill-ownership-sharing-and-project-assignment.md)), fetches the PR's full commit list from GitHub, and queries `queryUsageByRepoAndCommits` for matching usage rows. (#117)
+- [x] Required-skill matching is by **skill name only** and against **any commit reachable from the PR's branch history**, not exact-head-sha equality only — per `vcs-integration`'s `CONTRACT.md` Stability Guarantees, this specifically covers rebase/squash-merge cases from PDR-013. (#117)
+- [x] A `PrCheck` row is written, keyed on `(repoLinkId, prNumber, headSha)` — upserted on webhook redelivery of the same `deliveryId`/head sha, a new row on a new head sha (new `synchronize`). (#117)
+- [x] Webhook deliveries are deduped by GitHub's delivery id so a retried delivery doesn't double-process. (#117)
+- [x] A GitHub Check Run is posted/updated: `pass` if every required skill is satisfied, `fail` if any is missing (visibility only — **not configured as a required status check**, doesn't block merge), `neutral` if evaluation itself errored (e.g. Governance call threw) — fails loud, not silently. (#117)
+- [x] The Check Run's summary text lists which skills ran and which didn't, in plain language a PR author can act on. (#117)
+- [x] `PrEvaluated` audit event fires on every evaluation. (#117)
 
 ## Acceptance Criteria
 
 - [ ] **Needs Ben (live App):** Opening a PR on a linked repo, where the branch's commits include a CLI invocation of every required skill, produces a `pass` Check Run.
-- [x] Opening a PR missing one required skill produces a `fail` Check Run whose summary names the missing skill.
-- [x] Pushing a new commit to an open PR triggers re-evaluation and updates the same Check Run (not a duplicate one).
-- [x] Redelivering the same webhook payload (simulate via GitHub's redelivery feature or a manual duplicate POST) does not create a duplicate `PrCheck` row or double-post a Check Run.
-- [x] Forcing a Governance-call failure (e.g. a broken project link) results in a `neutral` Check Run with a visible error, not a missing/absent one.
-- [x] Repo not linked to any project → webhook is a no-op (no Check Run posted, no error).
+- [x] Opening a PR missing one required skill produces a `fail` Check Run whose summary names the missing skill. (#117)
+- [x] Pushing a new commit to an open PR triggers re-evaluation and updates the same Check Run (not a duplicate one). (#117)
+- [x] Redelivering the same webhook payload (simulate via GitHub's redelivery feature or a manual duplicate POST) does not create a duplicate `PrCheck` row or double-post a Check Run. (#117)
+- [x] Forcing a Governance-call failure (e.g. a broken project link) results in a `neutral` Check Run with a visible error, not a missing/absent one. (#117)
+- [x] Repo not linked to any project → webhook is a no-op (no Check Run posted, no error). (#117)
 
 ## Decisions
 
