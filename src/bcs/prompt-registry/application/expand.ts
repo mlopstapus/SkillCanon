@@ -1,6 +1,6 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { resolveAllObjectives, resolveAllPolicies, type EffectivePolicy } from "@/bcs/governance";
-import { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH, type ExpandParams, type ExpansionResult } from "../domain/expansion";
+import { ChainNotExpandableError, ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH, type ExpandParams, type ExpansionResult } from "../domain/expansion";
 import type { PromptVersionSummary } from "../domain/prompt";
 import {
   extractIncludeReferences,
@@ -162,8 +162,11 @@ export async function expand(db: Db, params: ExpandParams): Promise<ExpansionRes
   // version is — a caller cannot distinguish "this is a chain, use
   // startSkillChainRun instead" from "this doesn't exist" from expand()'s
   // error alone (PDR-017, CONTRACT.md).
-  if (!topVersion || topVersion.kind === "chain") {
+  if (!topVersion) {
     throw new ExpansionSourceNotFoundError(promptName);
+  }
+  if (topVersion.kind === "chain") {
+    throw new ChainNotExpandableError(promptName);
   }
 
   const templateVars: Record<string, unknown> = {};
