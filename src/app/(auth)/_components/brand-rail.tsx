@@ -14,12 +14,12 @@ export function BrandRail() {
           <LogoMark size={34} />
           <div>
             <Wordmark className="text-lg" />
-            <p className="font-mono text-[11px] uppercase text-faint">Prompt control plane</p>
+            <p className="font-caption text-[11px] uppercase text-faint">Prompt control plane</p>
           </div>
         </div>
 
         <div className="max-w-xl space-y-5">
-          <p className="font-mono text-xs uppercase text-text">Prompt control plane</p>
+          <p className="font-caption text-xs uppercase text-text">Prompt control plane</p>
           <h2 className="font-display text-5xl font-semibold leading-none text-text">
             Govern access before the first prompt ships.
           </h2>

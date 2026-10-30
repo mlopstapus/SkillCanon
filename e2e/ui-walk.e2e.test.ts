@@ -101,6 +101,13 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(await page.locator('meta[name="robots"]').getAttribute("content")).toMatch(/noindex/);
   });
 
+  it("falls back to system fonts and the SkillCanon mark when no Tribe brand assets are configured (018/003)", async () => {
+    expect((await fetch(`${BASE}/brand/logos/symbol.svg`)).status).toBe(404);
+    expect((await fetch(`${BASE}/brand/fonts.css`)).status).toBe(404);
+    await goto("/login");
+    expect(await page.locator("html").getAttribute("data-brand")).toBeNull();
+  });
+
   it("creates the instance through first-run setup", async () => {
     await goto("/register");
     await page.getByPlaceholder("Acme Ops").fill("Example Org");

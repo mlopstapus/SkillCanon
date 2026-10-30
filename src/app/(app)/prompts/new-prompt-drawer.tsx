@@ -445,7 +445,7 @@ export function NewPromptDrawer({
           {fetchState === "fetched" && results.length > 0 ? (
             <div>
               <div className="mb-2.5 flex items-center gap-2">
-                <span className="font-mono text-[10.5px] tracking-[0.08em] text-faint uppercase">
+                <span className="font-caption text-[10.5px] tracking-[0.08em] text-faint uppercase">
                   Found {results.length} skill{results.length === 1 ? "" : "s"}
                 </span>
                 <span className="h-px flex-1 bg-border" />
@@ -588,7 +588,7 @@ export function NewPromptDrawer({
           {localScanState === "scanned" && (localCandidates.length > 0 || localInvalidFolders.length > 0) ? (
             <div>
               <div className="mb-2.5 flex items-center gap-2">
-                <span className="font-mono text-[10.5px] tracking-[0.08em] text-faint uppercase">
+                <span className="font-caption text-[10.5px] tracking-[0.08em] text-faint uppercase">
                   Found {localCandidates.length} skill{localCandidates.length === 1 ? "" : "s"}
                 </span>
                 <span className="h-px flex-1 bg-border" />
