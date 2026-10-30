@@ -22,10 +22,10 @@ Per [PDR-020](../../docs/pdr/020-where-evals-run.md), results come from centrall
 - A run started from the tab appears as running, then as results.
 - Pool unconfigured and no-cases states render without errors.
 
-## Open Questions (for Ben)
+## Decisions (Ben, 2026-10-30)
 
-- Regression rule: proposed default is any drop in pass rate versus the previous version's same-model result. Should a tolerance apply?
-- Who can start a run: any skill editor (proposed default) or admins only?
+- Regression tolerance: **none**; any drop in pass rate versus the previous version's same-model result is a regression.
+- Who can start a run: **editors and reviewers**. No reviewer role exists yet (see 003); until it does, any org member with access to the skill.
 
 ## Dependencies
 
