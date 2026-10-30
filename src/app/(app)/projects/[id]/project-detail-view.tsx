@@ -47,6 +47,7 @@ export interface ProjectDetailData {
   addableTeams: Array<{ id: string; name: string }>;
   addableUsers: Array<{ id: string; name: string }>;
   repos: Array<{ id: string; name: string; url: string; branch: string }>;
+  addablePersonalSkills: Array<{ id: string; name: string; description: string }>;
   requiredPrompts: ProjectSkillRow[];
   optionalPrompts: ProjectSkillRow[];
   availablePrompts: ProjectSkillRow[];
@@ -67,6 +68,7 @@ export interface ProjectDetailViewProps {
   onOpenAddTeam: () => void;
   onOpenAddMember: () => void;
   onOpenAddRepo: () => void;
+  onOpenAddSkill: () => void;
   onOpenAddObjective: () => void;
   onEditObjective: (objective: ProjectObjectiveRow) => void;
   onRemoveObjective: (objectiveId: string) => void;
@@ -83,6 +85,7 @@ export function ProjectDetailView({
   onOpenAddTeam,
   onOpenAddMember,
   onOpenAddRepo,
+  onOpenAddSkill,
   onOpenAddObjective,
   onEditObjective,
   onRemoveObjective,
@@ -139,6 +142,11 @@ export function ProjectDetailView({
             {activeTab === "members" ? (
               <button type="button" onClick={onOpenAddMember} className="rounded-control border border-border-2 px-2.5 py-1.5 font-mono text-[11px] text-dim">
                 + add member
+              </button>
+            ) : null}
+            {activeTab === "prompts" ? (
+              <button type="button" onClick={onOpenAddSkill} className="rounded-control border border-border-2 px-2.5 py-1.5 font-mono text-[11px] text-dim">
+                + add skill
               </button>
             ) : null}
             {activeTab === "repos" ? (

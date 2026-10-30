@@ -14,6 +14,10 @@ import {
   SourceSkillNotFoundError,
   type SubscribeSkillParams,
 } from "../domain/subscription";
+import {
+  findByProjectAndSkill,
+  insert as insertAssignment,
+} from "../infrastructure/project-skill-assignments-repo";
 import { findPromptByOrgAndId } from "../infrastructure/prompts-repo";
 import {
   findBySourceAndSubscriber,
@@ -24,7 +28,7 @@ import { assertAuthorizedForOwner } from "./authorize-owner-action";
 type Db = PostgresJsDatabase<Record<string, never>>;
 
 /**
- * Creates a live-reference subscription: the subscriber (a user or a team)
+ * Creates a live-reference subscription: the subscriber (a user, team, or project)
  * always resolves the source skill's *current* active version at read time
  * — no cached/denormalized copy of the version pointer (FR-008).
  */
@@ -68,7 +72,24 @@ export async function subscribeSkill(
   try {
     return await withAudit(
       db,
-      (tx) => insertSubscription(tx, values),
+      async (tx) => {
+        const row = await insertSubscription(tx, values);
+        // 015/006: a project grant is also an optional assignment, so the
+        // project page and the CLI see one model. Never downgrades "required".
+        if (
+          params.subscriberType === "project" &&
+          !(await findByProjectAndSkill(tx, params.subscriberId, sourceSkillId))
+        ) {
+          await insertAssignment(tx, {
+            id: randomUUID(),
+            organizationId: actingUser.orgId,
+            projectId: params.subscriberId,
+            skillId: sourceSkillId,
+            requirement: "optional",
+          });
+        }
+        return row;
+      },
       (tx) =>
         record(tx, {
           organizationId: actingUser.orgId,
