@@ -10,6 +10,8 @@ import {
   requestImprovementDraftAction,
   setThirdPartyOptInAction,
   startEvalRunAction,
+  setEvalGateAction,
+  activateCandidateAction,
   forkSkillForSelfAction,
   getSkillChainRunAction,
   listSkillChainRunsAction,
@@ -143,6 +145,16 @@ export function PromptDetail({ data }: PromptDetailProps) {
         }}
         onStartEvalRun={(version, models) => startEvalRunAction(data.name, version, models)}
         onRefreshEvals={() => router.refresh()}
+        onSetGate={async (config) => {
+          const result = await setEvalGateAction(data.name, config);
+          router.refresh();
+          return result;
+        }}
+        onActivateCandidate={async (version, reason) => {
+          const result = await activateCandidateAction(data.name, version, reason);
+          router.refresh();
+          return result;
+        }}
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}
         onOpenShare={() => setShareOpen(true)}
