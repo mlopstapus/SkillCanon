@@ -19,7 +19,13 @@ import {
   type PolicyEnforcementType,
   type PolicyScopeVerifier,
 } from "@/bcs/governance";
-import { runGovernanceInterview, type InterviewDraft, type InterviewMessage } from "@/bcs/distribution";
+import {
+  runGovernanceInterview,
+  summarizeObjectives,
+  type InterviewDraft,
+  type InterviewMessage,
+  type SummaryScope,
+} from "@/bcs/distribution";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -229,6 +235,27 @@ export async function interviewAction(messages: InterviewMessage[]): Promise<Int
       runGovernanceInterview(tx, { organizationId: actingUser.orgId, userId: actingUser.id }, messages),
     );
     return { ok: true, reply: result.reply, drafts: result.drafts };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err) };
+  }
+}
+
+export type SummarizeActionResult =
+  | { ok: true; summary: string; objectiveCount: number; cached: boolean }
+  | { ok: false; error: string };
+
+/** Summarizes a team's effective objectives, or (admins) the whole org's. */
+export async function summarizeObjectivesAction(scope: SummaryScope): Promise<SummarizeActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    const result = await withTenantContext(db, actingUser.orgId, (tx) =>
+      summarizeObjectives(
+        tx,
+        { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role },
+        scope,
+      ),
+    );
+    return { ok: true, ...result };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
