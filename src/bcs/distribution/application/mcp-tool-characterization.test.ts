@@ -16,6 +16,15 @@ describe("MCP legacy tool contract", () => {
       "sh-feedback",
       "sh-workflow-list",
       "sh-workflow-run",
+      "sh-admin-policy-list",
+      "sh-admin-policy-create",
+      "sh-admin-policy-update",
+      "sh-admin-policy-delete",
+      "sh-admin-objective-list",
+      "sh-admin-objective-create",
+      "sh-admin-objective-update",
+      "sh-admin-objective-delete",
+      "sh-metrics-summary",
     ]);
   });
 
