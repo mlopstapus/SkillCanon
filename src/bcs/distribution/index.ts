@@ -54,12 +54,10 @@ export type { Db, McpToolContext, McpToolName } from "./application/mcp-tools";
 export {
   acceptImprovementDraft,
   dismissImprovementDraft,
-  getThirdPartyOptIn,
   listImprovementDrafts,
   requestImprovementDraft,
-  setThirdPartyOptIn,
 } from "./application/improvement-drafts";
-export { resolveEnvDrafter, createAnthropicDrafter } from "./infrastructure/anthropic-drafter";
+export { createAnthropicDrafter, createPoolDrafter, resolveDrafter, resolveEnvDrafter } from "./infrastructure/anthropic-drafter";
 export {
   DraftFailedError,
   DraftNotDraftableError,

@@ -7,8 +7,7 @@ import {
   dismissImprovementDraft,
   markFeedbackAddressed,
   requestImprovementDraft,
-  resolveEnvDrafter,
-  setThirdPartyOptIn,
+  resolveDrafter,
 } from "@/bcs/distribution";
 import {
   assignSkillToProject,
@@ -23,6 +22,7 @@ import {
   publishVersion,
   reactivatePrompt,
   rollbackPrompt,
+  setEvalsEnabled,
   scanLocalSkillFolders,
   subscribeSkill,
   transferSkillOwnership,
@@ -302,7 +302,7 @@ export async function requestImprovementDraftAction(promptName: string, versionI
         tx,
         { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role },
         versionId,
-        resolveEnvDrafter(),
+        resolveDrafter(),
       ),
     );
     revalidatePath(`/prompts/${promptName}`);
@@ -345,7 +345,7 @@ export async function setThirdPartyOptInAction(promptName: string, enabled: bool
   try {
     const actingUser = await requireActingUser();
     await withTenantContext(db, actingUser.orgId, (tx) =>
-      setThirdPartyOptIn(tx, { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role }, enabled),
+      setEvalsEnabled(tx, actingUser, enabled),
     );
     revalidatePath(`/prompts/${promptName}`);
     return { ok: true };

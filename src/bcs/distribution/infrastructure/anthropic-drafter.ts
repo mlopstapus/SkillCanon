@@ -1,3 +1,4 @@
+import { getEvalProviderPool, type EvalProvider, type EvalProviderPool } from "@/bcs/prompt-registry";
 import {
   DraftFailedError,
   type DraftedImprovement,
@@ -66,8 +67,50 @@ export function parseDraft(text: string): DraftedImprovement {
   }
 }
 
-/** The env-configured drafter, or null when no provider key is set. */
-export function resolveEnvDrafter(env: NodeJS.ProcessEnv = process.env): ImprovementDrafter | null {
+/** The env-configured drafter, or null when no provider key is set. Fallback until the operator pool has a config source. */
+export function resolveEnvDrafter(env: Record<string, string | undefined> = process.env): ImprovementDrafter | null {
   const key = env.ANTHROPIC_API_KEY?.trim();
   return key ? createAnthropicDrafter(key, env.DRAFTER_MODEL?.trim() || DEFAULT_MODEL) : null;
+}
+
+/** Drafts through one provider of the operator's eval pool (PDR-020) using the same prompt as the direct drafter. */
+export function createPoolDrafter(provider: EvalProvider, model: string): ImprovementDrafter {
+  return {
+    model: `${provider.id}/${model}`,
+    async draft(input: ImprovementDraftInput, signal: AbortSignal): Promise<DraftedImprovement> {
+      const user = [
+        `Skill: ${input.skillName}`,
+        "",
+        "Current skill file:",
+        "<skill>",
+        input.currentContent,
+        "</skill>",
+        "",
+        "Feedback notes:",
+        ...input.notes.map((note, i) => `${i + 1}. ${note}`),
+      ].join("\n");
+      // The pool's `complete` takes no abort signal, so race it against ours.
+      const aborted = new Promise<never>((_, reject) => {
+        signal.addEventListener("abort", () => reject(new DraftFailedError("the request timed out.")), { once: true });
+      });
+      const completion = await Promise.race([provider.complete({ model, system: SYSTEM_PROMPT, user }), aborted]);
+      return parseDraft(completion.text);
+    },
+  };
+}
+
+/**
+ * The drafter to use: a provider from the operator's eval pool when one is
+ * configured (preferring the `DRAFTER_MODEL` env override, else the first
+ * allowed model), otherwise the env-configured Anthropic drafter, else null.
+ */
+export function resolveDrafter(pool: EvalProviderPool = getEvalProviderPool(), env: Record<string, string | undefined> = process.env): ImprovementDrafter | null {
+  const wanted = env.DRAFTER_MODEL?.trim();
+  const qualified = (wanted && pool.models.find((m) => m === wanted || m.endsWith(`/${wanted}`))) || pool.models[0];
+  if (qualified) {
+    const slash = qualified.indexOf("/");
+    const provider = pool.providers.find((p) => p.id === qualified.slice(0, slash));
+    if (provider) return createPoolDrafter(provider, qualified.slice(slash + 1));
+  }
+  return resolveEnvDrafter(env);
 }
