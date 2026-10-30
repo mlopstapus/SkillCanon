@@ -7,6 +7,7 @@ import {
 } from "@/bcs/audit-compliance";
 import { withAudit } from "@/shared/db";
 import { isUniqueViolation } from "@/shared/db/postgres-errors";
+import { EVAL_CASES_FILE_NAME, validateEvalCases } from "../domain/eval-cases";
 import {
   determinePromptVersionKind,
   DuplicatePromptVersionError,
@@ -55,6 +56,7 @@ function validateFileBundle(mainFile: { content: string }, supportingFiles: Publ
   }
   const seenNames = new Set<string>();
   for (const file of supportingFiles) {
+    if (file.name === EVAL_CASES_FILE_NAME) validateEvalCases(file.content);
     if (seenNames.has(file.name)) {
       throw new InvalidVersionFilesError(`Duplicate supporting file name "${file.name}".`);
     }
