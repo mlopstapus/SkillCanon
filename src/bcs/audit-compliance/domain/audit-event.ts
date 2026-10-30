@@ -5,7 +5,7 @@
  * feature's own call sites (identity-access's login/logout) always pass
  * `null` for the fields an auth event has no value for.
  */
-export const AUDIT_TRANSPORTS = ["web", "api", "cli", "system"] as const;
+export const AUDIT_TRANSPORTS = ["web", "api", "mcp", "cli", "system"] as const;
 
 export type AuditTransport = (typeof AUDIT_TRANSPORTS)[number];
 

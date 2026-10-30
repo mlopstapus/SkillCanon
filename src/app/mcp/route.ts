@@ -58,7 +58,7 @@ function extraToContext(extra: RequestHandlerExtra<ServerRequest, ServerNotifica
     db: authExtra.db,
     caller: authExtra.caller,
     sessionId: extra.sessionId ?? "stateless",
-    auditContext: { transport: "api", sourceIp: authExtra.sourceIp ?? null },
+    auditContext: { transport: "mcp", sourceIp: authExtra.sourceIp ?? null },
     sessionManager: mcpSessionManager,
   };
 }

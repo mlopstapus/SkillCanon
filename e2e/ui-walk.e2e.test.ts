@@ -497,6 +497,11 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await expect
       .poll(() => page.getByText(POLICY.name).first().isVisible())
       .toBe(true);
+    // The earlier MCP sh-run is recorded with the mcp transport.
+    await goto("/settings/audit-log?transport=mcp");
+    await expect
+      .poll(() => page.getByText("prompt.expanded").first().isVisible())
+      .toBe(true);
   });
 
   it(
