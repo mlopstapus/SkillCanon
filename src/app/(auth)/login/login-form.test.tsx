@@ -25,4 +25,12 @@ describe("LoginForm", () => {
     expect(markup).toContain("Incorrect email or password.");
     expect(markup).toContain("<svg");
   });
+
+  it("keeps the submitted email after a failed attempt", () => {
+    const markup = renderToStaticMarkup(
+      <LoginFormView state={{ error: "Incorrect email or password.", email: "a@b.test" }} action={vi.fn()} />,
+    );
+
+    expect(markup).toContain('value="a@b.test"');
+  });
 });
