@@ -200,7 +200,10 @@ export async function expand(db: Db, params: ExpandParams): Promise<ExpansionRes
     const promptCache = await prefetchIncludedVersions(db, organizationId, [content]);
     const resolvedContent = renderContentWithIncludes(content, templateVars, promptCache);
 
-    return { content: resolvedContent, appliedPolicies, objectives };
+    const files = topVersion.files
+      .filter((f) => !f.isMain)
+      .map(({ name, content }) => ({ name, content }));
+    return { content: resolvedContent, files, appliedPolicies, objectives };
   }
 
   // Legacy-shape (032-skill-file-format-refactor, FR-010): resolve exactly
@@ -232,7 +235,7 @@ export async function expand(db: Db, params: ExpandParams): Promise<ExpansionRes
       : systemMessage
     : userMessage;
 
-  return { content, appliedPolicies, objectives };
+  return { content, files: [], appliedPolicies, objectives };
 }
 
 /**

@@ -273,7 +273,17 @@ export async function shContext(args: { project_id?: string }, ctx: McpToolConte
   return formatWithSessionContext(contextBlock, result);
 }
 
+export interface ShRunResult {
+  text: string;
+  files: { name: string; content: string }[];
+}
+
 export async function shRun(args: { name: string; project?: string }, ctx: McpToolContext): Promise<string> {
+  return (await shRunWithFiles(args, ctx)).text;
+}
+
+/** Like `shRun`, but also returns the skill's supporting files so the MCP layer can send them as extra blocks. */
+export async function shRunWithFiles(args: { name: string; project?: string }, ctx: McpToolContext): Promise<ShRunResult> {
   assertCoreFeaturesEnabled();
   const contextBlock = await maybeInjectSessionContext(ctx);
   const actor = actorFromCaller(ctx.caller);
@@ -331,7 +341,7 @@ export async function shRun(args: { name: string; project?: string }, ctx: McpTo
       if (expansion.appliedPolicies.length > 0) {
         parts.push(`[Policies Applied]\n${expansion.appliedPolicies.join(", ")}`);
       }
-      return parts.join("\n\n");
+      return { text: parts.join("\n\n"), files: expansion.files };
     } catch (err) {
       if (err instanceof ExpansionSourceNotFoundError) {
         throw new McpToolError(`skill '${args.name}' not found.`);
@@ -340,7 +350,7 @@ export async function shRun(args: { name: string; project?: string }, ctx: McpTo
     }
   });
 
-  return formatWithSessionContext(contextBlock, result);
+  return { text: formatWithSessionContext(contextBlock, result.text), files: result.files };
 }
 
 export async function shWorkflowList(ctx: McpToolContext): Promise<string> {
@@ -421,8 +431,15 @@ async function dispatchMcpTool(name: McpToolName, args: unknown, ctx: McpToolCon
       return textResult(await shSearch(toolInputSchemas["sh-search"].query ? z.object(toolInputSchemas["sh-search"]).parse(args) : { query: "" }, ctx));
     case "sh-context":
       return textResult(await shContext(z.object(toolInputSchemas["sh-context"]).parse(args ?? {}), ctx));
-    case "sh-run":
-      return textResult(await shRun(z.object(toolInputSchemas["sh-run"]).parse(args), ctx));
+    case "sh-run": {
+      const { text, files } = await shRunWithFiles(z.object(toolInputSchemas["sh-run"]).parse(args), ctx);
+      return {
+        content: [
+          { type: "text", text },
+          ...files.map((file) => ({ type: "text" as const, text: `[Supporting file: ${file.name}]\n${file.content}` })),
+        ],
+      };
+    }
     case "sh-workflow-list":
       return textResult(await shWorkflowList(ctx));
     case "sh-workflow-run":

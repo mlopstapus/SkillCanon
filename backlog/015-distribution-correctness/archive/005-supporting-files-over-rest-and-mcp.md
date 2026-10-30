@@ -1,7 +1,7 @@
 ---
 epic: 015-distribution-correctness
 feature: 005-supporting-files-over-rest-and-mcp
-status: open
+status: done
 dependencies: []
 ---
 
@@ -11,5 +11,5 @@ dependencies: []
 
 ## Requirements
 
-- [ ] `expand` returns `files: [{name, content}]` beside `content`.
-- [ ] MCP `sh-run` returns them as additional content blocks or embedded resources.
+- [x] `expand` returns `files: [{name, content}]` beside `content`.
+- [x] MCP `sh-run` returns them as additional content blocks or embedded resources.
