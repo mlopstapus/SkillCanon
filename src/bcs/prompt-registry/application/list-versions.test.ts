@@ -42,7 +42,7 @@ describe("listVersions", () => {
       listVersions(tx, fixture.actor, "multi-version"),
     );
 
-    expect(versions.map((v) => v.version)).toEqual(["v1", "v2"]);
+    expect(versions.map((v) => v.version)).toEqual(["1", "2"]);
   });
 
   it("does not return versions from prompts in other organizations", async () => {

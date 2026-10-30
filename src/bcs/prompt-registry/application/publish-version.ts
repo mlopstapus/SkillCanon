@@ -14,6 +14,7 @@ import {
   MAIN_FILE_NAME,
   MAX_FILE_SIZE_BYTES,
   MAX_SUPPORTING_FILES,
+  normalizeVersionLabel,
   PromptNotFoundError,
   type PromptActor,
   type PublishVersionFileInput,
@@ -80,10 +81,12 @@ export async function publishVersion(
     throw new PromptNotFoundError(params.promptName);
   }
 
+  const version = normalizeVersionLabel(params.version);
+
   // Check for duplicate version label on this prompt.
-  const existing = await findVersionByPromptAndLabel(db, prompt.id, params.version);
+  const existing = await findVersionByPromptAndLabel(db, prompt.id, version);
   if (existing) {
-    throw new DuplicatePromptVersionError(params.promptName, params.version);
+    throw new DuplicatePromptVersionError(params.promptName, version);
   }
 
   // Exactly one of a main file or chain steps — never both, never
@@ -98,7 +101,7 @@ export async function publishVersion(
   const versionValues = {
     id: versionId,
     promptId: prompt.id,
-    version: params.version,
+    version,
     kind,
     systemTemplate: null,
     userTemplate: null,
@@ -147,7 +150,7 @@ export async function publishVersion(
     return newVersion;
   } catch (err) {
     if (isUniqueViolation(err)) {
-      throw new DuplicatePromptVersionError(params.promptName, params.version);
+      throw new DuplicatePromptVersionError(params.promptName, version);
     }
     throw err;
   }

@@ -219,7 +219,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await drawer().locator("textarea").fill("## Features\n## Fixes");
     await drawer().getByRole("button", { name: "Publish version" }).click();
     await expect
-      .poll(() => page.getByText(/v1 · active/).isVisible())
+      .poll(() => page.getByText(/^1 · active/).isVisible())
       .toBe(true);
 
     await page.getByRole("button", { name: /^Files/ }).click();
@@ -242,12 +242,12 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       .fill("# Release notes v2\n\nGroup by feat, fix, docs.");
     await drawer().getByRole("button", { name: "Publish version" }).click();
     await expect
-      .poll(() => page.getByText(/v2 · active/).isVisible())
+      .poll(() => page.getByText(/^2 · active/).isVisible())
       .toBe(true);
-    await page.getByRole("button", { name: /v2 · active/ }).click();
+    await page.getByRole("button", { name: /^2 · active/ }).click();
     await page.getByRole("button", { name: /View full history/ }).click();
     await expect
-      .poll(() => drawer().getByText(/^v1/).first().isVisible())
+      .poll(() => drawer().getByText(/^1\b/).first().isVisible())
       .toBe(true);
     await drawer().getByRole("button", { name: "Close" }).click();
   });
@@ -478,7 +478,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       .toBe(true);
   });
 
-  it.fails(
+  it(
     "renders version labels without a doubled prefix (015/007)",
     async () => {
       await goto("/metrics");

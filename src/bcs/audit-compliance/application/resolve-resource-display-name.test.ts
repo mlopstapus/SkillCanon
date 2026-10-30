@@ -193,7 +193,7 @@ describe("resolveResourceDisplayName", () => {
       resolveResourceDisplayName(tx, organizationId, adminId, "prompt_version", version.id),
     );
 
-    expect(result).toEqual({ name: "v3", resolved: true });
+    expect(result).toEqual({ name: "3", resolved: true });
   });
 
   it("falls back to the raw id for project_member (no id-based finder exists)", async () => {

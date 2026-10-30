@@ -129,7 +129,7 @@ describe("rollbackPrompt", () => {
     const v2Row = await queryPromptVersionRows(testDb, sql`id = ${v2!.id}`);
     expect(v1Row).toHaveLength(1);
     expect(v2Row).toHaveLength(1);
-    expect(v1Row[0]?.version).toBe("v1");
-    expect(v2Row[0]?.version).toBe("v2");
+    expect(v1Row[0]?.version).toBe("1");
+    expect(v2Row[0]?.version).toBe("2");
   });
 });

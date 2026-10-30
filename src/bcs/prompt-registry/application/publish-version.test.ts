@@ -52,7 +52,7 @@ describe("publishVersion", () => {
       ),
     );
 
-    expect(v.version).toBe("v1");
+    expect(v.version).toBe("1");
     expect(v.kind).toBe("template");
     expect(v.tags).toEqual(["production"]);
     expect(v.files).toHaveLength(3);
@@ -188,11 +188,11 @@ describe("publishVersion", () => {
 
     // v1 row is unchanged
     const v1Rows = await queryPromptVersionRows(testDb, sql`id = ${v1.id}`);
-    expect(v1Rows[0]?.version).toBe("v1");
+    expect(v1Rows[0]?.version).toBe("1");
 
     // v2 row exists
     const v2Rows = await queryPromptVersionRows(testDb, sql`id = ${v2.id}`);
-    expect(v2Rows[0]?.version).toBe("v2");
+    expect(v2Rows[0]?.version).toBe("2");
   });
 
   it("rejects a duplicate version label for the same prompt", async () => {
@@ -218,6 +218,24 @@ describe("publishVersion", () => {
         }),
       ),
     ).rejects.toBeInstanceOf(DuplicatePromptVersionError);
+  });
+
+  it("stores a v-prefixed label unprefixed, and treats v1 and 1 as the same version", async () => {
+    const fixture = await makePromptFixtureOrg(testDb);
+    await createPromptInOrg(testDb, fixture, "normalised-version-prompt");
+    const publish = (version: string) =>
+      withTenantContext(testDb.appDb, fixture.organizationId, (tx) =>
+        publishVersion(tx, fixture.actor, {
+          organizationId: fixture.organizationId,
+          promptName: "normalised-version-prompt",
+          version,
+          mainFile: { content: "content" },
+        }),
+      );
+
+    expect((await publish("v1")).version).toBe("1");
+    await expect(publish("1")).rejects.toBeInstanceOf(DuplicatePromptVersionError);
+    expect((await publish("vNext")).version).toBe("vNext");
   });
 
   it("rejects publishing to a prompt that does not exist in the caller's organization", async () => {
