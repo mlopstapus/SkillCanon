@@ -2,7 +2,7 @@
 
 An open-source, self-hosted skill/prompt registry with **hierarchical governance**, distributed via REST, [MCP](https://modelcontextprotocol.io/), and a CLI.
 
-Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The one exception is the central eval runner ([PDR-020](docs/pdr/020-where-evals-run.md)), which calls a provider pool the operator configures to validate skill updates.
+Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (opt-in per organization; set `ANTHROPIC_API_KEY` on the server, optionally `DRAFTER_MODEL`).
 
 ## Key Features
 
@@ -29,6 +29,7 @@ docker compose up -d
 That builds and starts the whole self-hosted stack — the unified Next.js app (`app`, port 3000) and Postgres (`database`, port 5432). Postgres starts with no pre-baked schema; a one-shot `migrate` service (the Dockerfile's `migrator` stage) applies the Drizzle migrations and `app` starts only after it succeeds. Re-running `docker compose up -d` on an existing volume is a no-op for migrations.
 
 - **Web app:** http://localhost:3000
+- If a build fails with a message mentioning `next/font/google`, that is a network flake fetching Google Fonts: rerun `docker compose up -d --build`.
 - **First-run setup:** open http://localhost:3000/register to create the initial organization, admin user, and team. (The landing page and `/dashboard` redirect to `/login`, not to setup.)
 
 ### Local dev (without Docker for the app)

@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   deprecatePromptAction,
+  acceptImprovementDraftAction,
+  dismissImprovementDraftAction,
   markFeedbackAddressedAction,
+  requestImprovementDraftAction,
+  setThirdPartyOptInAction,
   forkSkillForSelfAction,
   getSkillChainRunAction,
   listSkillChainRunsAction,
@@ -115,6 +119,26 @@ export function PromptDetail({ data }: PromptDetailProps) {
         onMarkFeedbackAddressed={async (feedbackId, versionId) => {
           await markFeedbackAddressedAction(data.name, feedbackId, versionId);
           router.refresh();
+        }}
+        onRequestDraft={async (versionId) => {
+          const result = await requestImprovementDraftAction(data.name, versionId);
+          router.refresh();
+          return result;
+        }}
+        onAcceptDraft={async (draftId) => {
+          const result = await acceptImprovementDraftAction(data.name, draftId);
+          router.refresh();
+          return result;
+        }}
+        onDismissDraft={async (draftId) => {
+          const result = await dismissImprovementDraftAction(data.name, draftId);
+          router.refresh();
+          return result;
+        }}
+        onSetThirdPartyOptIn={async (enabled) => {
+          const result = await setThirdPartyOptInAction(data.name, enabled);
+          router.refresh();
+          return result;
         }}
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}

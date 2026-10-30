@@ -11,7 +11,13 @@ import {
   listSubscriptionsForSkill,
   listVersions,
 } from "@/bcs/prompt-registry";
-import { listFeedbackForSkill } from "@/bcs/distribution";
+import {
+  getThirdPartyOptIn,
+  lineDiff,
+  listFeedbackForSkill,
+  listImprovementDrafts,
+  resolveEnvDrafter,
+} from "@/bcs/distribution";
 import { resolveAllPolicies } from "@/bcs/governance";
 import { authenticateSession, listTeams, listUsers } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
@@ -46,6 +52,10 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
         countForksOfSkill(tx, user.orgId, prompt.id),
         listFeedbackForSkill(tx, user.orgId, prompt.id),
       ]);
+    const [drafts, draftingOptedIn] = await Promise.all([
+      listImprovementDrafts(tx, user.orgId, prompt.id),
+      getThirdPartyOptIn(tx, user.orgId),
+    ]);
 
     const userNameById = new Map(users.map((u) => [u.id, u.displayName]));
     const teamNameById = new Map(teams.map((t) => [t.id, t.name]));
@@ -200,6 +210,39 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
         // Same rule as transferring ownership: the user owner, the owning team's owner, or an org admin.
         canTriage: canTransferOwnership,
         versionOptions: sortedVersions.map((v) => ({ id: v.id, version: v.version })),
+        drafts: drafts.map((draft) => {
+          const base = versions.find((v) => v.id === draft.baseVersionId);
+          const baseContent = base?.files.find((f) => f.isMain)?.content ?? "";
+          return {
+            id: draft.id,
+            version: base?.version ?? "?",
+            status: draft.status,
+            rationale: draft.rationale,
+            model: draft.model,
+            noteCount: draft.sourceFeedbackIds.length,
+            createdAt: draft.createdAt.toISOString().slice(0, 16).replace("T", " "),
+            acceptedVersion: draft.acceptedVersionId
+              ? (versions.find((v) => v.id === draft.acceptedVersionId)?.version ?? null)
+              : null,
+            diff: lineDiff(baseContent, draft.proposedContent),
+          };
+        }),
+        draftableVersions: canTransferOwnership
+          ? feedbackSummary.byVersion.flatMap((row) => {
+              const v = versions.find((candidate) => candidate.id === row.versionId);
+              const openNotes = feedbackSummary.notes.filter(
+                (n) => n.versionId === row.versionId && n.addressedAt === null,
+              ).length;
+              return v && v.kind === "template" && v.files.some((f) => f.isMain) && openNotes > 0
+                ? [{ id: v.id, version: v.version, openNotes }]
+                : [];
+            })
+          : [],
+        drafting: {
+          configured: resolveEnvDrafter() !== null,
+          optedIn: draftingOptedIn,
+          canChangeOptIn: user.role === "admin",
+        },
       },
       shareState: {
         users: users

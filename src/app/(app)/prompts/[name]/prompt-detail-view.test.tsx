@@ -88,6 +88,9 @@ const baseData: PromptDetailData = {
       { id: "v2-id", version: "2" },
       { id: "v1-id", version: "1" },
     ],
+    drafts: [],
+    draftableVersions: [],
+    drafting: { configured: true, optedIn: true, canChangeOptIn: true },
   },
 };
 
@@ -107,6 +110,10 @@ const baseProps = {
   runStepsByRunId: {},
   onRequestRunSteps: vi.fn(),
   onMarkFeedbackAddressed: vi.fn(),
+  onRequestDraft: vi.fn(),
+  onAcceptDraft: vi.fn(),
+  onDismissDraft: vi.fn(),
+  onSetThirdPartyOptIn: vi.fn(),
 };
 
 describe("PromptDetailView", () => {
@@ -414,9 +421,53 @@ describe("PromptDetailView", () => {
       "Mark addressed",
     );
 
-    const empty = { ...baseData, feedback: { versions: [], notes: [], canTriage: true, versionOptions: [] } };
+    const empty = { ...baseData, feedback: { ...baseData.feedback, versions: [], notes: [], canTriage: true, versionOptions: [] } };
     expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={empty} activeTab="feedback" />)).toContain(
       "No feedback yet.",
     );
+  });
+
+  const pendingDraft = {
+    id: "d1",
+    version: "1",
+    status: "pending" as const,
+    rationale: "Adds sourcing guidance.",
+    model: "anthropic/claude-sonnet-5-5",
+    noteCount: 2,
+    createdAt: "2026-10-30 12:00",
+    acceptedVersion: null,
+    diff: [
+      { type: "same" as const, text: "Be brief." },
+      { type: "add" as const, text: "Always cite sources." },
+    ],
+  };
+
+  it("offers drafting per version with open notes, and shows a pending draft's diff with accept/dismiss", () => {
+    const data = {
+      ...baseData,
+      feedback: { ...baseData.feedback, drafts: [pendingDraft], draftableVersions: [{ id: "v1-id", version: "1", openNotes: 2 }] },
+    };
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={data} activeTab="feedback" />);
+
+    expect(html).toContain("Draft improvement for 1 (2 open)");
+    expect(html).toContain("Adds sourcing guidance.");
+    expect(html).toContain("+ ");
+    expect(html).toContain("Always cite sources.");
+    expect(html).toContain("Accept as new version");
+    expect(html).toContain("Dismiss");
+  });
+
+  it("explains why drafting is unavailable: no provider, or no opt-in (admins get the button)", () => {
+    const withDraftable = { draftableVersions: [{ id: "v1-id", version: "1", openNotes: 2 }] };
+    const noProvider = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: false, optedIn: false, canChangeOptIn: true } } };
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={noProvider} activeTab="feedback" />)).toContain("ANTHROPIC_API_KEY");
+
+    const notOptedIn = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: true, optedIn: false, canChangeOptIn: true } } };
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={notOptedIn} activeTab="feedback" />);
+    expect(html).toContain("Allow for this organization");
+    expect(html).not.toContain("Draft improvement for");
+
+    const member = { ...notOptedIn, feedback: { ...notOptedIn.feedback, drafting: { configured: true, optedIn: false, canChangeOptIn: false } } };
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={member} activeTab="feedback" />)).toContain("Ask an admin");
   });
 });

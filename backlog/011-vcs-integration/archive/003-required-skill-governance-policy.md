@@ -1,7 +1,7 @@
 ---
 epic: 011-vcs-integration
 feature: 003-required-skill-governance-policy
-status: open
+status: done
 dependencies: []
 ---
 
@@ -11,13 +11,13 @@ dependencies: []
 
 ## Requirements
 
-- [ ] `backlog/006-prompt-registry/007-project-skill-assignment.md` is done — this feature has no work of its own beyond confirming that dependency and wiring VCS Integration's calls to it.
-- [ ] `src/bcs/vcs-integration/` calls `listRequiredSkillsForProject(orgId, projectId)` from Prompt Registry's contract — never Governance, and never a direct `prompt_registry.*` table query.
+- [x] `backlog/006-prompt-registry/007-project-skill-assignment.md` is done — this feature has no work of its own beyond confirming that dependency and wiring VCS Integration's calls to it.
+- [x] `src/bcs/vcs-integration/` calls `listRequiredSkillsForProject(orgId, projectId)` from Prompt Registry's contract — never Governance, and never a direct `prompt_registry.*` table query.
 
 ## Acceptance Criteria
 
-- [ ] `listRequiredSkillsForProject` requires no `userId` argument and produces a correct result purely from `orgId`/`projectId` (unchanged expectation from the original design, just a different owning BC).
-- [ ] No import of anything from `src/bcs/governance/` appears anywhere in `src/bcs/vcs-integration/` for this purpose.
+- [x] `listRequiredSkillsForProject` requires no `userId` argument and produces a correct result purely from `orgId`/`projectId` (unchanged expectation from the original design, just a different owning BC).
+- [x] No import of anything from `src/bcs/governance/` appears anywhere in `src/bcs/vcs-integration/` for this purpose.
 
 ## Open Questions
 
@@ -32,3 +32,7 @@ dependencies: []
 
 - See `src/bcs/prompt-registry/CONTRACT.md`'s `listRequiredSkillsForProject`/`assignSkillToProject` rows and `src/bcs/vcs-integration/CONTRACT.md`'s updated Events Consumed section — both already updated per PDR-016, this feature (now essentially a dependency-tracking stub) just confirms the wiring once 007 is implemented.
 - This file is kept (not deleted) rather than silently removed, per this repo's convention of tracking design pivots explicitly rather than erasing the backlog trail — see PDR-016's "Related changes" list.
+
+## Done 2026-10-30
+
+Confirmed: `listRequiredSkillsForProject(db, orgId, projectId)` is exported by Prompt Registry (no user argument) and covered by its own tests; `src/bcs/vcs-integration/no-governance-import.test.ts` guards the no-Governance-import criterion. The actual call is wired in 005.

@@ -122,6 +122,29 @@ export interface PromptDetailData {
     /** Owner, owning team's owner, or org admin: may mark notes addressed. */
     canTriage: boolean;
     versionOptions: Array<{ id: string; version: string }>;
+    /** Model-drafted improvements (016/004), newest first. */
+    drafts: Array<{
+      id: string;
+      version: string;
+      status: "pending" | "accepted" | "dismissed";
+      rationale: string;
+      model: string;
+      noteCount: number;
+      createdAt: string;
+      acceptedVersion: string | null;
+      /** Line diff of the base version's main file against the proposal (mirrors the distribution `DiffLine`; not imported, to keep server code out of the client bundle). */
+      diff: Array<{ type: "same" | "add" | "del"; text: string }>;
+    }>;
+    /** Versions an owner may draft from: template skills with open (unaddressed) notes. */
+    draftableVersions: Array<{ id: string; version: string; openNotes: number }>;
+    drafting: {
+      /** An operator model provider is configured. */
+      configured: boolean;
+      /** The organization has allowed sending skill text to it. */
+      optedIn: boolean;
+      /** The viewer is an org admin and may change the opt-in. */
+      canChangeOptIn: boolean;
+    };
   };
   /** Skills the current user can access — powers the chain step builder's target-skill picker (FR-011). */
   accessibleSkillNames: string[];
@@ -148,7 +171,13 @@ export interface PromptDetailViewProps {
   runStepsByRunId: Record<string, ChainRunStepView[] | undefined>;
   onRequestRunSteps: (runId: string) => void;
   onMarkFeedbackAddressed: (feedbackId: string, versionId: string) => void;
+  onRequestDraft: (versionId: string) => Promise<DraftActionResult>;
+  onAcceptDraft: (draftId: string) => Promise<DraftActionResult>;
+  onDismissDraft: (draftId: string) => Promise<DraftActionResult>;
+  onSetThirdPartyOptIn: (enabled: boolean) => Promise<DraftActionResult>;
 }
+
+export type DraftActionResult = { ok: true } | { ok: false; error: string };
 
 const POLICY_BADGE: Record<string, "blue" | "violet" | "green" | "red"> = {
   prepend: "blue",
@@ -186,6 +215,10 @@ export function PromptDetailView({
   runStepsByRunId,
   onRequestRunSteps,
   onMarkFeedbackAddressed,
+  onRequestDraft,
+  onAcceptDraft,
+  onDismissDraft,
+  onSetThirdPartyOptIn,
 }: PromptDetailViewProps) {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(new Set());
@@ -587,7 +620,14 @@ export function PromptDetailView({
 
         {/* Always mounted (hidden when inactive) so the panel stays testable without clicking tabs. */}
         <div hidden={activeTab !== "feedback"}>
-          <FeedbackPanel feedback={data.feedback} onMarkAddressed={onMarkFeedbackAddressed} />
+          <FeedbackPanel
+            feedback={data.feedback}
+            onMarkAddressed={onMarkFeedbackAddressed}
+            onRequestDraft={onRequestDraft}
+            onAcceptDraft={onAcceptDraft}
+            onDismissDraft={onDismissDraft}
+            onSetThirdPartyOptIn={onSetThirdPartyOptIn}
+          />
         </div>
 
         {activeTab === "runs" ? (

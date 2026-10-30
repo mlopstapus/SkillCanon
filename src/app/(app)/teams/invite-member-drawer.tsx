@@ -8,7 +8,7 @@ export type InviteMemberDrawerProps = {
   teamId: string;
   teamName: string;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (email: string) => void;
 };
 
 export function InviteMemberDrawer({
@@ -28,7 +28,7 @@ export function InviteMemberDrawer({
     startTransition(async () => {
       const result = await inviteMemberAction({ teamId, email, role });
       if (result.ok) {
-        onSuccess();
+        onSuccess(email);
       } else {
         setError(result.error);
       }
