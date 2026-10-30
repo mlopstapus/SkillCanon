@@ -492,6 +492,10 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     const missing = await callRaw("sh-run", { name: "no-such-skill" });
     expect(missing.isError).toBe(true);
     expect(missing.content[0]?.text).toContain("not found");
+    // Admin tools are listed but refuse a key without the governance scope.
+    const admin = await callRaw("sh-admin-policy-list", { team_id: "x" });
+    expect(admin.isError).toBe(true);
+    expect(admin.content[0]?.text).toContain("governance:read");
   });
 
   it("revokes the API key", async () => {
@@ -552,6 +556,57 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       expect(newPageErrors()).toEqual([]);
     },
   );
+
+  it("reaches the primary navigation and opens a page using only the keyboard (015/007)", async () => {
+    await goto("/dashboard");
+    await page.waitForLoadState("networkidle");
+    const focusedName = () =>
+      page.evaluate(() => (document.activeElement as HTMLElement | null)?.textContent?.trim() ?? "");
+    let reached = false;
+    for (let i = 0; i < 40 && !reached; i++) {
+      await page.keyboard.press("Tab");
+      reached = (await focusedName()) === "Teams";
+    }
+    expect(reached).toBe(true);
+    await page.keyboard.press("Enter");
+    await page.waitForURL(/\/teams$/);
+  });
+
+  it("authors a chain in the UI from existing skills, then transfers it to a team (015/007)", async () => {
+    const CHAIN = "release-chain";
+    await goto("/prompts");
+    await page.getByRole("button", { name: "+ New skill" }).click();
+    await drawer().getByPlaceholder("release-notes-gen").fill(CHAIN);
+    await drawer().getByRole("button", { name: "Create skill" }).click();
+    await page.waitForURL(`**/prompts/${CHAIN}`);
+
+    await page.getByRole("button", { name: "+ New version" }).click();
+    await drawer().getByRole("button", { name: "Chain", exact: true }).click();
+    await drawer().getByRole("button", { name: "+ Add first step" }).click();
+    await drawer().getByLabel("Step 1 skill").selectOption(SKILL);
+    await drawer().getByRole("button", { name: "Publish version" }).click();
+    await expect.poll(() => page.getByText(/^1 · active/).isVisible()).toBe(true);
+    await page.getByRole("button", { name: /^Steps \(1\)/ }).click();
+    await expect.poll(() => page.getByText(SKILL).first().isVisible()).toBe(true);
+
+    // Ownership transfer to the sub-team created earlier.
+    await page.getByRole("button", { name: "Transfer ownership" }).click();
+    await drawer().getByRole("button", { name: "Teams", exact: true }).click();
+    await drawer().getByRole("button", { name: "Data Platform" }).click();
+    await drawer().getByRole("button", { name: "Transfer ownership" }).click();
+    await expect.poll(() => drawer().count()).toBe(0);
+    await expect.poll(() => page.getByText("Data Platform").first().isVisible()).toBe(true);
+  });
+
+  it("sends an invitation from the team's members tab and confirms it (015/007)", async () => {
+    await goto("/teams");
+    await page.getByRole("button", { name: "Members" }).click();
+    await page.getByRole("button", { name: "+ invite by email" }).click();
+    await drawer().getByPlaceholder("jamie@example.com").fill("jamie@example.test");
+    await drawer().getByRole("button", { name: "Send invite" }).click();
+    await expect.poll(() => drawer().count()).toBe(0);
+    await expect.poll(() => page.getByText("Invitation sent to jamie@example.test.").isVisible()).toBe(true);
+  });
 
   it("opens and closes the navigation at phone width", async () => {
     await page.setViewportSize({ width: 375, height: 812 });
