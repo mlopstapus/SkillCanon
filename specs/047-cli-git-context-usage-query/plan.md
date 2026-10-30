@@ -1,0 +1,2 @@
+# Plan
+Distribution: `normalizeGitRemoteUrl` (domain), applied in the usage insert along with lower-casing the sha; `queryUsageByRepoAndCommits` application function + repo query (org filter, 2xx only). CLI: `git-context.ts` (execFile git with 2 s timeout, credentials stripped) and `expandSkill` sends non-null fields. No migration. Tests: Testcontainers for query/normalization/tenancy; CLI tests with real temp git repos.

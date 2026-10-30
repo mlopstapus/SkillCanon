@@ -1,4 +1,5 @@
 import type { Command } from "commander";
+import { readGitContext } from "../git-context.js";
 import { readProjectLink } from "../config/project-link.js";
 import { readCredentials } from "../config/credentials.js";
 import { readSyncManifest, writeSyncManifest } from "../config/sync-manifest.js";
@@ -59,7 +60,7 @@ export async function runRunWithServe(repoRoot: string, slug: string): Promise<{
   const credentials = readCredentials(repoRoot);
   const options = { server: link.server, apiKey: credentials.apiKey };
   try {
-    const result = await expandSkill(options, slug);
+    const result = await expandSkill(options, slug, readGitContext(repoRoot));
     const text = formatExpansion(result);
     if (!result.serveId || !result.contentDigest) return { text };
     const version = result.version ?? "unknown";

@@ -370,3 +370,65 @@ export const skillChainRunSteps = promptRegistrySchema.table(
     unique("skill_chain_run_steps_run_id_step_index_unique").on(table.runId, table.stepIndex),
   ],
 );
+
+/**
+ * One central eval run for a skill version (017/003, PDR-020). Results are
+ * keyed by `content_digest` and never compared across digests.
+ */
+export const evalRuns = promptRegistrySchema.table(
+  "eval_runs",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    promptId: uuid("prompt_id").notNull(),
+    promptVersionId: uuid("prompt_version_id").notNull(),
+    contentDigest: text("content_digest").notNull(),
+    /** `<provider>/<model-id>` entries. */
+    models: jsonb("models").$type<string[]>().notNull(),
+    judge: text("judge"),
+    status: text("status", { enum: ["queued", "running", "succeeded", "failed"] })
+      .notNull()
+      .default("queued"),
+    error: text("error"),
+    requestedBy: uuid("requested_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("eval_runs_organization_id_prompt_version_id_index").on(table.organizationId, table.promptVersionId),
+  ],
+);
+
+/** One case × model outcome of an eval run. */
+export const evalResults = promptRegistrySchema.table(
+  "eval_results",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    runId: uuid("run_id")
+      .notNull()
+      .references(() => evalRuns.id),
+    model: text("model").notNull(),
+    caseId: text("case_id").notNull(),
+    passed: boolean("passed").notNull(),
+    scorePct: integer("score_pct"),
+    latencyMs: integer("latency_ms"),
+    tokens: integer("tokens"),
+    error: text("error"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("eval_results_run_id_index").on(table.runId)],
+);
+
+/**
+ * Per-organization eval opt-in (PDR-020, Ben's answer 5). Opting in to evals
+ * is also the opt-in to sending skill content and case data to the operator's
+ * third-party providers. No row means not opted in.
+ */
+export const evalSettings = promptRegistrySchema.table("eval_settings", {
+  organizationId: organizationId().primaryKey(),
+  enabled: boolean("enabled").notNull().default(false),
+  updatedBy: uuid("updated_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
