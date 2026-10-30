@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { EffectiveObjective, EffectiveObjectiveSet, EffectivePolicy, EffectivePolicySet } from "@/bcs/governance";
+import type { InterviewDraft } from "@/bcs/distribution";
+import { AiDraftPanel } from "./ai-draft-panel";
 import {
   createObjectiveAction,
   createPolicyAction,
@@ -20,8 +22,8 @@ import type { Team } from "@/bcs/identity-access";
 
 type DrawerState =
   | { kind: "none" }
-  | { kind: "policy"; mode: "create" | "edit"; policy?: EffectivePolicy }
-  | { kind: "objective"; mode: "create" | "edit"; objective?: EffectiveObjective };
+  | { kind: "policy"; mode: "create" | "edit"; policy?: EffectivePolicy; prefill?: PolicyFormValues }
+  | { kind: "objective"; mode: "create" | "edit"; objective?: EffectiveObjective; prefill?: ObjectiveFormValues };
 
 export interface GovernancePageProps {
   routeTeamId: string;
@@ -57,8 +59,17 @@ export function GovernancePage({ routeTeamId, initialTab, initialScope, teamsByI
         .join("   ›   ")
     : initialScope.label;
 
+  function useDraft(draft: InterviewDraft) {
+    setDrawer(
+      draft.kind === "policy"
+        ? { kind: "policy", mode: "create", prefill: { name: draft.name, enforcementType: draft.enforcementType, priority: 30, content: draft.content } }
+        : { kind: "objective", mode: "create", prefill: { title: draft.title, description: draft.description } },
+    );
+  }
+
   return (
     <>
+      <AiDraftPanel onUseDraft={useDraft} />
       <GovernanceView
         scope={initialScope}
         breadcrumb={breadcrumb}
@@ -94,7 +105,7 @@ export function GovernancePage({ routeTeamId, initialTab, initialScope, teamsByI
                   priority: drawer.policy.priority,
                   content: drawer.policy.content,
                 }
-              : undefined
+              : drawer.prefill
           }
           onClose={() => setDrawer({ kind: "none" })}
           onSubmit={async (values: PolicyFormValues) => {
@@ -119,7 +130,7 @@ export function GovernancePage({ routeTeamId, initialTab, initialScope, teamsByI
           initialValues={
             drawer.objective
               ? { title: drawer.objective.title, description: drawer.objective.description ?? "" }
-              : undefined
+              : drawer.prefill
           }
           onClose={() => setDrawer({ kind: "none" })}
           onSubmit={async (values: ObjectiveFormValues) => {

@@ -50,6 +50,14 @@ export type { McpCaller, McpSessionCleanupOptions } from "./application/mcp-sess
 
 export { MCP_TOOL_NAMES, invokeMcpTool, parseLegacyInput, textResult, toolDescriptions, toolInputSchemas } from "./application/mcp-tools";
 export type { Db, McpToolContext, McpToolName } from "./application/mcp-tools";
+export {
+  AiNotEnabledError,
+  AiPoolNotConfiguredError,
+  runGovernanceInterview,
+  type InterviewDraft,
+  type InterviewMessage,
+  type InterviewResult,
+} from "./application/governance-interview";
 
 export {
   acceptImprovementDraft,

@@ -19,6 +19,7 @@ import {
   type PolicyEnforcementType,
   type PolicyScopeVerifier,
 } from "@/bcs/governance";
+import { runGovernanceInterview, type InterviewDraft, type InterviewMessage } from "@/bcs/distribution";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -208,6 +209,26 @@ export async function deleteObjectiveAction(params: {
     );
     revalidateGovernance(params.routeTeamId);
     return { ok: true };
+  } catch (err) {
+    return { ok: false, error: errorMessage(err) };
+  }
+}
+
+export type InterviewActionResult =
+  | { ok: true; reply: string; drafts: InterviewDraft[] }
+  | { ok: false; error: string };
+
+/** One turn of the AI policy/tenet interview. Drafts only — the human applies one via the normal create actions. */
+export async function interviewAction(messages: InterviewMessage[]): Promise<InterviewActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    if (actingUser.role !== "admin") {
+      return { ok: false, error: "Only an organization admin can use the AI assistant." };
+    }
+    const result = await withTenantContext(db, actingUser.orgId, (tx) =>
+      runGovernanceInterview(tx, { organizationId: actingUser.orgId, userId: actingUser.id }, messages),
+    );
+    return { ok: true, reply: result.reply, drafts: result.drafts };
   } catch (err) {
     return { ok: false, error: errorMessage(err) };
   }
