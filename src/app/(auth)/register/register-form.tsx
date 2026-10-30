@@ -15,18 +15,23 @@ type RegisterFormViewProps = {
   action: (formData: FormData) => void;
 };
 
+/** Shown instead of the form once the instance has its organization: joining is by invitation only. */
+export function InviteOnlyNotice() {
+  return (
+    <TerminalState
+      heading="Access is by invitation"
+      message="This instance already has its organization. Ask an admin to send you an invitation, then use the link in it to join. If you already have an account, sign in."
+      buttonLabel="Go to sign in"
+      href="/login"
+      tone="accent"
+      icon={<ShieldCheckIcon className="h-6 w-6" />}
+    />
+  );
+}
+
 export function RegisterFormView({ state, action }: RegisterFormViewProps) {
   if (state.status === "blocked") {
-    return (
-      <TerminalState
-        heading="This instance already has an organization"
-        message="Self-hosted instances support exactly one organization for their entire lifetime, and this one already has an admin account. Sign in with that account to continue — registering again from here isn't possible."
-        buttonLabel="Go to sign in"
-        href="/login"
-        tone="accent"
-        icon={<ShieldCheckIcon className="h-6 w-6" />}
-      />
-    );
+    return <InviteOnlyNotice />;
   }
 
   return (
@@ -42,7 +47,7 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
 
         <fieldset className="grid gap-4">
           <legend className="mb-1 font-display text-lg font-semibold text-text">Organization</legend>
-          <TextField label="Organization name" name="orgName" required icon={<OrgIcon className="h-4 w-4" />} placeholder="Acme Ops" />
+          <TextField label="Organization name" name="orgName" defaultValue="Tribe" required icon={<OrgIcon className="h-4 w-4" />} placeholder="Acme Ops" />
           <TextField label="Root team name" name="teamName" required icon={<TeamIcon className="h-4 w-4" />} placeholder="Platform" />
         </fieldset>
 
