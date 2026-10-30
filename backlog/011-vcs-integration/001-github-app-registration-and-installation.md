@@ -32,6 +32,7 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 
 ## Decisions
 
+- App ownership (Ben, 2026-10-30): the GitHub App lives under a personal GitHub account (`mlopstapus`), not an org: README setup assumes a user-owned App ("Only on this account", "Any account" optional), no org-level permissions, no hard-coded owner; a later transfer to an org needs no code change.
 - `installation.deleted`: SOFT delete (`deleted_at`), not hard delete — hard FKs from repo links and PR checks would otherwise block it and lose history. Suspend/unsuspend/deleted/token-refusal and replay are covered by tests with a stubbed GitHub; the live-App criteria need Ben's registered App.
 
 ## Dependencies
