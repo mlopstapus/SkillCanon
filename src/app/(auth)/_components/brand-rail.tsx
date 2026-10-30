@@ -13,7 +13,7 @@ export function BrandRail() {
         </div>
 
         <div className="max-w-xl space-y-5">
-          <p className="font-mono text-xs uppercase text-a">Skills registry</p>
+          <p className="font-mono text-xs uppercase text-text">Skills registry</p>
           <h2 className="font-display text-5xl font-semibold leading-none text-text">
             One home for the skills we ship.
           </h2>

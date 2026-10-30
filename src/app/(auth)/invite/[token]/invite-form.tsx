@@ -90,7 +90,7 @@ export function InviteFormView({ preview, state, action }: InviteFormViewProps) 
   return (
     <section className="grid gap-7">
       <div className="grid gap-3">
-        <p className="font-mono text-xs uppercase text-a">Invitation</p>
+        <p className="font-mono text-xs uppercase text-text">Invitation</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Join {preview.orgName}.</h1>
         <p className="text-sm leading-6 text-dim">
           You are invited to the {preview.teamName} team as {roleLabel(preview.role)}.

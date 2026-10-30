@@ -1,3 +1,5 @@
+> **Superseded in part by 018/003 (Tribe visual identity).** The tokens, fonts and theme model in this document describe the original SkillCanon design. The live values are in `src/app/globals.css`: Tribe paper/ink palette (light default, `html[data-theme="dark"]`), system font fallbacks until decision D5 lets the licensed Tribe faces ship, ink-tinted shadows, the house easing `cubic-bezier(0.625, 0.05, 0, 1)`. Semantic token names are unchanged.
+
 # SkillCanon — Design System
 
 A dark-first, developer-tooling aesthetic: near-black neutrals, a single teal accent, three-family type system (display / body / mono), thin hairline borders, and soft accent glows. Two surfaces exist — a **marketing** context (landing page) and an **app** context (dashboard, audit log, governance) that share the same tokens with minor additions.

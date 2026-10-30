@@ -85,7 +85,7 @@ export function Drawer({ onClose, labelledBy, widthClassName = "w-[452px]", chil
 
   return (
     <div className="fixed inset-0 z-[100]">
-      <div onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" aria-hidden="true" />
+      <div onClick={onClose} className="absolute inset-0 bg-scrim backdrop-blur-[2px]" aria-hidden="true" />
       <div
         ref={panelRef}
         role="dialog"

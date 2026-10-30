@@ -146,7 +146,7 @@ export function GovernanceView(props: GovernanceViewProps) {
         <div
           aria-hidden="true"
           onClick={() => setScopeTreeOpen(false)}
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-[100] bg-scrim backdrop-blur-[2px] md:hidden"
         />
       ) : null}
 

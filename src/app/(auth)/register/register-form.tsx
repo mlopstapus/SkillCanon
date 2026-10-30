@@ -37,7 +37,7 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
   return (
     <section className="grid gap-7">
       <div className="grid gap-3">
-        <p className="font-mono text-xs uppercase text-a">First-run setup</p>
+        <p className="font-mono text-xs uppercase text-text">First-run setup</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Set up SkillCanon for Tribe.</h1>
         <p className="text-sm leading-6 text-dim">Create the Tribe organization, its root team and the first admin. After this, access is by invitation.</p>
       </div>
