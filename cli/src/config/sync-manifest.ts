@@ -5,6 +5,14 @@ import { join } from "node:path";
 export interface SyncManifest {
   /** slug -> filename -> content hash (033-skill-file-format-cli-support: one hash per synced file, not one per skill). */
   stubs: Record<string, Record<string, string>>;
+  /** slug -> the most recent `run` serve (016/001), so feedback and drift checks can name the same text. */
+  serves?: Record<string, ServeRecord>;
+}
+
+export interface ServeRecord {
+  serveId: string;
+  version: string;
+  contentDigest: string;
 }
 
 const SYNC_MANIFEST_RELATIVE_PATH = join(".skillcanon", "sync-manifest.json");
@@ -24,13 +32,13 @@ export function readSyncManifest(repoRoot: string): SyncManifest {
   if (!existsSync(path)) {
     return { stubs: {} };
   }
-  const raw = JSON.parse(readFileSync(path, "utf8")) as { stubs: Record<string, unknown> };
+  const raw = JSON.parse(readFileSync(path, "utf8")) as { stubs: Record<string, unknown>; serves?: Record<string, ServeRecord> };
   const stubs: Record<string, Record<string, string>> = {};
   for (const [slug, value] of Object.entries(raw.stubs ?? {})) {
     if (typeof value === "string") continue;
     stubs[slug] = value as Record<string, string>;
   }
-  return { stubs };
+  return raw.serves ? { stubs, serves: raw.serves } : { stubs };
 }
 
 export function writeSyncManifest(repoRoot: string, manifest: SyncManifest): void {

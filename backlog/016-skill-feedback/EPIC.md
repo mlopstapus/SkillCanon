@@ -12,7 +12,7 @@ SkillCanon already writes a `distribution.prompt_usage` row per run, so most of 
 
 ## Features
 
-- [ ] [001 - Serve Id and Content Digest](001-serve-id-and-digest.md)
+- [x] [001 - Serve Id and Content Digest](archive/001-serve-id-and-digest.md)
 - [ ] [002 - Feedback Intake](002-feedback-intake.md)
 - [ ] [003 - Feedback in the Skill Page](003-feedback-in-skill-page.md)
 - [ ] [004 - Drafted Improvements](004-drafted-improvements.md) (deferred)

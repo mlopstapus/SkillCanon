@@ -1,4 +1,6 @@
 export { recordPromptUsage } from "./application/record-prompt-usage";
+export { getServe } from "./application/get-serve";
+export { computeContentDigest } from "./domain/prompt-usage";
 export { getPromptUsageSummaryForProject } from "./application/get-prompt-usage-summary-for-project";
 export { getPromptUsageSummaryForOrganization } from "./application/get-prompt-usage-summary-for-organization";
 export type {
@@ -7,6 +9,7 @@ export type {
   PromptUsageSummaryForProject,
   PromptUsageWindow,
   RecordPromptUsageParams,
+  Serve,
 } from "./domain/prompt-usage";
 
 export {

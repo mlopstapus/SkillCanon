@@ -8,6 +8,7 @@ import { withTenantContext } from "@/shared/db";
 import { seedOrgWithAdmin, type SeededOrg } from "@/shared/api/test-helpers";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { McpSessionManager, type McpCaller } from "./mcp-session";
+import { computeContentDigest } from "../domain/prompt-usage";
 import { createSyntheticSessionId, invokeMcpTool, shContext, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
 
 describe("MCP tool behavior", () => {
@@ -187,6 +188,8 @@ describe("MCP tool behavior", () => {
     const result = await shRun({ name }, ctxFor(seeded));
 
     expect(result).toContain("Ship the thing");
+    const digest = computeContentDigest("Summarize: Ship the thing");
+    expect(result).toMatch(new RegExp(`\\[Serve [0-9a-f-]{36} · version 1\\.0\\.0 · digest ${digest}\\]`));
 
     const rows = Array.from(
       await testDb.ownerDb.execute<{ resource_id: string; actor_user_id: string }>(

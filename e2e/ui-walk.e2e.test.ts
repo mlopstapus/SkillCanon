@@ -396,6 +396,20 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(body.content).toContain("Release notes v2");
     expect(body.content).toContain(POLICY.content);
     expect(body.appliedPolicies).toContain(POLICY.name);
+
+    // Every serve carries an id, version and digest of the exact text (016/001).
+    expect(body.version).toBe("2");
+    expect(body.contentDigest).toMatch(/^[0-9a-f]{64}$/);
+    const serve = await fetch(`${BASE}/api/serves/${body.serveId}`, {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+    expect(serve.status).toBe(200);
+    expect(await serve.json()).toMatchObject({
+      serveId: body.serveId,
+      skill: SKILL,
+      version: "2",
+      contentDigest: body.contentDigest,
+    });
   });
 
   it("fetches the UI-made skill over MCP", async () => {
