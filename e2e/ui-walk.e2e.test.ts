@@ -423,6 +423,20 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect((await file("00000000-0000-4000-8000-000000000000", { kind: "signal", rating: "up" })).status).toBe(404);
   });
 
+  it("shows the filed feedback on the skill page and in the skills list, and lets the owner mark it addressed (016/003)", async () => {
+    await goto("/prompts");
+    const row = page.getByRole("link", { name: new RegExp(SKILL) });
+    await expect.poll(() => row.getByTestId("down-rate").innerText()).toBe("100% (1/1)");
+
+    await openSkill(SKILL);
+    await page.getByRole("button", { name: /^Feedback \(1\)/ }).click();
+    await expect.poll(() => page.getByText("Too terse.").isVisible()).toBe(true);
+
+    await page.getByLabel("Version that addressed this note").selectOption({ label: "2" });
+    await page.getByRole("button", { name: "Mark addressed" }).click();
+    await expect.poll(() => page.getByText("addressed in 2").isVisible()).toBe(true);
+  });
+
   it("fetches the UI-made skill over MCP", async () => {
     const headers = {
       Authorization: `Bearer ${apiKey}`,

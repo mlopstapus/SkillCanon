@@ -1,12 +1,24 @@
 export { recordPromptUsage } from "./application/record-prompt-usage";
+export { getDownRates } from "./application/get-down-rates";
+export { listFeedbackForSkill } from "./application/list-feedback-for-skill";
+export { markFeedbackAddressed } from "./application/mark-feedback-addressed";
+export type { FeedbackTriager } from "./application/mark-feedback-addressed";
 export { fileFeedback } from "./application/file-feedback";
 export type { FeedbackActor } from "./application/file-feedback";
 export {
   FEEDBACK_KINDS,
   FEEDBACK_RATINGS,
+  FeedbackNotFoundError,
+  FeedbackVersionMismatchError,
   InvalidFeedbackError,
   MAX_FEEDBACK_TEXT_LENGTH,
   ServeNotFoundError,
+} from "./domain/feedback";
+export type {
+  DownRate,
+  FeedbackVersionCounts,
+  SkillFeedbackItem,
+  SkillFeedbackSummary,
 } from "./domain/feedback";
 export type { Feedback, FeedbackKind, FeedbackRating, FileFeedbackParams } from "./domain/feedback";
 export { getServe } from "./application/get-serve";

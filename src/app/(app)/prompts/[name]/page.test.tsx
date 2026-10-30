@@ -41,6 +41,9 @@ vi.mock("@/bcs/identity-access", () => ({
     { id: "t-other", name: "Other Team", ownerId: "u-other" },
   ],
 }));
+vi.mock("@/bcs/distribution", () => ({
+  listFeedbackForSkill: async () => ({ byVersion: [], notes: [] }),
+}));
 vi.mock("@/bcs/governance", () => ({ resolveAllPolicies: async () => [] }));
 vi.mock("@/bcs/prompt-registry", () => ({
   countForksOfSkill: async () => 0,
@@ -105,7 +108,10 @@ describe("PromptDetailPage ownership-transfer state", () => {
       fixture.prompt.ownerType = ownerType;
       fixture.prompt.ownerId = ownerId;
 
-      expect((await loadData()).canTransferOwnership).toBe(expected);
+      const data = await loadData();
+      expect(data.canTransferOwnership).toBe(expected);
+      // Feedback triage follows the same owner rule (016/003).
+      expect(data.feedback.canTriage).toBe(expected);
     },
   );
 });

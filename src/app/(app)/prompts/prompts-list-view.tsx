@@ -11,6 +11,8 @@ export interface PromptListRow {
   projectLabels: string[];
   ownerLabel: string;
   activeVersion: string | null;
+  /** Down ratings over rated feedback for the active version; `null` when there is no active version. */
+  downRate: { up: number; down: number; rate: number | null } | null;
   tags: string[];
   updatedAt: string;
 }
@@ -36,6 +38,11 @@ export interface PromptsListViewProps {
   onOwnerChange: (owner: string) => void;
   onClearFilters: () => void;
   onNewPrompt: () => void;
+}
+
+export function formatDownRate(downRate: PromptListRow["downRate"]): string {
+  if (!downRate || downRate.rate === null) return "—";
+  return `${Math.round(downRate.rate * 100)}% (${downRate.down}/${downRate.up + downRate.down})`;
 }
 
 export function hasActivePromptFilters(filters: PromptListFilters): boolean {
@@ -128,11 +135,12 @@ export function PromptsListView({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-[5] grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_130px_90px] gap-2.5 border-b border-border bg-bg px-6.5 py-2.5 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">
+        <div className="sticky top-0 z-[5] grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_100px_130px_90px] gap-2.5 border-b border-border bg-bg px-6.5 py-2.5 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">
           <span>Name</span>
           <span>Project</span>
           <span>Owner</span>
           <span>Version</span>
+          <span>Down-rate</span>
           <span>Tags</span>
           <span>Updated</span>
         </div>
@@ -163,7 +171,7 @@ export function PromptsListView({
             <Link
               key={row.id}
               href={`/prompts/${encodeURIComponent(row.name)}`}
-              className="grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_130px_90px] items-center gap-2.5 border-b border-border px-6.5 py-3.5 hover:bg-surface"
+              className="grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_100px_130px_90px] items-center gap-2.5 border-b border-border px-6.5 py-3.5 hover:bg-surface"
             >
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
@@ -180,6 +188,9 @@ export function PromptsListView({
               <div className="min-w-0 truncate text-[12px] font-mono text-text">{row.ownerLabel}</div>
               <div>
                 {row.activeVersion ? <Badge variant="accent">{row.activeVersion}</Badge> : null}
+              </div>
+              <div className="font-mono text-[11px] text-dim" data-testid="down-rate">
+                {formatDownRate(row.downRate)}
               </div>
               <div className="flex flex-wrap gap-1">
                 {row.tags.map((tag) => (

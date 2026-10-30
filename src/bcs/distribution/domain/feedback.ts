@@ -51,3 +51,53 @@ export function validateFeedback(params: FileFeedbackParams): string | null {
   }
   return text;
 }
+
+/** One feedback row as shown on a skill's Feedback tab, with the serve it was filed against. */
+export interface SkillFeedbackItem extends Feedback {
+  /** Label of the version that was served. */
+  version: string;
+  versionId: string;
+  addressedAt: Date | null;
+  addressedInVersionId: string | null;
+}
+
+export interface FeedbackVersionCounts {
+  version: string;
+  versionId: string;
+  up: number;
+  down: number;
+  notes: number;
+}
+
+export interface SkillFeedbackSummary {
+  /** One entry per version that has feedback. */
+  byVersion: FeedbackVersionCounts[];
+  /** Notes only, newest first. */
+  notes: SkillFeedbackItem[];
+}
+
+/** Down ratings over rated feedback for one version; `rate` is null until something is rated. */
+export interface DownRate {
+  up: number;
+  down: number;
+  rate: number | null;
+}
+
+export class FeedbackNotFoundError extends Error {
+  constructor(feedbackId: string) {
+    super(`No note found with id "${feedbackId}".`);
+    this.name = "FeedbackNotFoundError";
+  }
+}
+
+export class FeedbackVersionMismatchError extends Error {
+  constructor() {
+    super("The version must belong to the same skill the note was filed against.");
+    this.name = "FeedbackVersionMismatchError";
+  }
+}
+
+export function computeDownRate(up: number, down: number): DownRate {
+  const rated = up + down;
+  return { up, down, rate: rated === 0 ? null : down / rated };
+}
