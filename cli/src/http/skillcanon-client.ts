@@ -137,3 +137,62 @@ export async function expandSkill(
   if (!response.ok) throwForStatus(response, slug);
   return (await response.json()) as ExpansionResult;
 }
+
+/** One resolved chain step, as returned by the start and advance routes. */
+export interface ChainStep {
+  stepId: string;
+  stepIndex: number;
+  promptName: string;
+  promptVersion: string;
+  content: string;
+}
+
+export type ChainProgress = { step: ChainStep } | { done: true };
+
+export interface ChainStatusReport {
+  stepIndex: number;
+  status: "success" | "error";
+  output?: string;
+  error?: string;
+}
+
+/** The skill row, used only to learn which version is active. */
+export async function getSkill(
+  options: SkillCanonClientOptions,
+  slug: string,
+): Promise<{ activeVersionId: string | null }> {
+  const response = await request(options, `/api/skills/${encodeURIComponent(slug)}`, { method: "GET" });
+  if (!response.ok) throwForStatus(response, slug);
+  return (await response.json()) as { activeVersionId: string | null };
+}
+
+async function postJson(options: SkillCanonClientOptions, path: string, body: unknown, notFound?: string) {
+  const response = await request(options, path, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throwForStatus(response, notFound);
+  return response;
+}
+
+export async function startChainRun(
+  options: SkillCanonClientOptions,
+  slug: string,
+): Promise<{ runId: string } & ChainProgress> {
+  const response = await postJson(options, `/api/skills/${encodeURIComponent(slug)}/chain-runs`, {}, slug);
+  return (await response.json()) as { runId: string } & ChainProgress;
+}
+
+export async function advanceChainRun(
+  options: SkillCanonClientOptions,
+  runId: string,
+  report: ChainStatusReport,
+): Promise<ChainProgress> {
+  const response = await postJson(options, `/api/chain-runs/${encodeURIComponent(runId)}/advance`, report);
+  return (await response.json()) as ChainProgress;
+}
+
+export async function abandonChainRun(options: SkillCanonClientOptions, runId: string): Promise<void> {
+  await postJson(options, `/api/chain-runs/${encodeURIComponent(runId)}/abandon`, {});
+}

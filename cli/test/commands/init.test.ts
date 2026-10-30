@@ -1,9 +1,9 @@
 import { describe, expect, it, beforeAll, afterAll, beforeEach, afterEach } from "vitest";
 import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
-import { mkdtempSync, rmSync, readFileSync, existsSync, statSync } from "node:fs";
+import { mkdtempSync, rmSync, readFileSync, existsSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runInit } from "../../src/commands/init.js";
+import { isOnPath, runInit } from "../../src/commands/init.js";
 
 interface MockSkill {
   name: string;
@@ -119,5 +119,18 @@ describe("runInit", () => {
   it("rejects an invalid API key (auth failure) without writing any config", async () => {
     await expect(runInit(dir, { projectKey: projectKey(), apiKey: "sk-bad" })).rejects.toThrow();
     expect(existsSync(join(dir, ".skillcanon"))).toBe(false);
+  });
+});
+
+describe("isOnPath (014/003)", () => {
+  it("finds an executable in a PATH directory and not otherwise", () => {
+    const bin = mkdtempSync(join(tmpdir(), "skillcanon-path-"));
+    try {
+      writeFileSync(join(bin, "skillcanon"), "#!/bin/sh\n", { mode: 0o755 });
+      expect(isOnPath("skillcanon", bin)).toBe(true);
+      expect(isOnPath("skillcanon", join(bin, "nope"))).toBe(false);
+    } finally {
+      rmSync(bin, { recursive: true, force: true });
+    }
   });
 });

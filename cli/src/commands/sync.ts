@@ -69,12 +69,18 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
       const content = action.frontmatter
         ? renderMainFile({ slug: action.slug, name: action.frontmatter.name, description: action.frontmatter.description, content: action.content })
         : action.content;
-      mkdirSync(skillDir(repoRoot, action.slug), { recursive: true });
-      writeFileSync(skillFilePath(repoRoot, action.slug, action.filename), content, "utf8");
+      const unchanged = readCurrentFileContent(repoRoot, action.slug, action.filename) === content;
+      if (!unchanged) {
+        mkdirSync(skillDir(repoRoot, action.slug), { recursive: true });
+        writeFileSync(skillFilePath(repoRoot, action.slug, action.filename), content, "utf8");
+      }
       manifest.stubs[action.slug] ??= {};
       (manifest.stubs[action.slug] as Record<string, string>)[action.filename] = hashContent(content);
-      result[action.type === "create" ? "created" : "updated"].push({ slug: action.slug, filename: action.filename });
-      touchedSlugs.add(action.slug);
+      // An identical rewrite is not reported: sync lists only real changes.
+      if (!unchanged) {
+        result[action.type === "create" ? "created" : "updated"].push({ slug: action.slug, filename: action.filename });
+        touchedSlugs.add(action.slug);
+      }
     } else if (action.type === "remove") {
       rmSync(skillFilePath(repoRoot, action.slug, action.filename), { force: true });
       const trackedFiles = manifest.stubs[action.slug];
@@ -104,6 +110,22 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   return result;
 }
 
+/** One line per change, then a count; says so plainly when nothing changed. */
+export function describeSync(result: SyncResult): string {
+  const lines = [
+    ...result.created.map((f) => `added ${f.slug}/${f.filename}`),
+    ...result.updated.map((f) => `updated ${f.slug}/${f.filename}`),
+    ...result.removed.map((f) => `removed ${f.slug}/${f.filename}`),
+  ];
+  const { created, updated, removed } = result;
+  lines.push(
+    created.length + updated.length + removed.length === 0
+      ? "Already up to date."
+      : `Synced: ${created.length} added, ${updated.length} updated, ${removed.length} removed.`,
+  );
+  return lines.join("\n");
+}
+
 export function registerSyncCommand(program: Command): void {
   program
     .command("sync")
@@ -113,6 +135,7 @@ export function registerSyncCommand(program: Command): void {
     .action(async (opts: { force?: boolean; quiet?: boolean }) => {
       try {
         const result = await runSync(process.cwd(), { force: opts.force });
+        if (!opts.quiet) process.stdout.write(`${describeSync(result)}\n`);
         for (const conflict of result.conflicts) {
           const target = conflict.filename ? `${conflict.slug}/${conflict.filename}` : conflict.slug;
           process.stderr.write(`Skipped "${target}": ${conflict.reason}. Run with --force to overwrite a hand-edited file.\n`);
