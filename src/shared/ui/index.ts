@@ -13,3 +13,5 @@ export {
 } from "./table";
 export { AppState, type AppStateProps, type AppStateVariant } from "./app-state";
 export { Drawer, type DrawerProps } from "./drawer";
+export { ThemeToggle } from "./theme-toggle";
+export { THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme";

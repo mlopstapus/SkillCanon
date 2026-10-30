@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { LogoMark, Wordmark } from "@/shared/ui";
+import { LogoMark, ThemeToggle, Wordmark } from "@/shared/ui";
 import { AccountFooter, type AccountIdentity } from "./account-footer";
 
 type AppShellProps = {
@@ -56,7 +56,7 @@ export function AppShell({ children, navigation, user }: AppShellProps) {
         <div
           aria-hidden="true"
           onClick={() => setNavOpen(false)}
-          className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-[2px] md:hidden"
+          className="fixed inset-0 z-[100] bg-scrim backdrop-blur-[2px] md:hidden"
         />
       ) : null}
 
@@ -80,6 +80,10 @@ export function AppShell({ children, navigation, user }: AppShellProps) {
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto" onClick={() => setNavOpen(false)}>
           {navigation}
+        </div>
+        <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
+          <span className="font-mono text-[10px] tracking-[0.1em] text-faint uppercase">Theme</span>
+          <ThemeToggle />
         </div>
         <AccountFooter user={user} />
       </aside>

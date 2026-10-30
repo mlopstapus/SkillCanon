@@ -19,7 +19,7 @@ export function BrandRail() {
         </div>
 
         <div className="max-w-xl space-y-5">
-          <p className="font-mono text-xs uppercase text-a">Prompt control plane</p>
+          <p className="font-mono text-xs uppercase text-text">Prompt control plane</p>
           <h2 className="font-display text-5xl font-semibold leading-none text-text">
             Govern access before the first prompt ships.
           </h2>

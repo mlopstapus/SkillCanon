@@ -11,6 +11,7 @@
  */
 import { chromium, type Browser, type Page } from "playwright";
 import { mkdir } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 
 const BASE = (process.env.E2E_BASE_URL ?? "http://localhost:3000").replace(
@@ -609,6 +610,35 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await drawer().getByRole("button", { name: "Send invite" }).click();
     await expect.poll(() => drawer().count()).toBe(0);
     await expect.poll(() => page.getByText("Invitation sent to jamie@example.test.").isVisible()).toBe(true);
+  });
+
+  it("keeps the saved theme across a reload and passes colour-contrast in light and dark (018/003)", async () => {
+    const axePath = createRequire(`${process.cwd()}/`).resolve("axe-core");
+    const contrastViolations = async () => {
+      await page.addScriptTag({ path: axePath });
+      return page.evaluate(async () =>
+        (await (window as unknown as { axe: { run(o: object): Promise<{ violations: { nodes: { target: string[] }[] }[] }> } }).axe.run({ runOnly: ["color-contrast"] }))
+          .violations.flatMap((v) => v.nodes.map((n) => n.target.join(" "))),
+      );
+    };
+    for (const theme of ["light", "dark"] as const) {
+      await goto("/dashboard");
+      await page.evaluate((t) => (t === "dark" ? localStorage.setItem("skillcanon-theme", "dark") : localStorage.removeItem("skillcanon-theme")), theme);
+      for (const path of ["/dashboard", "/prompts", "/metrics", "/settings/api-keys"]) {
+        await goto(path);
+        await page.waitForLoadState("networkidle");
+        expect(await page.locator("html").getAttribute("data-theme")).toBe(theme === "dark" ? "dark" : null);
+        expect(await contrastViolations()).toEqual([]);
+      }
+    }
+    await page.evaluate(() => localStorage.removeItem("skillcanon-theme"));
+    await goto("/dashboard");
+    await page.getByRole("button", { name: "Toggle theme" }).click();
+    expect(await page.locator("html").getAttribute("data-theme")).toBe("dark");
+    await page.reload();
+    expect(await page.locator("html").getAttribute("data-theme")).toBe("dark");
+    await page.getByRole("button", { name: "Toggle theme" }).click();
+    await expect.poll(() => page.locator("html").getAttribute("data-theme")).toBeNull();
   });
 
   it("opens and closes the navigation at phone width", async () => {

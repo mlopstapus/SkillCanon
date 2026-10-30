@@ -32,7 +32,7 @@ export function RegisterFormView({ state, action }: RegisterFormViewProps) {
   return (
     <section className="grid gap-7">
       <div className="grid gap-3">
-        <p className="font-mono text-xs uppercase text-a">First-run setup</p>
+        <p className="font-mono text-xs uppercase text-text">First-run setup</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Create your instance.</h1>
         <p className="text-sm leading-6 text-dim">Set up the organization, root team, and first admin account in one pass.</p>
       </div>
