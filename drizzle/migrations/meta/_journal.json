@@ -295,6 +295,13 @@
       "when": 1793395526597,
       "tag": "0041_prompt_registry_eval_provider_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1793397378424,
+      "tag": "0042_prompt_registry_eval_worker_queue",
+      "breakpoints": true
     }
   ]
 }
