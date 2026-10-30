@@ -13,6 +13,7 @@ describe("MCP legacy tool contract", () => {
       "sh-chain-run",
       "sh-chain-advance",
       "sh-chain-abandon",
+      "sh-feedback",
       "sh-workflow-list",
       "sh-workflow-run",
     ]);

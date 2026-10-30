@@ -1,4 +1,5 @@
 import { ZodError } from "zod";
+import { InvalidFeedbackError, ServeNotFoundError } from "@/bcs/distribution";
 import {
   ApiKeyNotFoundError,
   CrossOrgReparentError,
@@ -149,6 +150,8 @@ const REGISTRY: RegistryEntry[] = [
   { ctor: InvalidVersionShapeError, code: "INVALID_SKILL_VERSION_SHAPE", status: 422 },
   { ctor: InvalidVersionFilesError, code: "INVALID_SKILL_VERSION_FILES", status: 422 },
   { ctor: ChainNotExpandableError, code: "SKILL_IS_A_CHAIN", status: 409 },
+  { ctor: ServeNotFoundError, code: "SERVE_NOT_FOUND", status: 404 },
+  { ctor: InvalidFeedbackError, code: "FEEDBACK_INVALID", status: 422 },
   { ctor: ExpansionSourceNotFoundError, code: "SKILL_EXPANSION_SOURCE_NOT_FOUND", status: 404 },
   { ctor: SourceSkillNotFoundError, code: "SKILL_NOT_FOUND", status: 404 },
   { ctor: SubscriptionNotFoundError, code: "SUBSCRIPTION_NOT_FOUND", status: 404 },

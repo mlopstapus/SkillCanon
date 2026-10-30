@@ -25,7 +25,9 @@ import {
 import { resolveEffectiveObjectives, resolveEffectivePolicies } from "@/bcs/governance";
 import { withAudit, withTenantContext } from "@/shared/db";
 import { assertCoreFeaturesEnabled } from "@/bcs/identity-access";
+import { FEEDBACK_RATINGS, InvalidFeedbackError, ServeNotFoundError } from "../domain/feedback";
 import { computeContentDigest } from "../domain/prompt-usage";
+import { fileFeedback } from "./file-feedback";
 import { recordPromptUsage } from "./record-prompt-usage";
 import { type McpCaller, type McpSessionManager, mcpSessionManager } from "./mcp-session";
 
@@ -40,6 +42,7 @@ export const MCP_TOOL_NAMES = [
   "sh-chain-run",
   "sh-chain-advance",
   "sh-chain-abandon",
+  "sh-feedback",
   // Legacy names, kept as aliases of sh-chain-list / sh-chain-run for one release.
   "sh-workflow-list",
   "sh-workflow-run",
@@ -65,6 +68,12 @@ export const toolInputSchemas = {
     error: z.string().optional().describe("What went wrong, when status is error."),
   },
   "sh-chain-abandon": { run_id: z.string().describe("The run id to abandon.") },
+  "sh-feedback": {
+    serve_id: z.string().describe("The serve id printed by sh-run ([Serve <id> · ...])."),
+    rating: z.enum(FEEDBACK_RATINGS).optional().describe("up if the skill worked, down if it did not."),
+    text: z.string().optional().describe("A note for the skill's owner: what failed or what to change."),
+    kind: z.enum(["signal", "note"]).optional().describe("Defaults to note when text is given, otherwise signal."),
+  },
   "sh-workflow-list": {},
   "sh-workflow-run": {
     name: z.string().describe("The workflow name."),
@@ -82,6 +91,8 @@ export const toolDescriptions: Record<McpToolName, string> = {
     "Start a chain run and get step 1. Do the step, then call sh-chain-advance with the run_id and your result to get the next step.",
   "sh-chain-advance": "Report the result of the current chain step and get the next step (or the end of the run).",
   "sh-chain-abandon": "Abandon an in-progress chain run.",
+  "sh-feedback":
+    "Tell the skill's owner how a run went, against the serve id from sh-run: a rating (up/down) and/or a note.",
   "sh-workflow-list": "Deprecated alias of sh-chain-list.",
   "sh-workflow-run": "Deprecated alias of sh-chain-run; input is ignored.",
 };
@@ -481,12 +492,31 @@ export async function shChainAbandon(args: { run_id: string }, ctx: McpToolConte
   return "Chain run abandoned.";
 }
 
+export async function shFeedback(
+  args: { serve_id: string; rating?: "up" | "down"; text?: string; kind?: "signal" | "note" },
+  ctx: McpToolContext,
+): Promise<string> {
+  assertCoreFeaturesEnabled();
+  const kind = args.kind ?? (args.text?.trim() ? "note" : "signal");
+  await withTenantContext(ctx.db, ctx.caller.user.orgId, (tx) =>
+    fileFeedback(
+      tx,
+      { organizationId: ctx.caller.user.orgId, userId: ctx.caller.user.id },
+      { serveId: args.serve_id, kind, rating: args.rating, text: args.text },
+      ctx.auditContext,
+    ),
+  );
+  return "Feedback recorded. Thank you.";
+}
+
 export async function invokeMcpTool(name: McpToolName, args: unknown, ctx: McpToolContext): Promise<CallToolResult> {
   try {
     return await dispatchMcpTool(name, args, ctx);
   } catch (err) {
     if (
       err instanceof McpToolError ||
+      err instanceof ServeNotFoundError ||
+      err instanceof InvalidFeedbackError ||
       err instanceof RunNotFoundError ||
       err instanceof RunAlreadyFinishedError ||
       err instanceof RunStepConflictError ||
@@ -528,6 +558,8 @@ async function dispatchMcpTool(name: McpToolName, args: unknown, ctx: McpToolCon
       return textResult(await shChainAdvance(z.object(toolInputSchemas["sh-chain-advance"]).parse(args), ctx));
     case "sh-chain-abandon":
       return textResult(await shChainAbandon(z.object(toolInputSchemas["sh-chain-abandon"]).parse(args), ctx));
+    case "sh-feedback":
+      return textResult(await shFeedback(z.object(toolInputSchemas["sh-feedback"]).parse(args), ctx));
     case "sh-workflow-run":
       return textResult(await shWorkflowRun(z.object(toolInputSchemas["sh-workflow-run"]).parse(args), ctx));
     default:

@@ -3,6 +3,8 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { RecordPromptUsageParams, Serve } from "../domain/prompt-usage";
 import { promptUsage } from "./schema";
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function insert<TSchema extends Record<string, unknown>>(
   tx: PostgresJsDatabase<TSchema>,
   params: RecordPromptUsageParams,
@@ -30,6 +32,8 @@ export async function findById<TSchema extends Record<string, unknown>>(
   organizationId: string,
   serveId: string,
 ): Promise<Serve | null> {
+  // A malformed id is "not found", not a Postgres cast error.
+  if (!UUID_PATTERN.test(serveId)) return null;
   const [row] = await tx
     .select()
     .from(promptUsage)

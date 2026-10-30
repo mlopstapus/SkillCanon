@@ -9,20 +9,16 @@ interface Params {
   serveId: string;
 }
 
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
 export async function handleGet(
   _request: Request,
   { caller, params, db }: { caller: ResolvedCaller; params: Params; db: Db },
 ) {
-  const found = UUID.test(params.serveId)
-    ? await withTenantContext(db, caller.organizationId, async (tx) => {
-        const serve = await getServe(tx, caller.organizationId, params.serveId);
-        if (!serve) return null;
-        const prompt = await getPromptById(tx, caller.organizationId, serve.promptId);
-        return { serve, skill: prompt?.name ?? null };
-      })
-    : null;
+  const found = await withTenantContext(db, caller.organizationId, async (tx) => {
+    const serve = await getServe(tx, caller.organizationId, params.serveId);
+    if (!serve) return null;
+    const prompt = await getPromptById(tx, caller.organizationId, serve.promptId);
+    return { serve, skill: prompt?.name ?? null };
+  });
   if (!found) {
     const mapped = notFoundResponse("SERVE_NOT_FOUND", "Serve not found");
     return Response.json(mapped.body, { status: mapped.status });
