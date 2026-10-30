@@ -110,7 +110,7 @@ An admin (and later UI) can list the organization's installations, active and su
 
 ## Assumptions
 
-- Registering the GitHub App itself (permissions `checks:write`, `pull_requests:read`, `contents:read`, `metadata:read`; events `installation`, `installation_repositories`, `pull_request`; a publicly reachable webhook URL) is a one-time manual step by the maintainer, documented in the README. Acceptance criteria needing a real App and a real GitHub org are "needs Ben".
+- Registering the GitHub App itself (permissions `checks:write`, `pull_requests:read`, `contents:read`, `metadata:read`; events `installation`, `installation_repositories`, `pull_request`; a publicly reachable webhook URL) is a one-time manual step by the maintainer, documented in the README. The App is owned by a personal GitHub account (decision 2026-10-30), installable on that account and its repos ("Only on this account"; "Any account" optional), with no organization-level permissions; ownership can move to an org later and nothing hard-codes the owner. Acceptance criteria needing a real App and a real GitHub org are "needs Ben".
 - A self-hosted instance has one organization, but the design keys everything by organization regardless.
 - Uninstall is a soft delete (decision: keeps PR history queryable under the codebase's hard foreign keys).
-- Only org admins can start an install.
+- Only SkillCanon organization admins can start an install.

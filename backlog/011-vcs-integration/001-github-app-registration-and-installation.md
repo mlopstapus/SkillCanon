@@ -21,7 +21,7 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 
 ## Acceptance Criteria
 
-- [ ] **Needs Ben (live App):** Installing the App on a test GitHub org creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
+- [ ] **Needs Ben (live App):** Installing the App on a test GitHub account (the owner's own account is enough) creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
 - [ ] **Needs Ben (live App):** Suspending the installation in GitHub's UI updates `suspendedAt` within one webhook delivery.
 - [x] Deleting the installation soft-deletes (decision below) the `Installation` row; it removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path.
 - [x] No installation access token or the App private key ever appears in application logs.
@@ -32,6 +32,7 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 
 ## Decisions
 
+- App ownership (Ben, 2026-10-30): the GitHub App lives under a personal GitHub account (`mlopstapus`), not an org: README setup assumes a user-owned App ("Only on this account", "Any account" optional), no org-level permissions, no hard-coded owner; a later transfer to an org needs no code change.
 - `installation.deleted`: SOFT delete (`deleted_at`), not hard delete — hard FKs from repo links and PR checks would otherwise block it and lose history. Suspend/unsuspend/deleted/token-refusal and replay are covered by tests with a stubbed GitHub; the live-App criteria need Ben's registered App.
 
 ## Dependencies
