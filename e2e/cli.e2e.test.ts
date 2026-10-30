@@ -138,7 +138,7 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
   });
 
   it("sync is idempotent", () => {
-    expect(cli("sync")).not.toMatch(/error/i);
+    expect(cli("sync")).toContain("Already up to date.");
   });
 
   it("run resolves the skill live", () => {

@@ -52,16 +52,25 @@ Sign in to the web app and go to **Settings → API keys** (`/settings/api-keys`
 
 ### Step 2: Use it
 
-**Via the `skillcanon` CLI** (`cli/` — a standalone package, published separately):
+**Via the `skillcanon` CLI** (`cli/` — a standalone package, published to GitHub Packages as `@mlopstapus/skillcanon`). GitHub Packages has no anonymous read access, so install needs a one-time registry and token setup (a GitHub token with `read:packages`; details in [`cli/README.md`](cli/README.md)):
 
 ```bash
-npx skillcanon init <project-key> <api-key>   # one-time: links this repo to a SkillCanon project
-npx skillcanon sync                            # pulls the project's governed skills into .claude/skills/
-npx skillcanon run <slug>                      # resolves and prints one skill's current governed content
+npm config set @mlopstapus:registry https://npm.pkg.github.com
+npm login --scope=@mlopstapus --registry=https://npm.pkg.github.com
+npm install -g @mlopstapus/skillcanon
+```
+
+Then, in the repo you want governed:
+
+```bash
+# --project-key is the project's own page URL in the web UI (http://localhost:3000/projects/<id>)
+skillcanon init --project-key <project-page-url> --api-key sk_YOUR_API_KEY_HERE   # one-time: links this repo
+skillcanon sync                                # syncs the project's skills into .claude/skills/ as stubs and lists what changed
+skillcanon run <slug>                          # resolves and prints one skill's current governed content
                                                # (a chain skill starts a run: follow it with `advance <runId> <stepIndex>`)
 ```
 
-`init` also wires a Claude Code session-start hook, so a linked repo's skills stay in sync automatically.
+`init` also wires a Claude Code session-start hook (`skillcanon sync --quiet`), so a linked repo's skills stay in sync automatically. The hook and the synced stubs call `skillcanon` by name, so it must be on `PATH` (`init` warns if it is not; `npx` alone is not enough).
 
 **Via REST:**
 

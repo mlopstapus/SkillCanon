@@ -11,11 +11,13 @@ The README tells users `npx skillcanon init <project-key> <api-key>`. Neither ha
 
 ## Requirements
 
-- [ ] The CLI installs without GitHub Packages auth: publish to npmjs.com (it is Apache-2.0) or document the `.npmrc` step. Today `publishConfig` is `access: restricted` on `npm.pkg.github.com`.
-- [ ] README usage matches the CLI: it takes `--project-key <project page URL>` and `--api-key`, not two positional arguments.
-- [ ] The SessionStart hook `init` writes (`skillcanon sync --quiet`) works when the CLI was run through `npx` and is not on `PATH`. Either write an `npx` form or have `init` warn.
-- [ ] `sync` prints what it added, updated and removed, not only what it skipped.
+- [x] The CLI installs without GitHub Packages auth: publish to npmjs.com (it is Apache-2.0) or document the `.npmrc` step. Today `publishConfig` is `access: restricted` on `npm.pkg.github.com`. (D3: stays on GitHub Packages; the registry and token step is documented in both READMEs. No npm publish.)
+- [x] README usage matches the CLI: it takes `--project-key <project page URL>` and `--api-key`, not two positional arguments.
+- [x] The SessionStart hook `init` writes (`skillcanon sync --quiet`) works when the CLI was run through `npx` and is not on `PATH`. Either write an `npx` form or have `init` warn.
+- [x] `sync` prints what it added, updated and removed, not only what it skipped.
 
 ## Acceptance Criteria
 
 - [ ] On a machine with no prior setup, the README's CLI commands succeed verbatim against a local instance.
+
+Left open: the acceptance criterion needs a published package and a tester's read:packages token, which this session could not verify. Tick it after someone runs the README's install and init commands on a clean machine.
