@@ -1,0 +1,5 @@
+- [x] T001 getComplianceSummaryForProject + listRecentPrChecksForProject
+- [x] T002 Checks page + view + empty states
+- [x] T003 Links between project page, checks, and GitHub settings
+- [x] T004 Tests
+- [x] T005 CONTRACT/backlog

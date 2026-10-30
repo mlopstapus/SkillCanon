@@ -1,0 +1,5 @@
+- [x] T001 normalizeGitRemoteUrl + insert normalization
+- [x] T002 queryUsageByRepoAndCommits + export
+- [x] T003 CLI readGitContext + expand tagging
+- [x] T004 Tests (distribution + CLI)
+- [x] T005 CONTRACT, backlog

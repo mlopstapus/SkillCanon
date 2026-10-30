@@ -29,6 +29,14 @@ Placeholder for a paid-tier feature that uses AI to automatically summarize an o
 - Does this overlap with `003-audit-compliance`'s existing usage/audit data in a way that should reuse its query paths rather than duplicating them?
 - Should this be exposed as an MCP tool (feature `001`) too, so an external AI client can pull the same aggregate view, or is it in-app-only?
 
+## Questions for Ben (wave 5) — building to these defaults
+
+1. Input: **default** objective titles and descriptions only (no audit or usage data).
+2. Scope: **default** per team (its effective objectives), plus an org-wide rollup for admins only; always through the caller's tenant context.
+3. Freshness: **default** cached in a table keyed by a hash of the input objectives, regenerated on demand when the hash changes; never a model call per page view.
+4. Provider, opt-in and cost: **default** same as 002.
+5. MCP: **default** also a read-only `sh-admin-objective-summary` tool, returning the cached summary only.
+
 ## Dependencies
 
 - `backlog/005-governance/002-objective-model-and-crud.md`

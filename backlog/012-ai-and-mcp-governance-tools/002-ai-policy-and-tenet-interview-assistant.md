@@ -28,6 +28,15 @@ Placeholder for a paid-tier feature that helps a team turn a loose, conversation
 - How does this interact with the hierarchical resolution engine (`005-governance/003-hierarchical-resolution-engine.md`) — does the assistant need to be aware of inherited team/org policies to avoid proposing conflicting or redundant ones?
 - Should "propose/apply a policy" call the same underlying application-layer function that feature `001`'s MCP tools wrap, so an external AI client (via MCP) and this in-app assistant enforce identical rules instead of two independently-maintained code paths?
 
+## Questions for Ben (wave 5) — building to these defaults
+
+1. Interview shape: **default** a multi-turn chat panel on the Governance page; the assistant asks questions, then returns draft policies/objectives.
+2. Safety: **default** the assistant only ever produces drafts. A human reviews, edits and applies each one through the existing create-policy path; nothing is auto-applied.
+3. Provider and keys: **default** the lane-H eval provider pool (admin page, Anthropic + OpenAI); no second key store. **Needs Ben:** a provider key in that admin page before the assistant can run.
+4. Sending org data to a third party: **default** the same per-org opt-in as evals.
+5. Cost attribution: **default** log tokens per org per call in the same usage store lane H builds; no billing wiring.
+6. Awareness of inherited policies: **default** yes — the assistant is given the caller's effective policies so it avoids duplicates.
+
 ## Dependencies
 
 - `backlog/005-governance/001-policy-model-and-crud.md`

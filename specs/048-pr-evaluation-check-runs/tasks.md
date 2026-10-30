@@ -1,0 +1,7 @@
+- [x] T001 pr_checks schema + migration 0038
+- [x] T002 GitHub client: PR commits, check run create/update
+- [x] T003 evaluate + describe (domain), evaluatePullRequestForLink, getPrCheck
+- [x] T004 Webhook pull_request dispatch + route wiring
+- [x] T005 Tests (pass/fail/update/dup/neutral/no-link/forged/history/isolation)
+- [x] T006 CONTRACT/backlog
+- [ ] T007 Live-App run on a real PR (needs Ben)
