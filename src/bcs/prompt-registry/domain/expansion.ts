@@ -73,3 +73,16 @@ export class ExpansionSourceNotFoundError extends Error {
     this.name = "ExpansionSourceNotFoundError";
   }
 }
+
+/**
+ * `expand()` was asked to expand a chain. A subclass of
+ * `ExpansionSourceNotFoundError` so existing callers still treat it as
+ * "not expandable"; REST maps it to its own 409 that names the chain-runs route.
+ */
+export class ChainNotExpandableError extends ExpansionSourceNotFoundError {
+  constructor(promptName: string) {
+    super(promptName);
+    this.message = `Skill "${promptName}" is a chain and cannot be expanded; start a run with POST /api/skills/${promptName}/chain-runs.`;
+    this.name = "ChainNotExpandableError";
+  }
+}

@@ -71,7 +71,7 @@ export function createSkillCanonMcpServer(): McpServer {
     },
     {
       instructions:
-        "SkillCanon is a skill registry. Use sh-list to see available skills, sh-search to find skills by tag or name, and sh-run to expand a specific skill. Use sh-workflow-list and sh-workflow-run to list and run chains (the tool names are kept for compatibility).",
+        "SkillCanon is a skill registry. Use sh-list to see available skills, sh-search to find skills by tag or name, and sh-run to expand a specific skill. Use sh-chain-list and sh-chain-run to start a chain, then sh-chain-advance after each step (sh-chain-abandon to stop); the older sh-workflow-* names still work.",
     },
   );
 
