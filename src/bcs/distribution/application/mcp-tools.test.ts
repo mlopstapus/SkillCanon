@@ -10,7 +10,7 @@ import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { McpSessionManager, type McpCaller } from "./mcp-session";
 import { computeContentDigest } from "../domain/prompt-usage";
 import { getPromptUsageSummaryForOrganization } from "./get-prompt-usage-summary-for-organization";
-import { createSyntheticSessionId, invokeMcpTool, shContext, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
+import { createSyntheticSessionId, invokeMcpTool, shContext, shFeedback, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
 
 describe("MCP tool behavior", () => {
   let testDb: TestDb;
@@ -199,6 +199,25 @@ describe("MCP tool behavior", () => {
     );
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({ resource_id: version.promptId, actor_user_id: seeded.adminUserId });
+  });
+
+  it("shFeedback files feedback against the serve id sh-run returned, and rejects an unknown serve as a tool error", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const name = `feedback-skill-${randomUUID()}`;
+    await publishTemplateSkill(seeded, name, "Body.");
+    const run = await shRun({ name }, ctxFor(seeded));
+    const serveId = /\[Serve ([0-9a-f-]{36}) /.exec(run)?.[1] ?? "";
+
+    expect(await shFeedback({ serve_id: serveId, text: "Too long." }, ctxFor(seeded))).toContain("recorded");
+    const rows = Array.from(
+      await testDb.ownerDb.execute<{ kind: string; text: string }>(
+        sql`select kind, text from distribution.feedback where serve_id = ${serveId}`,
+      ),
+    );
+    expect(rows).toEqual([{ kind: "note", text: "Too long." }]);
+
+    const missing = await invokeMcpTool("sh-feedback", { serve_id: randomUUID(), rating: "up" }, ctxFor(seeded));
+    expect(missing.isError).toBe(true);
   });
 
   it("shRun reports a clear error for a prompt the caller cannot see, without recording an audit event", async () => {

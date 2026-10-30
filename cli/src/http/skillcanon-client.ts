@@ -138,6 +138,29 @@ export async function expandSkill(
   return (await response.json()) as ExpansionResult;
 }
 
+export interface FeedbackInput {
+  serveId: string;
+  kind: "signal" | "note";
+  rating?: "up" | "down";
+  text?: string;
+}
+
+/** Files feedback against a serve (016/002). 404 = unknown serve id or one from another organization. */
+export async function postFeedback(options: SkillCanonClientOptions, input: FeedbackInput): Promise<void> {
+  const response = await request(options, "/api/feedback", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  if (response.ok) return;
+  if (response.status === 404) throw new Error(`No serve found with id "${input.serveId}".`);
+  if (response.status === 422) {
+    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+    throw new Error(body?.error?.message ?? "SkillCanon rejected the feedback.");
+  }
+  throwForStatus(response);
+}
+
 /** One resolved chain step, as returned by the start and advance routes. */
 export interface ChainStep {
   stepId: string;

@@ -410,6 +410,17 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
       version: "2",
       contentDigest: body.contentDigest,
     });
+
+    // Feedback attaches to that serve (016/002); an unknown serve is a 404.
+    const file = (serveId: string, payload: object) =>
+      fetch(`${BASE}/api/feedback`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ serveId, ...payload }),
+      });
+    expect((await file(body.serveId, { kind: "note", rating: "down", text: "Too terse." })).status).toBe(201);
+    expect((await file(body.serveId, { kind: "note" })).status).toBe(422);
+    expect((await file("00000000-0000-4000-8000-000000000000", { kind: "signal", rating: "up" })).status).toBe(404);
   });
 
   it("fetches the UI-made skill over MCP", async () => {

@@ -36,3 +36,27 @@ export const promptUsage = distributionSchema.table(
     index("prompt_usage_git_commit_sha_index").on(table.gitCommitSha),
   ],
 );
+
+/**
+ * Feedback filed against one serve (016/002). Stores the serve id, never a
+ * copy of the skill text. `organization_id` is carried directly for RLS.
+ */
+export const feedback = distributionSchema.table(
+  "feedback",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    serveId: uuid("serve_id")
+      .notNull()
+      .references(() => promptUsage.id),
+    userId: uuid("user_id").notNull(),
+    kind: text("kind", { enum: ["signal", "note"] }).notNull(),
+    rating: text("rating", { enum: ["up", "down"] }),
+    text: text("text"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("feedback_organization_id_created_at_index").on(table.organizationId, table.createdAt),
+    index("feedback_serve_id_index").on(table.serveId),
+  ],
+);

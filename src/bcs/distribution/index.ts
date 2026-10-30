@@ -1,4 +1,14 @@
 export { recordPromptUsage } from "./application/record-prompt-usage";
+export { fileFeedback } from "./application/file-feedback";
+export type { FeedbackActor } from "./application/file-feedback";
+export {
+  FEEDBACK_KINDS,
+  FEEDBACK_RATINGS,
+  InvalidFeedbackError,
+  MAX_FEEDBACK_TEXT_LENGTH,
+  ServeNotFoundError,
+} from "./domain/feedback";
+export type { Feedback, FeedbackKind, FeedbackRating, FileFeedbackParams } from "./domain/feedback";
 export { getServe } from "./application/get-serve";
 export { computeContentDigest } from "./domain/prompt-usage";
 export { getPromptUsageSummaryForProject } from "./application/get-prompt-usage-summary-for-project";
