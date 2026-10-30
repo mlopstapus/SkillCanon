@@ -74,11 +74,48 @@ jobs:
       - uses: actions/checkout@v4
       - run: docker build .
 
+  # Quickstart smoke test: the README path (docker compose up) followed by the
+  # browser walk and the CLI steps in e2e/. Needs a fresh database.
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --dir cli install --frozen-lockfile
+      - run: pnpm --dir cli run build
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: docker compose up -d --build
+      - name: Wait for the app
+        # curl's own --retry skips connection resets (exit 56) while the app boots.
+        run: |
+          for _ in $(seq 60); do
+            curl -fsS http://localhost:3000/api/health && exit 0
+            sleep 2
+          done
+          exit 1
+      # The browser runs in a non-UTC zone so locale-dependent rendering matches
+      # a developer's machine; on a UTC runner the audit-log hydration defect
+      # (015/007, an it.fails marker) would otherwise never show.
+      - run: pnpm test:e2e
+        env:
+          TZ: America/New_York
+      - name: Compose logs
+        if: failure()
+        run: docker compose logs
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
   # Single required check for main's branch protection (contracts/required-check.md).
   # Constituent jobs above may be renamed/split/added without touching branch
   # protection settings, as long as this job's `needs:` list is kept in sync.
   ci-gate:
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test, build, docker-build]
+    needs: [lint, typecheck, test, build, docker-build, e2e]
     steps:
       - run: echo "ci-gate passed"

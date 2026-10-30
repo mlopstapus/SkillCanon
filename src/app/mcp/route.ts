@@ -71,7 +71,7 @@ export function createSkillCanonMcpServer(): McpServer {
     },
     {
       instructions:
-        "SkillCanon is a prompt registry. Use sh-list to see available prompts, sh-search to find prompts by tag or name, and sh-run to expand a specific prompt with your input. Use sh-workflow-list and sh-workflow-run for legacy workflow-compatible skill chains.",
+        "SkillCanon is a skill registry. Use sh-list to see available skills, sh-search to find skills by tag or name, and sh-run to expand a specific skill. Use sh-workflow-list and sh-workflow-run to list and run chains (the tool names are kept for compatibility).",
     },
   );
 
