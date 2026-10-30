@@ -32,6 +32,10 @@ Rewritten for D4: "prior to any sort of merge of that skill update, we need the 
 - Override: an **org admin or the skill's owner** may activate a candidate manually; the override and its reason are audited.
 - A candidate nobody activates is **kept**.
 
+## Status
+
+Backend and API shipped in `specs/055-eval-gate/` (migration 0043). Left open: the skill-page gate settings panel and candidate badge (after the results matrix PR lands), so the file stays open.
+
 ## Dependencies
 
 - 003 runner and results, 004 matrix (for showing candidate state). Needs a migration for the gate setting and candidate state: coordinate numbering with other lanes.

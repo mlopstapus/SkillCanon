@@ -449,3 +449,19 @@ export const evalProviderConfigs = promptRegistrySchema.table(
   },
   (t) => [primaryKey({ columns: [t.organizationId, t.provider] })],
 );
+
+/**
+ * Per-skill eval gate (017/005). When enabled, a newly published version stays a
+ * candidate (not active) until an eval run on its own content digest meets `minPassPct`
+ * for every model in `models`, or an admin/owner overrides it.
+ */
+export const evalGates = promptRegistrySchema.table("eval_gates", {
+  promptId: uuid("prompt_id").primaryKey(),
+  organizationId: organizationId(),
+  enabled: boolean("enabled").notNull().default(false),
+  models: jsonb("models").$type<string[]>().notNull(),
+  /** 0..100. Default 100: no regression tolerance (Ben #9). */
+  minPassPct: integer("min_pass_pct").notNull().default(100),
+  updatedBy: uuid("updated_by").notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

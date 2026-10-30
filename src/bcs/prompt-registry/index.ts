@@ -228,6 +228,8 @@ export {
   type EvalProviderConfigView,
 } from "./application/eval-provider-config";
 export { createEvalProvider, EVAL_PROVIDER_IDS, type EvalProviderId } from "./infrastructure/eval-providers";
+export { activateCandidateVersion, applyEvalGate, getEvalGate, setEvalGate, type GateState } from "./application/eval-gate";
+export { evaluateGate, EvalGateConfigInvalidError, VersionNotCandidateError, type EvalGateConfig } from "./domain/eval-gate";
 export { EVAL_CASES_FILE_NAME } from "./domain/eval-cases";
 export {
   DEFAULT_EVAL_LIMITS,
