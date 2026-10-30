@@ -20,7 +20,7 @@ export function LoginFormView({ state, action }: LoginFormViewProps) {
       <div className="grid gap-3">
         <p className="font-caption text-xs uppercase text-text">Sign in</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Welcome back.</h1>
-        <p className="text-sm leading-6 text-dim">Use your SkillCanon account to enter the authenticated app.</p>
+        <p className="text-sm leading-6 text-dim">Sign in with the account an admin set up for you.</p>
       </div>
 
       <form action={action} className="grid gap-5">

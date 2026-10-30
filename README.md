@@ -1,8 +1,10 @@
 # SkillCanon
 
-An open-source, self-hosted skill/prompt registry with **hierarchical governance**, distributed via REST, [MCP](https://modelcontextprotocol.io/), and a CLI.
+Tribe's internal skills registry. Builders keep the skills their AI tools run here, versioned and governed by team policy, and the tools fetch them over REST, [MCP](https://modelcontextprotocol.io/) or the `skillcanon` CLI.
 
-Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the operator provider pool, or `ANTHROPIC_API_KEY` on the server until the pool has a config source, optionally `DRAFTER_MODEL`).
+**Getting access:** ask a SkillCanon admin for an invitation. Open the link in it, set your password, and you're in. There is no self-serve sign-up.
+
+Skills are defined once and distributed to every builder's AI tool. Organizational policies and objectives are applied when a skill is expanded. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the operator provider pool, or `ANTHROPIC_API_KEY` on the server until the pool has a config source, optionally `DRAFTER_MODEL`).
 
 ## Key Features
 

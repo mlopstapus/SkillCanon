@@ -27,10 +27,10 @@ export function WelcomePageContent({ user, organization }: { user: AppSessionUse
             </svg>
           </div>
         </div>
-        <p className="font-caption text-xs uppercase text-text">Instance ready</p>
+        <p className="font-caption text-xs uppercase text-text">Setup done</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Welcome, {displayName}.</h1>
         <p className="mx-auto max-w-md text-sm leading-6 text-dim">
-          {organization.name} is ready. You are signed in as the admin and can enter the authenticated app.
+          {organization.name} is ready. You are signed in as admin. Invite your builders from Teams.
         </p>
       </div>
 
