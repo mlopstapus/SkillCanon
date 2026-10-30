@@ -11,13 +11,13 @@ Placeholder for a paid-tier feature that uses AI to automatically summarize an o
 
 ## Requirements
 
-- [x] Summary box on a team's Objectives tab: summarize the team's effective objectives, or (admin) the whole org (spec `specs/047-objective-summary`). Cached by input hash, process-local (no migration).
-- [x] Read-only MCP tool `sh-admin-objective-summary` (governance:read; returns the cached summary only, never calls a model).
+- [x] Summary box on a team's Objectives tab: summarize the team's effective objectives, or (admin) the whole org (spec `specs/047-objective-summary`). Cached by input hash, process-local (no migration). (#122)
+- [x] Read-only MCP tool `sh-admin-objective-summary` (governance:read; returns the cached summary only, never calls a model). (#122)
 
 ## Acceptance Criteria
 
-- [x] Repeat requests with unchanged objectives make no model call; a change makes a new one.
-- [x] Org rollup is admin-only; no opt-in or no provider gives a clear refusal and no model call.
+- [x] Repeat requests with unchanged objectives make no model call; a change makes a new one. (#122)
+- [x] Org rollup is admin-only; no opt-in or no provider gives a clear refusal and no model call. (#122)
 - [ ] Verified live against a real provider — **needs Ben** (provider key in the admin page, org opted in).
 
 ## Open Questions
