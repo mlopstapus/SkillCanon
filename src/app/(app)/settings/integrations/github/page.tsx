@@ -51,6 +51,7 @@ export default async function GithubIntegrationPage({ searchParams }: { searchPa
         repo: l.repoFullName,
         account: l.installationAccountLogin,
         project: projectName.get(l.projectId) ?? l.projectId,
+        projectId: l.projectId,
       }))}
       notice={notice}
       errorMessage={query.error ? decodeURIComponent(query.error) : null}

@@ -45,10 +45,11 @@ describe("GithubIntegrationView", () => {
       installations: inst,
       repos: [{ id: 1, fullName: "acme/api" }],
       projects: [{ id: "p", name: "Docs" }],
-      links: [{ id: "l1", repo: "acme/api", account: "acme", project: "Docs" }],
+      links: [{ id: "l1", repo: "acme/api", account: "acme", project: "Docs", projectId: "p" }],
     };
     const admin = render(props);
     expect(admin).toContain("Link repository");
+    expect(admin).toContain("/projects/p/checks");
     expect(admin).toContain("Unlink acme/api from Docs");
     const member = render({ ...props, isAdmin: false });
     expect(member).not.toContain("Link repository");
