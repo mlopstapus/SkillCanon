@@ -34,7 +34,7 @@ In addition to the external surface above, Distribution exposes internal, cross-
 | `markFeedbackAddressed(db, actor, feedbackId, versionId, auditContext?)` | Owner-only (user owner, owning team's owner, or org admin): marks a note addressed by a version of the same skill; writes `feedback.updated`. Throws `NotAuthorizedError`, `FeedbackNotFoundError` (missing/cross-org/not a note), `FeedbackVersionMismatchError`. | Skill page server action |
 | `getPromptUsageSummaryForProject(db, orgId, projectId, { activeWindowDays, trendDays })` | Returns project-scoped `{ totalInvocations, windowRows, bySkill, byMember, dailyCountsBySkill }`, every internal query scoped by both `orgId` and `projectId`. | Prompt Registry project metrics composition |
 | `getPromptUsageSummaryForOrganization(db, orgId, { window })` | Returns organization-scoped totals, success/failure counts, latency summaries, status counts, skill/version breakdowns, and daily counts for the requested bounded window. | `/api/metrics`, `/metrics` |
-| `queryUsageByRepoAndCommits(orgId, gitRemoteUrl, commitShas[])` | Planned VCS Integration read side for rows whose `git_remote_url` matches and `git_commit_sha` is in the supplied list. | VCS Integration |
+| `queryUsageByRepoAndCommits(db, orgId, gitRemoteUrl, commitShas[])` | VCS Integration read side: successful (2xx) serves in the org whose normalized `git_remote_url` matches and whose `git_commit_sha` is in the list. Remotes are stored and compared as `host/owner/repo` (lower case, no scheme/credentials/`.git`), so SSH and HTTPS clones match; shas are lower case. Rows recorded before normalization may hold raw remotes. | VCS Integration |
 
 ## Events Published
 

@@ -22,6 +22,9 @@ export type {
 } from "./domain/feedback";
 export type { Feedback, FeedbackKind, FeedbackRating, FileFeedbackParams } from "./domain/feedback";
 export { getServe } from "./application/get-serve";
+export { queryUsageByRepoAndCommits } from "./application/query-usage-by-repo-and-commits";
+export { normalizeGitRemoteUrl } from "./domain/prompt-usage";
+export type { CommitUsage } from "./domain/prompt-usage";
 export { computeContentDigest } from "./domain/prompt-usage";
 export { getPromptUsageSummaryForProject } from "./application/get-prompt-usage-summary-for-project";
 export { getPromptUsageSummaryForOrganization } from "./application/get-prompt-usage-summary-for-organization";
