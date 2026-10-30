@@ -91,9 +91,9 @@ export const feedbackDrafts = distributionSchema.table(
 );
 
 /**
- * Per-organization consent to send skill content and feedback text to the
- * operator-configured third-party model provider (Ben #1697 q5). Absent row =
- * not opted in. Shared by any feature that makes model calls.
+ * UNUSED. Drafting now reads the evals opt-in (`prompt_registry.eval_settings`,
+ * one opt-in for every third-party model call). Kept only so no migration is
+ * needed in the refactor that stopped using it; drop it in a later migration.
  */
 export const thirdPartyOptIn = distributionSchema.table("third_party_opt_in", {
   organizationId: organizationId().primaryKey(),

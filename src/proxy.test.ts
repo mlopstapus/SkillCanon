@@ -62,9 +62,9 @@ describe("handleProtectedRequest", () => {
 });
 
 describe("config.matcher", () => {
-  it("never gates the public root route", () => {
-    // The marketing landing page at "/" (014-marketing-landing-page) must never
-    // require auth. Guard against a future edit accidentally adding it here.
+  it("never gates the root route", () => {
+    // "/" redirects by itself (signed-in, setup, or sign-in); it must never
+    // be gated by the proxy. Guard against a future edit adding it here.
     expect(config.matcher).not.toContain("/");
     expect(
       config.matcher.some((pattern) => pattern === "/:path*" || pattern === "/*"),

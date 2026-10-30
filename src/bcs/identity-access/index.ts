@@ -1,3 +1,4 @@
+export { isInstanceSetUp } from "./application/is-instance-set-up";
 export { getOrganization } from "./application/get-organization";
 export { getUser } from "./application/get-user";
 export { createUser } from "./application/create-user";
@@ -5,7 +6,6 @@ export { updateUser } from "./application/update-user";
 export { deactivateUser } from "./application/deactivate-user";
 export { listUsers } from "./application/list-users";
 export { registerFirstRunAdmin } from "./application/register-first-run-admin";
-export { isInstanceSetUp } from "./application/is-instance-set-up";
 export type {
   AppSessionUser,
   UserSummary,

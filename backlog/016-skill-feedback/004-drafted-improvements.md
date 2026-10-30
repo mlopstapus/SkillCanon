@@ -11,16 +11,16 @@ Group open notes by skill and version, have a model draft a diff to the skill, a
 
 ## Requirements
 
-- [x] On a skill's Feedback tab, an owner (same rule as marking a note addressed) can ask for a drafted improvement of a version: the open (unaddressed) notes for that version plus the version's main file go to a model, which returns a proposed new main file and a short rationale.
-- [x] The draft is stored (status pending), shows as a line diff against the version it was drafted from, and lists the notes it is based on.
-- [x] The owner can accept (publishes the proposed main file as a new version through `publishVersion`, keeps supporting files, marks the source notes addressed in that version) or dismiss (draft kept as dismissed, notes stay open).
-- [x] Only template-kind skills with a main file are draftable; a model failure or an unconfigured provider is reported, never stored as a draft.
-- [x] Drafting needs the organization's third-party opt-in and an operator-configured provider; every request, accept and dismiss writes an audit event.
+- [x] On a skill's Feedback tab, an owner (same rule as marking a note addressed) can ask for a drafted improvement of a version: the open (unaddressed) notes for that version plus the version's main file go to a model, which returns a proposed new main file and a short rationale. (#112)
+- [x] The draft is stored (status pending), shows as a line diff against the version it was drafted from, and lists the notes it is based on. (#112)
+- [x] The owner can accept (publishes the proposed main file as a new version through `publishVersion`, keeps supporting files, marks the source notes addressed in that version) or dismiss (draft kept as dismissed, notes stay open). (#112)
+- [x] Only template-kind skills with a main file are draftable; a model failure or an unconfigured provider is reported, never stored as a draft. (#112)
+- [x] Drafting needs the organization's third-party opt-in and an operator-configured provider; every request, accept and dismiss writes an audit event. (#112)
 
 ## Acceptance Criteria
 
-- [x] With a stub model, drafting from two notes produces a pending draft; accepting it creates the next version and addresses both notes; dismissing leaves the skill unchanged.
-- [x] With no provider or no opt-in, drafting is refused with a clear message and nothing is stored.
+- [x] With a stub model, drafting from two notes produces a pending draft; accepting it creates the next version and addresses both notes; dismissing leaves the skill unchanged. (#112)
+- [x] With no provider or no opt-in, drafting is refused with a clear message and nothing is stored. (#112)
 - [ ] Live call against a real provider: **needs Ben** (set `ANTHROPIC_API_KEY`, then an admin allows it on the Feedback tab and drafts a version with open notes). Not exercised in CI.
 
 ## Open Questions (decided by default, build proceeds; Ben may overturn)
