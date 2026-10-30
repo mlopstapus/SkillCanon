@@ -1,6 +1,6 @@
-import { and, asc, count, eq, gte, lte, max, sql } from "drizzle-orm";
+import { and, asc, count, eq, gte, inArray, lte, max, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import type { RecordPromptUsageParams, Serve } from "../domain/prompt-usage";
+import { normalizeGitRemoteUrl, type CommitUsage, type RecordPromptUsageParams, type Serve } from "../domain/prompt-usage";
 import { promptUsage } from "./schema";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -18,9 +18,9 @@ export async function insert<TSchema extends Record<string, unknown>>(
     userId: params.userId ?? null,
     statusCode: params.statusCode ?? 200,
     latencyMs: params.latencyMs ?? null,
-    gitRemoteUrl: params.gitRemoteUrl ?? null,
+    gitRemoteUrl: normalizeGitRemoteUrl(params.gitRemoteUrl),
     gitBranch: params.gitBranch ?? null,
-    gitCommitSha: params.gitCommitSha ?? null,
+    gitCommitSha: params.gitCommitSha?.toLowerCase() ?? null,
     contentDigest: params.contentDigest ?? null,
   }).returning({ id: promptUsage.id });
   if (!row) throw new Error("prompt_usage insert returned no row.");
@@ -161,4 +161,35 @@ export async function listForOrganizationWindow<TSchema extends Record<string, u
       ),
     )
     .orderBy(asc(promptUsage.createdAt));
+}
+
+/** Successful serves in one org for a normalized remote whose commit is in `commitShas`. */
+export async function listByRemoteAndCommits<TSchema extends Record<string, unknown>>(
+  tx: PostgresJsDatabase<TSchema>,
+  organizationId: string,
+  normalizedRemote: string,
+  commitShas: string[],
+): Promise<CommitUsage[]> {
+  const rows = await tx
+    .select({
+      id: promptUsage.id,
+      promptId: promptUsage.promptId,
+      promptVersion: promptUsage.promptVersion,
+      userId: promptUsage.userId,
+      gitCommitSha: promptUsage.gitCommitSha,
+      gitBranch: promptUsage.gitBranch,
+      createdAt: promptUsage.createdAt,
+    })
+    .from(promptUsage)
+    .where(
+      and(
+        eq(promptUsage.organizationId, organizationId),
+        eq(promptUsage.gitRemoteUrl, normalizedRemote),
+        inArray(promptUsage.gitCommitSha, commitShas),
+        gte(promptUsage.statusCode, 200),
+        lte(promptUsage.statusCode, 299),
+      ),
+    )
+    .orderBy(asc(promptUsage.createdAt));
+  return rows as CommitUsage[];
 }
