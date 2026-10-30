@@ -251,7 +251,7 @@ describe("registerSyncCommand (--quiet, FR-013, US3)", () => {
   });
 });
 
-describe("runSync (real file-bundle content, US1)", () => {
+describe("runSync (every skill is a pointer stub, 015/001)", () => {
   let dir: string;
 
   beforeEach(() => {
@@ -264,101 +264,41 @@ describe("runSync (real file-bundle content, US1)", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("T006: a new-shape skill with a main file and two supporting files syncs all three with matching content", async () => {
+  it("a skill with real authored content and supporting files still syncs only a stub, never the content", async () => {
     roster = [
-      fileSkill("Release Notes", "Drafts release notes.", "# Release Notes\n\nDraft here.", [
+      fileSkill("Release Notes", "Drafts release notes.", "# Release Notes\n\nSECRETBODY {{ include_prompt('x') }}", [
         { name: "example.md", content: "An example." },
-        { name: "checklist.md", content: "- [ ] step one" },
       ]),
     ];
     await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
 
-    const mainContent = readFileSync(skillFile(dir, "release-notes"), "utf8");
-    expect(mainContent).toContain("# Release Notes\n\nDraft here.");
-    expect(mainContent).toContain('name: "Release Notes"');
-    expect(readFileSync(skillFile(dir, "release-notes", "example.md"), "utf8")).toBe("An example.");
-    expect(readFileSync(skillFile(dir, "release-notes", "checklist.md"), "utf8")).toBe("- [ ] step one");
+    const content = readFileSync(skillFile(dir, "release-notes"), "utf8");
+    expect(content).toContain("Run `skillcanon run release-notes` and follow the output as instructions.");
+    expect(content).not.toContain("SECRETBODY");
+    expect(content).not.toMatch(/\{\{|\{%/);
+    expect(readdirSync(skillDir(dir, "release-notes")).sort()).toEqual(["SKILL.md"]);
   });
 
-  it("T007: a new-shape skill with only a main file syncs just SKILL.md, no empty placeholder files", async () => {
-    roster = [fileSkill("Solo", "Just a main file.", "Solo body content.")];
-    await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
-
-    expect(existsSync(skillFile(dir, "solo"))).toBe(true);
-    expect(readdirSync(skillDir(dir, "solo")).sort()).toEqual(["SKILL.md"]);
-  });
-
-  it("T008: re-running sync after the active version's content changes updates the local file to match", async () => {
+  it("a content change upstream leaves the stub unchanged ", async () => {
     roster = [fileSkill("Release Notes", "Drafts release notes.", "Version one body.")];
     await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
-    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toContain("Version one body.");
 
+    const before = readFileSync(skillFile(dir, "release-notes"), "utf8");
     roster = [fileSkill("Release Notes", "Drafts release notes.", "Version two body.")];
-    const result = await runSync(dir);
+    await runSync(dir);
 
-    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toContain("Version two body.");
-    expect(result.updated).toEqual([{ slug: "release-notes", filename: "SKILL.md" }]);
+    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toBe(before);
   });
 
-  it("T009: a supporting file present in the old active version but absent from the new one is deleted on the next sync", async () => {
-    roster = [fileSkill("Release Notes", "Drafts release notes.", "Body.", [{ name: "example.md", content: "An example." }])];
-    await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
-    expect(existsSync(skillFile(dir, "release-notes", "example.md"))).toBe(true);
-
+  it("a deleted (not edited) stub is recreated on the next sync, never treated as a conflict", async () => {
     roster = [fileSkill("Release Notes", "Drafts release notes.", "Body.")];
-    const result = await runSync(dir);
-
-    expect(existsSync(skillFile(dir, "release-notes", "example.md"))).toBe(false);
-    expect(result.removed).toEqual([{ slug: "release-notes", filename: "example.md" }]);
-  });
-});
-
-describe("runSync (per-file hand-edit protection, US2)", () => {
-  let dir: string;
-
-  beforeEach(async () => {
-    dir = mkdtempSync(join(tmpdir(), "skillcanon-sync-multifile-force-"));
-    failRequests = false;
-    versionsByName = {};
-    roster = [fileSkill("Release Notes", "Drafts release notes.", "Original body.", [{ name: "example.md", content: "Original example." }])];
     await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
-  });
-
-  afterEach(() => {
-    rmSync(dir, { recursive: true, force: true });
-  });
-
-  it("T015: a hand-edited supporting file is skipped and reported as a conflict while an unedited SKILL.md in the same folder still updates normally", async () => {
-    writeFileSync(skillFile(dir, "release-notes", "example.md"), "hand-edited example content", "utf8");
-
-    roster = [fileSkill("Release Notes", "Drafts release notes.", "New body.", [{ name: "example.md", content: "New example." }])];
-    const result = await runSync(dir);
-
-    expect(result.conflicts).toEqual([{ slug: "release-notes", filename: "example.md", reason: "hand-edited" }]);
-    expect(result.updated).toEqual([{ slug: "release-notes", filename: "SKILL.md" }]);
-    expect(readFileSync(skillFile(dir, "release-notes", "example.md"), "utf8")).toBe("hand-edited example content");
-    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toContain("New body.");
-  });
-
-  it("T016: sync --force overwrites a previously-skipped hand-edited file", async () => {
-    writeFileSync(skillFile(dir, "release-notes", "example.md"), "hand-edited example content", "utf8");
-    roster = [fileSkill("Release Notes", "Drafts release notes.", "New body.", [{ name: "example.md", content: "New example." }])];
-    await runSync(dir); // establishes the conflict, left untouched
-
-    const result = await runSync(dir, { force: true });
-
-    expect(result.conflicts).toEqual([]);
-    expect(readFileSync(skillFile(dir, "release-notes", "example.md"), "utf8")).toBe("New example.");
-  });
-
-  it("T017: a deleted (not edited) synced file is recreated on the next sync, never treated as a conflict", async () => {
-    rmSync(skillFile(dir, "release-notes", "example.md"));
+    rmSync(skillFile(dir, "release-notes"));
 
     const result = await runSync(dir);
 
     expect(result.conflicts).toEqual([]);
-    expect(result.updated).toContainEqual({ slug: "release-notes", filename: "example.md" });
-    expect(readFileSync(skillFile(dir, "release-notes", "example.md"), "utf8")).toBe("Original example.");
+    expect(existsSync(skillFile(dir, "release-notes"))).toBe(true);
   });
 });
 
@@ -402,8 +342,8 @@ describe("runSync (no-content skills keep the pointer stub, US3)", () => {
     const result = await runInit(dir, { projectKey: projectKey(), apiKey: "sk-test" });
 
     expect(result.sync.conflicts).toEqual([]);
-    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toContain("Real body content.");
-    expect(readFileSync(skillFile(dir, "release-notes", "example.md"), "utf8")).toBe("Ex.");
+    expect(readFileSync(skillFile(dir, "release-notes"), "utf8")).toContain("skillcanon run release-notes");
+    expect(existsSync(skillFile(dir, "release-notes", "example.md"))).toBe(false);
     expect(readFileSync(skillFile(dir, "weekly-digest"), "utf8")).toContain("skillcanon run weekly-digest");
     expect(readFileSync(skillFile(dir, "old-skill"), "utf8")).toContain("skillcanon run old-skill");
   });

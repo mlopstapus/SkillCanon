@@ -7,6 +7,7 @@ import { AppState, Badge } from "@/shared/ui";
 import { IssueKeyDrawer } from "./issue-key-drawer";
 import { KeyRevealModal } from "./key-reveal-modal";
 import { revokeApiKeyAction } from "./actions";
+import { scopeLabel } from "./scope-label";
 
 export type ApiKeysListProps = {
   currentUser: AppSessionUser;
@@ -101,7 +102,7 @@ export function ApiKeysListView({ currentUser, keys, refresh }: ApiKeysListViewP
                           key={s}
                           className="rounded-control bg-a-soft px-2 py-0.5 font-mono text-[10px] text-a"
                         >
-                          {s}
+                          {scopeLabel(s)}
                         </span>
                       ))}
                     </div>

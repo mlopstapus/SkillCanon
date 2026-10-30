@@ -14,7 +14,8 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const BASE = (process.env.E2E_BASE_URL ?? "http://localhost:3000").replace(/\/$/, "");
 const ADMIN = { email: "e2e-admin@example.test", password: "e2e-local-password-1" };
 const SLUG = "cli-smoke";
-const BODY = "Greet the reader and cite the PR number.";
+const BODY = "Greet the reader.";
+const POLICY = "Always cite the CLI smoke ticket number.";
 const CLI = resolve("cli/dist/index.js");
 
 let browser: Browser;
@@ -63,6 +64,12 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     await api("POST", `/api/skills/${SLUG}/versions`, { version: "1.0.0", mainFile: { content: BODY } });
     // A personally-owned skill can't be assigned to a project; hand it to the team.
     await api("POST", `/api/skills/${SLUG}/transfer`, { newOwnerType: "team", newOwnerId: teamId });
+    await api("POST", "/api/policies", {
+      teamId,
+      name: "cli-smoke-policy",
+      enforcementType: "append",
+      content: POLICY,
+    });
     const project = await api("POST", "/api/projects", {
       teamId,
       name: "CLI Smoke",
@@ -75,8 +82,8 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     await page.getByRole("button", { name: "Issue key" }).first().click();
     const drawer = page.getByRole("dialog").filter({ visible: true });
     await drawer.getByPlaceholder("CI deploy key").fill("cli e2e key");
-    await drawer.getByText("prompts:read").click();
-    await drawer.getByText("workflows:run").click();
+    await drawer.getByText("skills:read").click();
+    await drawer.getByText("chains:run").click();
     await drawer.getByRole("button", { name: "Generate key" }).click();
     apiKey = ((await page.locator("span.break-all").textContent()) ?? "").trim();
     expect(apiKey).toMatch(/^sk_/);
@@ -85,7 +92,11 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
   it("init links the repo and syncs the project's skill", () => {
     const out = cli("init", "--project-key", `${BASE}/projects/${projectId}`, "--api-key", apiKey);
     expect(out).toMatch(/^Linked\. Synced \d+ skill/);
-    expect(readFileSync(join(repo, ".claude/skills", `skillcanon-${SLUG}`, "SKILL.md"), "utf8")).toContain(BODY);
+    // D1: the synced file is a stub, so no policy or template text is baked in.
+    const synced = readFileSync(join(repo, ".claude/skills", `skillcanon-${SLUG}`, "SKILL.md"), "utf8");
+    expect(synced).toContain(`skillcanon run ${SLUG}`);
+    expect(synced).not.toContain(BODY);
+    expect(synced).not.toMatch(/\{\{|\{%/);
     expect(existsSync(join(repo, ".skillcanon/project.json"))).toBe(true);
   });
 
@@ -94,6 +105,8 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
   });
 
   it("run resolves the skill live", () => {
-    expect(cli("run", SLUG)).toContain(BODY);
+    const out = cli("run", SLUG);
+    expect(out).toContain(BODY);
+    expect(out).toContain(POLICY); // governance reaches the model through `run`
   });
 });

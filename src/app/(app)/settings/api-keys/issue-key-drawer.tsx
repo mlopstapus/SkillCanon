@@ -4,6 +4,7 @@ import { useId, useState, useTransition } from "react";
 import type { UserRole } from "@/bcs/identity-access";
 import { Drawer } from "@/shared/ui";
 import { createApiKeyAction } from "./actions";
+import { scopeLabel } from "./scope-label";
 
 export type IssueKeyDrawerProps = {
   role: UserRole;
@@ -121,7 +122,7 @@ export function IssueKeyDrawer({ role, onClose, onIssued }: IssueKeyDrawerProps)
                       disabled={!allowed}
                       onChange={() => toggleScope(scope)}
                     />
-                    <span className="font-mono text-[12.5px] text-text">{scope}</span>
+                    <span className="font-mono text-[12.5px] text-text">{scopeLabel(scope)}</span>
                     {!allowed ? (
                       <span className="ml-auto font-mono text-[9.5px] text-faint">
                         admin only

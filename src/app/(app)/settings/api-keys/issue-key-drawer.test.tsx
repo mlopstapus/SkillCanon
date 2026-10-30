@@ -10,9 +10,9 @@ describe("IssueKeyDrawer", () => {
       <IssueKeyDrawer role="admin" onClose={noop} onIssued={noop} />,
     );
 
-    expect(markup).toContain("prompts:read");
-    expect(markup).toContain("prompts:write");
-    expect(markup).toContain("workflows:run");
+    expect(markup).toContain("skills:read");
+    expect(markup).toContain("skills:write");
+    expect(markup).toContain("chains:run");
     expect(markup).not.toContain("admin only");
   });
 
@@ -21,8 +21,8 @@ describe("IssueKeyDrawer", () => {
       <IssueKeyDrawer role="member" onClose={noop} onIssued={noop} />,
     );
 
-    expect(markup).toContain("prompts:write");
-    expect(markup).toContain("workflows:run");
+    expect(markup).toContain("skills:write");
+    expect(markup).toContain("chains:run");
     // Exactly the two non-read scopes are labeled "admin only" — the read
     // scope stays fully enabled (unlabeled).
     expect(markup.match(/admin only/g)).toHaveLength(2);
