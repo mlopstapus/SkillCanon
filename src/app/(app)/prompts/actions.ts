@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { markFeedbackAddressed } from "@/bcs/distribution";
 import {
   assignSkillToProject,
   createPrompt,
@@ -256,6 +257,29 @@ export async function createPromptAction(params: {
       }),
     );
     revalidatePath("/prompts");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Owner-only: marks a feedback note addressed by one of the skill's versions (016/003). */
+export async function markFeedbackAddressedAction(
+  promptName: string,
+  feedbackId: string,
+  versionId: string,
+): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      markFeedbackAddressed(
+        tx,
+        { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role },
+        feedbackId,
+        versionId,
+      ),
+    );
+    revalidatePath(`/prompts/${promptName}`);
     return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };

@@ -14,6 +14,7 @@ const rows: PromptListRow[] = [
     projectLabels: ["Support Copilot"],
     ownerLabel: "alice",
     activeVersion: "v2",
+    downRate: { up: 3, down: 1, rate: 0.25 },
     tags: ["git", "conventional"],
     updatedAt: "2026-07-10",
   },
@@ -27,6 +28,7 @@ const rows: PromptListRow[] = [
     projectLabels: [],
     ownerLabel: "carol",
     activeVersion: "v1",
+    downRate: { up: 0, down: 0, rate: null },
     tags: [],
     updatedAt: "2026-03-14",
   },
@@ -43,6 +45,16 @@ const baseProps = {
 };
 
 describe("PromptsListView", () => {
+  it("shows the active version's down-rate with its counts, and a dash when nothing is rated", () => {
+    const html = renderToStaticMarkup(
+      <PromptsListView {...baseProps} rows={rows} filters={{ q: "", project: "all", owner: "all" }} />,
+    );
+
+    expect(html).toContain("Down-rate");
+    expect(html).toContain("25% (1/4)");
+    expect(html).toContain(">—<");
+  });
+
   it("renders every row with name, deprecated badge, project label, owner, version, and tags", () => {
     const html = renderToStaticMarkup(
       <PromptsListView {...baseProps} rows={rows} filters={{ q: "", project: "all", owner: "all" }} />,

@@ -56,6 +56,39 @@ const baseData: PromptDetailData = {
   shareState: { users: [], teams: [], projects: [] },
   shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: ["commit-message"],
+  feedback: {
+    versions: [
+      { version: "2", up: 1, down: 0, notes: 1 },
+      { version: "1", up: 0, down: 2, notes: 1 },
+    ],
+    notes: [
+      {
+        id: "fb-2",
+        serveId: "22222222-aaaa-4aaa-8aaa-222222222222",
+        version: "2",
+        rating: "up",
+        text: "Much clearer now.",
+        author: "Alice Admin",
+        createdAt: "2026-10-30 10:00",
+        addressedInVersion: null,
+      },
+      {
+        id: "fb-1",
+        serveId: "11111111-aaaa-4aaa-8aaa-111111111111",
+        version: "1",
+        rating: "down",
+        text: "Ignores the changelog.",
+        author: "Bob Builder",
+        createdAt: "2026-10-29 09:00",
+        addressedInVersion: "2",
+      },
+    ],
+    canTriage: true,
+    versionOptions: [
+      { id: "v2-id", version: "2" },
+      { id: "v1-id", version: "1" },
+    ],
+  },
 };
 
 const baseProps = {
@@ -73,6 +106,7 @@ const baseProps = {
   onRunsPageChange: vi.fn(),
   runStepsByRunId: {},
   onRequestRunSteps: vi.fn(),
+  onMarkFeedbackAddressed: vi.fn(),
 };
 
 describe("PromptDetailView", () => {
@@ -361,5 +395,28 @@ describe("PromptDetailView", () => {
 
       expect(html.toLowerCase()).not.toMatch(/start run|advance run|abandon run/);
     });
+  });
+
+  it("renders the Feedback tab: counts per version, newest note first linked to its serve, addressed state", () => {
+    const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={baseData} activeTab="feedback" />);
+
+    expect(html).toContain("Feedback (2)");
+    expect(html.indexOf("Much clearer now.")).toBeLessThan(html.indexOf("Ignores the changelog."));
+    expect(html).toContain('href="/api/serves/22222222-aaaa-4aaa-8aaa-222222222222"');
+    expect(html).toContain("addressed in 2");
+    // Only the unaddressed note offers the owner control.
+    expect(html.match(/Mark addressed/g)).toHaveLength(1);
+  });
+
+  it("hides the triage control from a non-owner and shows an empty state with no feedback", () => {
+    const readOnly = { ...baseData, feedback: { ...baseData.feedback, canTriage: false } };
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={readOnly} activeTab="feedback" />)).not.toContain(
+      "Mark addressed",
+    );
+
+    const empty = { ...baseData, feedback: { versions: [], notes: [], canTriage: true, versionOptions: [] } };
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={empty} activeTab="feedback" />)).toContain(
+      "No feedback yet.",
+    );
   });
 });

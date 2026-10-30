@@ -78,6 +78,7 @@ const data: PromptDetailData = {
   shareState: { users: [], teams: [], projects: [] },
   shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: [],
+  feedback: { versions: [], notes: [], canTriage: false, versionOptions: [] },
 };
 
 describe("PromptDetail ownership-transfer wiring", () => {

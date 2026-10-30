@@ -6,6 +6,7 @@ import {
   listProjectsByOrganization,
   listVersions,
 } from "@/bcs/prompt-registry";
+import { getDownRates } from "@/bcs/distribution";
 import { authenticateSession, listTeams, listUsers } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
 import { PromptsList } from "./prompts-list";
@@ -48,6 +49,12 @@ export default async function PromptsPage({
       projectIdsBySkillId.set(a.skillId, list);
     }
 
+    const downRates = await getDownRates(
+      tx,
+      user.orgId,
+      prompts.flatMap((p) => (p.activeVersionId ? [p.activeVersionId] : [])),
+    );
+
     const resolved: PromptListRow[] = await Promise.all(
       prompts.map(async (p) => {
         const ownerLabel =
@@ -65,6 +72,7 @@ export default async function PromptsPage({
           projectLabels: projectIds.map((id) => projectNameById.get(id)).filter((n): n is string => !!n),
           ownerLabel,
           activeVersion: activeVersion?.version ?? null,
+          downRate: (p.activeVersionId ? downRates.get(p.activeVersionId) : null) ?? null,
           tags: (activeVersion?.tags as string[] | undefined) ?? [],
           updatedAt: p.updatedAt.toISOString().slice(0, 10),
         };

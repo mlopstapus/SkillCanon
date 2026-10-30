@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   deprecatePromptAction,
+  markFeedbackAddressedAction,
   forkSkillForSelfAction,
   getSkillChainRunAction,
   listSkillChainRunsAction,
@@ -109,6 +110,10 @@ export function PromptDetail({ data }: PromptDetailProps) {
         }}
         onSetActiveVersion={async (version) => {
           await rollbackPromptAction(data.name, version);
+          router.refresh();
+        }}
+        onMarkFeedbackAddressed={async (feedbackId, versionId) => {
+          await markFeedbackAddressedAction(data.name, feedbackId, versionId);
           router.refresh();
         }}
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/shared/ui";
+import { FeedbackPanel } from "./feedback-panel";
 
 export interface ChainStepView {
   id: string;
@@ -104,11 +105,29 @@ export interface PromptDetailData {
     /** Count of other org skills forked from this one. */
     copyCount: number;
   };
+  /** Feedback filed against this skill's serves (016/003). */
+  feedback: {
+    versions: Array<{ version: string; up: number; down: number; notes: number }>;
+    /** Notes only, newest first. */
+    notes: Array<{
+      id: string;
+      serveId: string;
+      version: string;
+      rating: "up" | "down" | null;
+      text: string;
+      author: string;
+      createdAt: string;
+      addressedInVersion: string | null;
+    }>;
+    /** Owner, owning team's owner, or org admin: may mark notes addressed. */
+    canTriage: boolean;
+    versionOptions: Array<{ id: string; version: string }>;
+  };
   /** Skills the current user can access — powers the chain step builder's target-skill picker (FR-011). */
   accessibleSkillNames: string[];
 }
 
-export type PromptDetailTab = "overview" | "files" | "preview" | "policies" | "steps" | "runs";
+export type PromptDetailTab = "overview" | "files" | "preview" | "policies" | "steps" | "runs" | "feedback";
 
 export interface PromptDetailViewProps {
   data: PromptDetailData;
@@ -128,6 +147,7 @@ export interface PromptDetailViewProps {
   /** A run's step detail, keyed by run id; absent until `onRequestRunSteps` resolves for that run. */
   runStepsByRunId: Record<string, ChainRunStepView[] | undefined>;
   onRequestRunSteps: (runId: string) => void;
+  onMarkFeedbackAddressed: (feedbackId: string, versionId: string) => void;
 }
 
 const POLICY_BADGE: Record<string, "blue" | "violet" | "green" | "red"> = {
@@ -165,6 +185,7 @@ export function PromptDetailView({
   onRunsPageChange,
   runStepsByRunId,
   onRequestRunSteps,
+  onMarkFeedbackAddressed,
 }: PromptDetailViewProps) {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(new Set());
@@ -193,7 +214,8 @@ export function PromptDetailView({
     });
   }
 
-  const tabs: Array<[PromptDetailTab, string]> =
+  const feedbackTab: [PromptDetailTab, string] = ["feedback", `Feedback (${data.feedback.notes.length})`];
+  const baseTabs: Array<[PromptDetailTab, string]> =
     data.kind === "chain"
       ? [
           ["steps", `Steps (${data.steps?.length ?? 0})`],
@@ -211,6 +233,7 @@ export function PromptDetailView({
             ["preview", "Preview"],
             ["policies", `Applied policies (${data.appliedPolicies.length})`],
           ];
+  const tabs = [...baseTabs, feedbackTab];
 
   return (
     <div className="flex h-full flex-col">
@@ -561,6 +584,11 @@ export function PromptDetailView({
             </div>
           )
         ) : null}
+
+        {/* Always mounted (hidden when inactive) so the panel stays testable without clicking tabs. */}
+        <div hidden={activeTab !== "feedback"}>
+          <FeedbackPanel feedback={data.feedback} onMarkAddressed={onMarkFeedbackAddressed} />
+        </div>
 
         {activeTab === "runs" ? (
           !chainRunsPage || chainRunsPage.items.length === 0 ? (

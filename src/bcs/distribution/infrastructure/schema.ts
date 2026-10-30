@@ -53,6 +53,9 @@ export const feedback = distributionSchema.table(
     kind: text("kind", { enum: ["signal", "note"] }).notNull(),
     rating: text("rating", { enum: ["up", "down"] }),
     text: text("text"),
+    /** Set when the skill's owner marks a note addressed (016/003). */
+    addressedAt: timestamp("addressed_at", { withTimezone: true }),
+    addressedInVersionId: uuid("addressed_in_version_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

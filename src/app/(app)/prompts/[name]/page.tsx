@@ -11,6 +11,7 @@ import {
   listSubscriptionsForSkill,
   listVersions,
 } from "@/bcs/prompt-registry";
+import { listFeedbackForSkill } from "@/bcs/distribution";
 import { resolveAllPolicies } from "@/bcs/governance";
 import { authenticateSession, listTeams, listUsers } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
@@ -33,7 +34,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       return null;
     }
 
-    const [versions, users, teams, projects, assignments, subscriptions, accessibleSkills, copyCount] =
+    const [versions, users, teams, projects, assignments, subscriptions, accessibleSkills, copyCount, feedbackSummary] =
       await Promise.all([
         listVersions(tx, actor, name),
         listUsers(tx, user),
@@ -43,6 +44,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
         listSubscriptionsForSkill(tx, user.orgId, prompt.id),
         listPrompts(tx, actor),
         countForksOfSkill(tx, user.orgId, prompt.id),
+        listFeedbackForSkill(tx, user.orgId, prompt.id),
       ]);
 
     const userNameById = new Map(users.map((u) => [u.id, u.displayName]));
@@ -181,6 +183,24 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       steps,
       chainRuns,
       accessibleSkillNames: accessibleSkills.map((s) => s.name),
+      feedback: {
+        versions: feedbackSummary.byVersion.map(({ version, up, down, notes }) => ({ version, up, down, notes })),
+        notes: feedbackSummary.notes.map((note) => ({
+          id: note.id,
+          serveId: note.serveId,
+          version: note.version,
+          rating: note.rating,
+          text: note.text ?? "",
+          author: userNameById.get(note.userId) ?? "Unknown user",
+          createdAt: note.createdAt.toISOString().slice(0, 16).replace("T", " "),
+          addressedInVersion: note.addressedInVersionId
+            ? (versions.find((v) => v.id === note.addressedInVersionId)?.version ?? "a later version")
+            : null,
+        })),
+        // Same rule as transferring ownership: the user owner, the owning team's owner, or an org admin.
+        canTriage: canTransferOwnership,
+        versionOptions: sortedVersions.map((v) => ({ id: v.id, version: v.version })),
+      },
       shareState: {
         users: users
           .filter((u) => !(prompt.ownerType === "user" && u.id === prompt.ownerId))
