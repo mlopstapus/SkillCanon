@@ -38,7 +38,7 @@ Cons: the main service now calls LLMs (scoped to eval jobs only); the operator c
 
 ### Amendment (016/004, Drafted Improvements)
 
-A skill owner may ask for a model-drafted improvement of a version from its open feedback notes. This is a second, owner-triggered model call (never automatic), sent to the same operator-configured provider and only for organizations that have opted in to third-party sends. Accepting a draft is a normal `publishVersion`, so any eval gate (017/005) applies to it. Until the admin-page provider pool exists, the provider is configured by `ANTHROPIC_API_KEY` (and optionally `DRAFTER_MODEL`).
+A skill owner may ask for a model-drafted improvement of a version from its open feedback notes. This is a second, owner-triggered model call (never automatic), sent to the same operator-configured provider and only for organizations that have opted in to third-party sends. Accepting a draft is a normal `publishVersion`, so any eval gate (017/005) applies to it. The provider comes from the organization's resolved pool (the admin page's Eval providers); `ANTHROPIC_API_KEY` is only a fallback when none is configured, and `DRAFTER_MODEL` can pick the model.
 
 ### Model naming
 

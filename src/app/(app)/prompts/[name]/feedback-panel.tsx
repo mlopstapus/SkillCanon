@@ -75,7 +75,7 @@ export function FeedbackPanel({
           <h3 className="font-caption text-[11px] tracking-[0.1em] text-faint uppercase">Drafted improvements</h3>
           {!drafting.configured ? (
             <p role="status" className="text-[12.5px] text-dim">
-              No model provider is configured, so drafts are unavailable. An operator sets ANTHROPIC_API_KEY on the server.
+              No model provider is configured, so drafts are unavailable. An admin adds one on the Eval providers settings page.
             </p>
           ) : !drafting.optedIn ? (
             <div className="flex flex-wrap items-center gap-3 text-[12.5px] text-dim">

@@ -1,4 +1,4 @@
-import { getEvalProviderPool, type EvalProvider, type EvalProviderPool } from "@/bcs/prompt-registry";
+import type { EvalProvider, EvalProviderPool } from "@/bcs/prompt-registry";
 import {
   DraftFailedError,
   type DraftedImprovement,
@@ -100,11 +100,13 @@ export function createPoolDrafter(provider: EvalProvider, model: string): Improv
 }
 
 /**
- * The drafter to use: a provider from the operator's eval pool when one is
+ * The drafter to use: a provider from the organization's resolved eval pool
+ * (`resolveEvalProviderPool`, the admin page's providers) when one is
  * configured (preferring the `DRAFTER_MODEL` env override, else the first
- * allowed model), otherwise the env-configured Anthropic drafter, else null.
+ * allowed model), otherwise the env-configured Anthropic drafter (a fallback for instances that
+ * configure no provider on the admin page), else null.
  */
-export function resolveDrafter(pool: EvalProviderPool = getEvalProviderPool(), env: Record<string, string | undefined> = process.env): ImprovementDrafter | null {
+export function resolveDrafter(pool: EvalProviderPool, env: Record<string, string | undefined> = process.env): ImprovementDrafter | null {
   const wanted = env.DRAFTER_MODEL?.trim();
   const qualified = (wanted && pool.models.find((m) => m === wanted || m.endsWith(`/${wanted}`))) || pool.models[0];
   if (qualified) {

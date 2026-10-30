@@ -447,7 +447,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await expect.poll(() => page.getByText("Too terse.").isVisible()).toBe(true);
 
     // No provider key on the test instance: drafting explains itself instead of offering a button (016/004).
-    await expect.poll(() => page.getByText(/ANTHROPIC_API_KEY/).isVisible()).toBe(true);
+    await expect.poll(() => page.getByText(/Eval providers settings page/).isVisible()).toBe(true);
 
     await page.getByLabel("Version that addressed this note").selectOption({ label: "2" });
     await page.getByRole("button", { name: "Mark addressed" }).click();

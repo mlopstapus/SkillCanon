@@ -4,7 +4,7 @@ Tribe's internal skills registry. Builders keep the skills their AI tools run he
 
 **Getting access:** ask a SkillCanon admin for an invitation. Open the link in it, set your password, and you're in. There is no self-serve sign-up.
 
-Skills are defined once and distributed to every builder's AI tool. Organizational policies and objectives are applied when a skill is expanded. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the operator provider pool, or `ANTHROPIC_API_KEY` on the server until the pool has a config source, optionally `DRAFTER_MODEL`).
+Skills are defined once and distributed to every builder's AI tool. Organizational policies and objectives are applied when a skill is expanded. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the providers an admin configures on the Eval providers settings page; `ANTHROPIC_API_KEY` on the server is only a fallback when none is configured; `DRAFTER_MODEL` picks the model).
 
 ## Key Features
 
