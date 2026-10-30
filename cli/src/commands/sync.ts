@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { readProjectLink } from "../config/project-link.js";
 import { readCredentials } from "../config/credentials.js";
 import { hashContent, readSyncManifest, writeSyncManifest } from "../config/sync-manifest.js";
-import { getSkillVersions, listSkills, type SkillSummary, type SkillVersion } from "../http/skillcanon-client.js";
+import { listSkills, type SkillSummary } from "../http/skillcanon-client.js";
 import { renderMainFile } from "../skills/skill-file.js";
 import { planReconciliation, type RosterEntry, type SkillContent } from "../skills/reconcile.js";
 
@@ -33,28 +33,6 @@ function readCurrentFileContent(repoRoot: string, slug: string, filename: string
 }
 
 /**
- * Resolves one roster entry's desired local content (data-model.md
- * "SkillContent"): a new-shape template version's real main-file +
- * supporting files, or the unchanged pointer stub for a chain-kind skill
- * or a legacy-shape template version with no file bundle (research.md §6).
- */
-export function resolveSkillContent(skill: SkillSummary, versions: SkillVersion[]): SkillContent {
-  const version = versions.find((v) => v.id === skill.activeVersionId);
-  if (!version || version.kind !== "template" || version.files.length === 0) {
-    return { shape: "pointer-stub" };
-  }
-  const mainFile = version.files.find((f) => f.isMain);
-  if (!mainFile) {
-    return { shape: "pointer-stub" };
-  }
-  return {
-    shape: "files",
-    mainFile: { content: mainFile.content },
-    supportingFiles: version.files.filter((f) => !f.isMain).map((f) => ({ name: f.name, content: f.content })),
-  };
-}
-
-/**
  * The engine behind both the manual `sync` command and the automatic
  * SessionStart hook (which just invokes the same command with `--quiet`) —
  * there is no separate "automatic" code path (FR-014).
@@ -70,12 +48,12 @@ export async function runSync(repoRoot: string, options: SyncOptions = {}): Prom
   // (data-model.md "SkillContent") — never fetched, never written.
   const publishedRoster = roster.filter((skill): skill is SkillSummary & { activeVersionId: string } => skill.activeVersionId !== null);
 
-  const rosterEntries: RosterEntry[] = await Promise.all(
-    publishedRoster.map(async (skill) => {
-      const versions = await getSkillVersions(clientOptions, skill.name);
-      return { skill, content: resolveSkillContent(skill, versions) };
-    }),
-  );
+  // Every skill syncs as a pointer stub (015/001, D1): the real content,
+  // with policies and objectives applied, only ever comes from `skillcanon run`.
+  const rosterEntries: RosterEntry[] = publishedRoster.map((skill) => ({
+    skill,
+    content: { shape: "pointer-stub" },
+  }));
 
   const plan = planReconciliation(rosterEntries, {
     lastWrittenHashBySlugAndFile: manifest.stubs,
