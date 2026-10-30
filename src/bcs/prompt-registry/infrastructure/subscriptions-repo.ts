@@ -53,6 +53,23 @@ export async function deleteById(tx: Tx, id: string) {
   return row ?? null;
 }
 
+export async function deleteBySourceAndSubscriber(
+  tx: Tx,
+  sourceSkillId: string,
+  subscriberType: SubscriberType,
+  subscriberId: string,
+) {
+  await tx
+    .delete(subscriptions)
+    .where(
+      and(
+        eq(subscriptions.sourceSkillId, sourceSkillId),
+        eq(subscriptions.subscriberType, subscriberType),
+        eq(subscriptions.subscriberId, subscriberId),
+      ),
+    );
+}
+
 /**
  * Every subscription grant on a given source skill, regardless of
  * subscriber kind — powers the Share drawer's "who already has access"

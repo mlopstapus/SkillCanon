@@ -13,6 +13,9 @@ import {
   deleteByProjectAndSkill,
   findByProjectAndSkill,
 } from "../infrastructure/project-skill-assignments-repo";
+import {
+  deleteBySourceAndSubscriber,
+} from "../infrastructure/subscriptions-repo";
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
@@ -44,7 +47,13 @@ export async function unassignSkillFromProject(
 
   return withAudit(
     db,
-    (tx) => deleteByProjectAndSkill(tx, projectId, skillId),
+    async (tx) => {
+      const row = await deleteByProjectAndSkill(tx, projectId, skillId);
+      // 015/006: one model — removing the assignment also drops any Share grant
+      // so the CLI stops syncing the skill.
+      await deleteBySourceAndSubscriber(tx, skillId, "project", projectId);
+      return row;
+    },
     (tx) =>
       record(tx, {
         organizationId: actingUser.orgId,

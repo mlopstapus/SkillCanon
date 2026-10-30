@@ -50,11 +50,15 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
     const skillNameById = new Map(allSkills.map((s) => [s.id, s.name]));
     const participatingTeamIds = new Set([project.teamId, ...collaboratorTeams.map((t) => t.teamId)]);
 
-    const eligibleSkills = allSkills.filter(
-      (s) => s.ownerType === "team" && participatingTeamIds.has(s.ownerId),
-    );
     const projectAssignmentsById = new Map(
       assignments.filter((a) => a.projectId === id).map((a) => [a.skillId, a.requirement]),
+    );
+    // Eligible team skills (assignable) plus anything already assigned, e.g.
+    // a personal skill granted via Share (015/006).
+    const eligibleSkills = allSkills.filter(
+      (s) =>
+        (s.ownerType === "team" && participatingTeamIds.has(s.ownerId)) ||
+        projectAssignmentsById.has(s.id),
     );
 
     const skillRows = await Promise.all(
@@ -96,6 +100,11 @@ export default async function ProjectDetailPage({ params }: { params: Promise<{ 
         .filter((u) => !memberUserIds.has(u.id))
         .map((u) => ({ id: u.id, name: u.displayName })),
       repos: repos.map((r) => ({ id: r.id, name: r.name, url: r.url, branch: r.branch })),
+      // The acting user's own unassigned personal skills: not directly assignable
+      // (PDR-016), so "Add skill" grants them through the Share path.
+      addablePersonalSkills: allSkills
+        .filter((s) => s.ownerType === "user" && s.ownerId === user.id && !projectAssignmentsById.has(s.id))
+        .map((s) => ({ id: s.id, name: s.name, description: s.description ?? "" })),
       requiredPrompts: skillRows.filter((s) => s.requirement === "required"),
       optionalPrompts: skillRows.filter((s) => s.requirement === "optional"),
       availablePrompts: skillRows.filter((s) => !s.requirement),

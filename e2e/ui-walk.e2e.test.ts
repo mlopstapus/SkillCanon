@@ -333,7 +333,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(newPageErrors()).toEqual([]);
   });
 
-  it.fails(
+  it(
     "shows a skill granted through Share on the project's Skills tab (015/006)",
     async () => {
       await goto("/projects");
