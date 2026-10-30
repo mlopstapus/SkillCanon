@@ -35,6 +35,7 @@ import {
   type LocalSkillInvalidFolder,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
+import { getEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
@@ -613,6 +614,29 @@ export async function getSkillChainRunAction(runId: string): Promise<GetSkillCha
       return { ok: false, error: "Run not found." };
     }
     return { ok: true, run: result.run, steps: result.steps };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Starts a central eval run for one version from the Evals tab; the worker picks it up. */
+export async function startEvalRunAction(
+  promptName: string,
+  version: string,
+  models: string[],
+): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      submitEvalRun(
+        tx,
+        { organizationId: actingUser.orgId, userId: actingUser.id },
+        { promptName, version, models },
+        getEvalProviderPool(),
+      ),
+    );
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }

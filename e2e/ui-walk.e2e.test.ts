@@ -508,6 +508,13 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(admin.content[0]?.text).toContain("governance:read");
   });
 
+  it("shows the Evals tab as not configured on an instance with no provider pool (017/004)", async () => {
+    await openSkill(SKILL);
+    await page.getByRole("button", { name: "Evals", exact: true }).click();
+    await expect.poll(() => page.getByText("Evals are not configured").isVisible()).toBe(true);
+    await expect(page.getByRole("button", { name: "Run evals" }).count()).resolves.toBe(0);
+  });
+
   it("revokes the API key", async () => {
     await goto("/settings/api-keys");
     page.once("dialog", (d) => d.accept());
