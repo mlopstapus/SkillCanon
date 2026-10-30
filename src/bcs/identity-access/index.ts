@@ -5,6 +5,7 @@ export { updateUser } from "./application/update-user";
 export { deactivateUser } from "./application/deactivate-user";
 export { listUsers } from "./application/list-users";
 export { registerFirstRunAdmin } from "./application/register-first-run-admin";
+export { isInstanceSetUp } from "./application/is-instance-set-up";
 export type {
   AppSessionUser,
   UserSummary,
