@@ -25,7 +25,7 @@ What does not change:
 - [x] [001 - Remove the Marketing Site](archive/001-remove-marketing-site.md)
 - [x] [002 - One Tribe Organization](archive/002-one-tribe-organization.md)
 - [ ] [003 - Tribe Visual Identity](003-tribe-visual-identity.md)
-- [ ] [004 - Copy in the Tribe Voice](004-tribe-voice-copy.md)
+- [x] [004 - Copy in the Tribe Voice](archive/004-tribe-voice-copy.md)
 
 _Completed features are moved to `archive/` and checked off here._
 

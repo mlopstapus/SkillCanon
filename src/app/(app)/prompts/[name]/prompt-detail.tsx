@@ -9,6 +9,7 @@ import {
   markFeedbackAddressedAction,
   requestImprovementDraftAction,
   setThirdPartyOptInAction,
+  startEvalRunAction,
   forkSkillForSelfAction,
   getSkillChainRunAction,
   listSkillChainRunsAction,
@@ -140,6 +141,8 @@ export function PromptDetail({ data }: PromptDetailProps) {
           router.refresh();
           return result;
         }}
+        onStartEvalRun={(version, models) => startEvalRunAction(data.name, version, models)}
+        onRefreshEvals={() => router.refresh()}
         onOpenVersionHistory={() => setVersionHistoryOpen(true)}
         onOpenNewVersion={() => setNewVersionOpen(true)}
         onOpenShare={() => setShareOpen(true)}

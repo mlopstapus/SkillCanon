@@ -101,6 +101,13 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(await page.locator('meta[name="robots"]').getAttribute("content")).toMatch(/noindex/);
   });
 
+  it("falls back to system fonts and the SkillCanon mark when no Tribe brand assets are configured (018/003)", async () => {
+    expect((await fetch(`${BASE}/brand/logos/symbol.svg`)).status).toBe(404);
+    expect((await fetch(`${BASE}/brand/fonts.css`)).status).toBe(404);
+    await goto("/login");
+    expect(await page.locator("html").getAttribute("data-brand")).toBeNull();
+  });
+
   it("creates the instance through first-run setup", async () => {
     await goto("/register");
     await page.getByPlaceholder("Acme Ops").fill("Example Org");
@@ -506,6 +513,13 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     const admin = await callRaw("sh-admin-policy-list", { team_id: "x" });
     expect(admin.isError).toBe(true);
     expect(admin.content[0]?.text).toContain("governance:read");
+  });
+
+  it("shows the Evals tab as not configured on an instance with no provider pool (017/004)", async () => {
+    await openSkill(SKILL);
+    await page.getByRole("button", { name: "Evals", exact: true }).click();
+    await expect.poll(() => page.getByText("Evals are not configured").isVisible()).toBe(true);
+    await expect(page.getByRole("button", { name: "Run evals" }).count()).resolves.toBe(0);
   });
 
   it("revokes the API key", async () => {
