@@ -274,6 +274,13 @@
       "when": 1793387563981,
       "tag": "0038_distribution_feedback_drafts",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1793388199365,
+      "tag": "0039_vcs_integration_repo_links",
+      "breakpoints": true
     }
   ]
 }
