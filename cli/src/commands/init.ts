@@ -1,3 +1,5 @@
+import { accessSync, constants } from "node:fs";
+import { delimiter, join } from "node:path";
 import type { Command } from "commander";
 import { parseProjectKey, writeProjectLink } from "../config/project-link.js";
 import { writeCredentials } from "../config/credentials.js";
@@ -6,6 +8,21 @@ import { ensureGitignoreEntry } from "../gitignore.js";
 import { ensureSessionStartHook } from "../integrations/claude-settings.js";
 import { ensureAgentDocBlurb } from "../integrations/agent-docs.js";
 import { runSync, type SyncResult } from "./sync.js";
+
+/** True if an executable `name` exists in one of the `PATH` directories. */
+export function isOnPath(name: string, pathEnv: string = process.env.PATH ?? ""): boolean {
+  return pathEnv
+    .split(delimiter)
+    .filter(Boolean)
+    .some((dir) => {
+      try {
+        accessSync(join(dir, name), constants.X_OK);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+}
 
 export interface InitOptions {
   projectKey: string;
@@ -96,6 +113,11 @@ export function registerInitCommand(program: Command): void {
     .action(async (opts: { projectKey: string; apiKey?: string }) => {
       const apiKey = opts.apiKey ?? (await promptForApiKey());
       const result = await runInit(process.cwd(), { projectKey: opts.projectKey, apiKey });
+      if (!isOnPath("skillcanon")) {
+        process.stderr.write(
+          "Warning: `skillcanon` is not on your PATH. The session-start hook and the synced skills call it by name, so install it globally (see the CLI README) or they will fail.\n",
+        );
+      }
       process.stdout.write(
         `Linked. Synced ${result.sync.created.length + result.sync.updated.length} skill(s) (${result.sync.created.length} new).\n`,
       );
