@@ -1,7 +1,7 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { EvalRunStatus } from "../domain/eval-run";
-import { evalResults, evalRuns, evalSettings } from "./schema";
+import { evalProviderConfigs, evalResults, evalRuns, evalSettings } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -96,4 +96,39 @@ export async function upsertEvalsEnabled(tx: Tx, organizationId: string, enabled
     .insert(evalSettings)
     .values({ organizationId, enabled, updatedBy })
     .onConflictDoUpdate({ target: evalSettings.organizationId, set: { enabled, updatedBy, updatedAt: new Date() } });
+}
+
+export async function listProviderConfigs(tx: Tx, organizationId: string) {
+  return tx.select().from(evalProviderConfigs).where(eq(evalProviderConfigs.organizationId, organizationId));
+}
+
+export async function upsertProviderConfig(
+  tx: Tx,
+  row: { organizationId: string; provider: "anthropic" | "openai"; apiKeyEnc: string; models: string[]; updatedBy: string },
+) {
+  await tx
+    .insert(evalProviderConfigs)
+    .values(row)
+    .onConflictDoUpdate({
+      target: [evalProviderConfigs.organizationId, evalProviderConfigs.provider],
+      set: { apiKeyEnc: row.apiKeyEnc, models: row.models, updatedBy: row.updatedBy, updatedAt: new Date() },
+    });
+}
+
+export async function deleteProviderConfig(tx: Tx, organizationId: string, provider: "anthropic" | "openai") {
+  await tx
+    .delete(evalProviderConfigs)
+    .where(and(eq(evalProviderConfigs.organizationId, organizationId), eq(evalProviderConfigs.provider, provider)));
+}
+
+export async function getDefaultJudge(tx: Tx, organizationId: string) {
+  const [row] = await tx.select().from(evalSettings).where(eq(evalSettings.organizationId, organizationId));
+  return row?.defaultJudge ?? null;
+}
+
+export async function upsertDefaultJudge(tx: Tx, organizationId: string, defaultJudge: string | null, updatedBy: string) {
+  await tx
+    .insert(evalSettings)
+    .values({ organizationId, defaultJudge, updatedBy })
+    .onConflictDoUpdate({ target: evalSettings.organizationId, set: { defaultJudge, updatedBy, updatedAt: new Date() } });
 }
