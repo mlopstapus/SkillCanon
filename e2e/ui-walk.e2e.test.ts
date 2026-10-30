@@ -492,6 +492,10 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     const missing = await callRaw("sh-run", { name: "no-such-skill" });
     expect(missing.isError).toBe(true);
     expect(missing.content[0]?.text).toContain("not found");
+    // Admin tools are listed but refuse a key without the governance scope.
+    const admin = await callRaw("sh-admin-policy-list", { team_id: "x" });
+    expect(admin.isError).toBe(true);
+    expect(admin.content[0]?.text).toContain("governance:read");
   });
 
   it("revokes the API key", async () => {
