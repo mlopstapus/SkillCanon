@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { EffectiveObjective, EffectiveObjectiveSet, EffectivePolicy, EffectivePolicySet } from "@/bcs/governance";
 import type { InterviewDraft } from "@/bcs/distribution";
 import { AiDraftPanel } from "./ai-draft-panel";
+import { ObjectiveSummary } from "./objective-summary";
 import {
   createObjectiveAction,
   createPolicyAction,
@@ -70,6 +71,7 @@ export function GovernancePage({ routeTeamId, initialTab, initialScope, teamsByI
   return (
     <>
       <AiDraftPanel onUseDraft={useDraft} />
+      {initialTab === "objectives" && initialScope.kind === "team" ? <ObjectiveSummary teamId={initialScope.teamId} /> : null}
       <GovernanceView
         scope={initialScope}
         breadcrumb={breadcrumb}

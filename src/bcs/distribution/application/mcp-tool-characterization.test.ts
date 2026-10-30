@@ -24,6 +24,7 @@ describe("MCP legacy tool contract", () => {
       "sh-admin-objective-create",
       "sh-admin-objective-update",
       "sh-admin-objective-delete",
+      "sh-admin-objective-summary",
       "sh-metrics-summary",
     ]);
   });
