@@ -2,7 +2,7 @@
 
 An open-source, self-hosted skill/prompt registry with **hierarchical governance**, distributed via REST, [MCP](https://modelcontextprotocol.io/), and a CLI.
 
-Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work.
+Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The one exception is the central eval runner ([PDR-020](docs/pdr/020-where-evals-run.md)), which calls a provider pool the operator configures to validate skill updates.
 
 ## Key Features
 
