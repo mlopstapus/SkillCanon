@@ -11,10 +11,21 @@ const BASE = (process.env.E2E_BASE_URL ?? "http://localhost:3000").replace(/\/$/
 const MAIL = (process.env.E2E_MAIL_API ?? "http://localhost:8025").replace(/\/$/, "");
 const ADMIN = { email: "e2e-admin@example.test", password: "e2e-local-password-1" };
 const INVITEE = `new-member-${Date.now()}@example.test`;
+const REVOKED = `revoked-${Date.now()}@example.test`;
 
 let browser: Browser;
 let adminPage: Page;
 let guest: BrowserContext;
+
+async function sendInvite(email: string) {
+  await adminPage.goto(`${BASE}/teams`);
+  await adminPage.getByRole("button", { name: "Members" }).click();
+  await adminPage.getByRole("button", { name: "+ invite by email" }).click();
+  const drawer = adminPage.getByRole("dialog").filter({ visible: true });
+  await drawer.getByPlaceholder("jamie@example.com").fill(email);
+  await drawer.getByRole("button", { name: "Send invite" }).click();
+  await expect.poll(() => adminPage.getByText(`Invitation sent to ${email}.`).isVisible()).toBe(true);
+}
 
 async function inviteLink(to: string): Promise<string> {
   const deadline = Date.now() + 15_000;
@@ -51,14 +62,16 @@ describe("invitation accept flow", { timeout: 60_000 }, () => {
     await adminPage.locator('input[type="password"]').fill(ADMIN.password);
     await adminPage.getByRole("button", { name: "Sign in" }).click();
     await adminPage.waitForURL("**/dashboard");
+    await sendInvite(INVITEE);
+    expect(await inviteLink(INVITEE)).toContain("/invite/");
+  });
+
+  it("lists the invitation as pending on the Teams page with who invited and the expiry (015/008)", async () => {
     await adminPage.goto(`${BASE}/teams`);
     await adminPage.getByRole("button", { name: "Members" }).click();
-    await adminPage.getByRole("button", { name: "+ invite by email" }).click();
-    const drawer = adminPage.getByRole("dialog").filter({ visible: true });
-    await drawer.getByPlaceholder("jamie@example.com").fill(INVITEE);
-    await drawer.getByRole("button", { name: "Send invite" }).click();
-    await expect.poll(() => adminPage.getByText(`Invitation sent to ${INVITEE}.`).isVisible()).toBe(true);
-    expect(await inviteLink(INVITEE)).toContain("/invite/");
+    const pending = adminPage.getByRole("region", { name: "Pending invitations" });
+    await expect.poll(() => pending.getByText(INVITEE).isVisible()).toBe(true);
+    expect(await pending.textContent()).toMatch(/invited by .+ · expires \d{4}-\d{2}-\d{2}/);
   });
 
   it("the invitee accepts from the emailed link and lands signed in", async () => {
@@ -77,5 +90,22 @@ describe("invitation accept flow", { timeout: 60_000 }, () => {
     const page = await (await browser.newContext()).newPage();
     await page.goto(await inviteLink(INVITEE));
     await expect.poll(() => page.getByText("already accepted").first().isVisible()).toBe(true);
+  });
+
+  it("the pending row disappears once accepted, and a revoked invitation can no longer be used (015/008)", async () => {
+    await adminPage.goto(`${BASE}/teams`);
+    await adminPage.getByRole("button", { name: "Members" }).click();
+    // Accepted: no longer pending (the new member now appears in the members list instead).
+    await expect.poll(() => adminPage.getByRole("button", { name: `Revoke invitation for ${INVITEE}` }).count()).toBe(0);
+
+    await sendInvite(REVOKED);
+    await adminPage.goto(`${BASE}/teams`);
+    await adminPage.getByRole("button", { name: "Members" }).click();
+    await adminPage.getByRole("button", { name: `Revoke invitation for ${REVOKED}` }).click();
+    await expect.poll(() => adminPage.getByText(REVOKED).count()).toBe(0);
+
+    const page = await (await browser.newContext()).newPage();
+    await page.goto(await inviteLink(REVOKED));
+    await expect.poll(() => page.getByText("was revoked").first().isVisible()).toBe(true);
   });
 });

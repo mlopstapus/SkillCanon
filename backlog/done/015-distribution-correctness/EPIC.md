@@ -1,7 +1,7 @@
 # Epic 015: Distribution Correctness
 
 **Priority:** 2
-**Status:** in-progress
+**Status:** done
 **Goal:** Every way a skill leaves SkillCanon (REST, CLI-synced file, `skillcanon run`, MCP) hands the consumer the same complete, governed content.
 
 ## Overview
@@ -17,7 +17,7 @@ The 2026-10-29 smoke test fetched three skills over REST, the CLI, MCP and a rea
 - [x] [005 - Supporting Files Over REST and MCP](archive/005-supporting-files-over-rest-and-mcp.md)
 - [x] [006 - One Model for Project Skills](archive/006-one-model-for-project-skills.md)
 - [x] [007 - UI Defects Found in the Smoke Test](archive/007-ui-defects.md)
-- [ ] [008 - Invitation Follow-ups](008-invitation-follow-ups.md)
+- [x] [008 - Invitation Follow-ups](archive/008-invitation-follow-ups.md)
 
 _Completed features are moved to `archive/` and checked off here._
 

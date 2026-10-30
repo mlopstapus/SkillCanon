@@ -250,3 +250,35 @@ describe("TeamsExplorer", () => {
     expect(platformIdx).toBeLessThan(marketingIdx);
   });
 });
+
+describe("TeamsExplorerView pending invitations (015/008)", () => {
+  const teams = [{ id: "t1", name: "Platform", organizationId: "o", parentTeamId: null, ownerId: "u1", slug: "platform", description: null, createdAt: new Date(), updatedAt: new Date() }] as never;
+  const pending = [
+    { id: "i1", email: "kai@example.test", teamId: "t1", role: "member" as const, invitedBy: "Alice Admin", expiresAt: "2026-11-06" },
+    { id: "i2", email: "other@example.test", teamId: "other-team", role: "admin" as const, invitedBy: "Alice Admin", expiresAt: "2026-11-06" },
+  ];
+  const render = (role: "admin" | "member") =>
+    renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={{ id: "u1", orgId: "o", teamId: "t1", role, email: "a@x.test", displayName: "A", username: "a" } as never}
+        teams={teams}
+        users={[]}
+        pendingInvitations={pending}
+        initialSelectedTeamId="t1"
+        refresh={() => {}}
+      />,
+    );
+
+  it("lists the selected team's pending invitations with who invited, expiry and a revoke action, for admins", () => {
+    const html = render("admin");
+    expect(html).toContain("Pending invitations");
+    expect(html).toContain("kai@example.test");
+    expect(html).toContain("invited by Alice Admin · expires 2026-11-06");
+    expect(html).toContain("Revoke invitation for kai@example.test");
+    expect(html).not.toContain("other@example.test");
+  });
+
+  it("shows nothing to non-admins", () => {
+    expect(render("member")).not.toContain("Pending invitations");
+  });
+});

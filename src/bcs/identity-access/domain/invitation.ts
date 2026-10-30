@@ -23,6 +23,8 @@ export interface InvitationSummary {
   teamId: string;
   role: InvitationRole;
   state: InvitationState;
+  invitedById: string;
+  expiresAt: Date;
   createdAt: Date;
 }
 

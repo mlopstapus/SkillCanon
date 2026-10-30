@@ -7,6 +7,7 @@ import {
   createTeam,
   insertTeamBetween,
   inviteUser,
+  revokeInvitation,
   removeTeamMember,
   reparentTeam,
   updateTeam,
@@ -136,6 +137,21 @@ export async function assignUserToTeamAction(params: {
     const actingUser = await requireActingUser();
     await withTenantContext(db, actingUser.orgId, (tx) =>
       updateUser(tx, actingUser, params.targetUserId, { teamId: params.teamId }),
+    );
+    revalidatePath("/teams");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function revokeInvitationAction(params: {
+  invitationId: string;
+}): Promise<TeamActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      revokeInvitation(tx, actingUser, params.invitationId),
     );
     revalidatePath("/teams");
     return { ok: true };
