@@ -34,7 +34,11 @@ Cons: the main service now calls LLMs (scoped to eval jobs only); the operator c
 - **Providers.** The instance operator configures a provider pool (credentials and allowed models). Users do not bring their own keys. Provider credentials are server-side secrets and never leave the server.
 - **CLI.** The CLI only submits runs and fetches results. It never calls a model for evals.
 - **Gate.** Eval results gate the merge of a skill update: results for the update's content must exist before it is merged. How strictly a given organization is held to this is decided in 017/005, which this PDR makes the intended default rather than an optional extra.
-- **Scope of LLM use.** The "SkillCanon never calls an LLM" statement remains true for expansion, sync and distribution. Only the eval runner calls models.
+- **Scope of LLM use.** The "SkillCanon never calls an LLM" statement remains true for expansion, sync and distribution. Only the eval runner calls models, with one further exception added by 016/004 (below).
+
+### Amendment (016/004, Drafted Improvements)
+
+A skill owner may ask for a model-drafted improvement of a version from its open feedback notes. This is a second, owner-triggered model call (never automatic), sent to the same operator-configured provider and only for organizations that have opted in to third-party sends. Accepting a draft is a normal `publishVersion`, so any eval gate (017/005) applies to it. Until the admin-page provider pool exists, the provider is configured by `ANTHROPIC_API_KEY` (and optionally `DRAFTER_MODEL`).
 
 ### Model naming
 
