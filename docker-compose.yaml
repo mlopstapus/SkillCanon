@@ -59,5 +59,20 @@ services:
       migrate:
         condition: service_completed_successfully
 
+  # Separate eval worker (017/003 1b): executes queued eval runs against each org's provider pool.
+  eval-worker:
+    build:
+      context: .
+      target: worker
+    environment:
+      DATABASE_URL: postgresql://skillcanon_app:${APP_DB_PASSWORD:-changeme_in_production}@database:5432/${POSTGRES_DB:-skillcanon}
+      JWT_SECRET: ${JWT_SECRET:-changeme_in_production}
+    depends_on:
+      database:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
 volumes:
   pgdata:
