@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { AuditActorOption, ResolvedAuditRow } from "@/bcs/audit-compliance";
-import { AppState, Badge, type BadgeProps } from "@/shared/ui";
+import { AppState, Badge, formatUtcTimestamp, type BadgeProps } from "@/shared/ui";
 import { FilterBar } from "./filter-bar";
 import { hasActiveFilters, type AuditLogFilterState } from "./filter-params";
 import { EventDetailDrawer } from "./event-detail-drawer";
@@ -159,7 +159,7 @@ export function AuditLogView({
               >
                 <div>
                   <div className="font-mono text-[12px] text-text">
-                    {row.event.createdAt.toLocaleString()}
+                    {formatUtcTimestamp(row.event.createdAt)}
                   </div>
                 </div>
                 <div className="flex min-w-0 items-center gap-2.5">

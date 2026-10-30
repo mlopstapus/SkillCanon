@@ -7,6 +7,8 @@ import { setSessionCookie } from "@/app/_lib/session-cookie";
 
 export type LoginFormState = {
   error?: string;
+  /** Echoed back so a failed attempt doesn't clear the email field. */
+  email?: string;
 };
 
 
@@ -22,12 +24,12 @@ export async function loginAction(
   const password = String(formData.get("password") ?? "");
 
   if (!email || !password) {
-    return { error: "Incorrect email or password." };
+    return { error: "Incorrect email or password.", email };
   }
 
   const result = await login(authDb, email, password);
   if (!result) {
-    return { error: "Incorrect email or password." };
+    return { error: "Incorrect email or password.", email };
   }
 
   await setSessionCookie(result.cookie);
