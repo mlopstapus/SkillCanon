@@ -25,7 +25,7 @@ Delivered in parts so each PR stays reviewable: **1a** job tables, queue semanti
 - [ ] An org must opt in to evals (admin action, audited) before any run is accepted; this is also consent to send skill content to the providers.
 - [ ] Submitting and reading runs is audited and limited by an API-key scope.
 
-Part 1a shipped in `specs/045-central-eval-runner/` (migration 0036, `executeEvalRun`, REST submit/read, org opt-in; default pool empty so submit is 409). The worker (1b), pool admin page (1c) and CLI (2) remain; this file stays open.
+Part 1a shipped in `specs/046-central-eval-runner/` (migration 0036, `executeEvalRun`, REST submit/read, org opt-in; default pool empty so submit is 409). The worker (1b), pool admin page (1c) and CLI (2) remain; this file stays open.
 
 ## Acceptance Criteria
 
