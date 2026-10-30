@@ -11,7 +11,7 @@ describe("POST /api/webhooks/github", () => {
   afterAll(async () => testDb.teardown());
 
   const send = (body: string, headers: Record<string, string>) =>
-    handlePost(new Request("http://x/api/webhooks/github", { method: "POST", body, headers }), { db: testDb.authDb });
+    handlePost(new Request("http://x/api/webhooks/github", { method: "POST", body, headers }), { db: testDb.authDb, appDb: testDb.appDb });
 
   it("is 503 when the App is not configured", async () => {
     vi.unstubAllEnvs();

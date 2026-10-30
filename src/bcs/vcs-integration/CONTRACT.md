@@ -16,7 +16,7 @@ Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCan
 | `unlinkRepo(db, actor, repoLinkId)` | Soft-unlinks a repo↔project link (`unlinkedAt`). Does not delete PR-check history. | Distribution (route handlers) |
 | `listInstallations(db, orgId)` | Active (not deleted) GitHub App installations for this org. Also exposed: `buildInstallUrl`, `completeInstall` (install flow), `getInstallationAccessToken` (short-lived token for an active installation; never stored). | Distribution (admin UI) |
 | `listRepoLinks(db, orgId, projectId?)` (also `listAccessibleRepos` for the picker) | Repo links, optionally filtered to one project. | Distribution (UI) |
-| `getPrCheck(orgId, repoLinkId, prNumber)` | Latest evaluation plus history for one PR. | Distribution (dashboard UI) |
+| `getPrCheck(db, orgId, repoLinkId, prNumber)` → `{ latest, history }` | Latest evaluation plus history for one PR. | Distribution (dashboard UI) |
 | `getComplianceSummaryForProject(orgId, projectId, { since }?)` | Aggregates `PrCheck` rows across every repo linked to the project into `{ totalEvaluated, passed, failed, neutral, rate }`. `rate = passed / (passed + failed)` — `neutral` (evaluation-errored) rows count toward `totalEvaluated` but are excluded from `rate`'s numerator/denominator, since an infra error isn't the same claim as a missing skill. `since` omitted means all-time. Visibility/reporting only — never a merge gate (`006-vcs-integration-dashboard-ui.md`). | Distribution (dashboard UI) |
 
 ## Events Published
@@ -69,7 +69,8 @@ interface PrCheck {
   evaluatedAt: string;
   results: RequiredSkillResult[];
   status: "pass" | "fail" | "neutral"; // neutral = evaluation itself errored (e.g. Governance call failed)
-  githubCheckRunId: number | null;
+  githubCheckRunId: number | null; // one check run per head sha (GitHub ties a run to a commit)
+  error: string | null; // set only when status is neutral
 }
 ```
 
