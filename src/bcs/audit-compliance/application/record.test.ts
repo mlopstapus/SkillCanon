@@ -45,6 +45,29 @@ describe("record", () => {
     expect(rows[0]?.sourceIp).toBe("203.0.113.10");
   });
 
+  it("accepts the mcp transport", async () => {
+    const organizationId = randomUUID();
+    const actorUserId = randomUUID();
+
+    await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      record(tx, {
+        organizationId,
+        actorUserId,
+        actorApiKeyId: null,
+        action: "prompt.expanded",
+        resourceType: "prompt",
+        resourceId: randomUUID(),
+        transport: "mcp",
+        sourceIp: null,
+      }),
+    );
+
+    const rows = await withTenantContext(testDb.appDb, organizationId, (tx) =>
+      tx.select().from(auditEvents).where(eq(auditEvents.actorUserId, actorUserId)),
+    );
+    expect(rows[0]?.transport).toBe("mcp");
+  });
+
   it("strips password_hash/key_hash/raw-token fields nested inside before/after before storage", async () => {
     const organizationId = randomUUID();
     const resourceId = randomUUID();

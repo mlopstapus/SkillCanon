@@ -3,12 +3,16 @@ import { z } from "zod";
 import { MCP_TOOL_NAMES, parseLegacyInput, textResult, toolInputSchemas } from "./mcp-tools";
 
 describe("MCP legacy tool contract", () => {
-  it("exposes exactly the six legacy tool names in discovery order", () => {
+  it("exposes the legacy tool names plus the chain tools, in discovery order", () => {
     expect(MCP_TOOL_NAMES).toEqual([
       "sh-list",
       "sh-search",
       "sh-context",
       "sh-run",
+      "sh-chain-list",
+      "sh-chain-run",
+      "sh-chain-advance",
+      "sh-chain-abandon",
       "sh-workflow-list",
       "sh-workflow-run",
     ]);

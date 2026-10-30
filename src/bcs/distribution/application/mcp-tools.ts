@@ -9,7 +9,15 @@ import {
   fetchExpandableVersion,
   listPrompts,
   listVersions,
+  ChainStepResolutionFailedError,
+  ReportOutputTooLargeError,
+  RunAlreadyFinishedError,
+  RunNotFoundError,
+  RunStepConflictError,
+  abandonSkillChainRun,
+  advanceSkillChainRun,
   startSkillChainRun,
+  type ChainStepResolution,
   type PromptActor,
   type PromptSummary,
   type PromptVersionSummary,
@@ -27,6 +35,11 @@ export const MCP_TOOL_NAMES = [
   "sh-search",
   "sh-context",
   "sh-run",
+  "sh-chain-list",
+  "sh-chain-run",
+  "sh-chain-advance",
+  "sh-chain-abandon",
+  // Legacy names, kept as aliases of sh-chain-list / sh-chain-run for one release.
   "sh-workflow-list",
   "sh-workflow-run",
 ] as const;
@@ -41,6 +54,16 @@ export const toolInputSchemas = {
     name: z.string().describe("The skill name to run."),
     project: z.string().optional().describe("Optional project UUID to scope objective resolution."),
   },
+  "sh-chain-list": {},
+  "sh-chain-run": { name: z.string().describe("The chain name.") },
+  "sh-chain-advance": {
+    run_id: z.string().describe("The run id returned by sh-chain-run."),
+    step_index: z.number().int().min(0).describe("The zero-based index of the step you are reporting on."),
+    status: z.enum(["success", "error"]).describe("Whether you completed the step."),
+    output: z.string().optional().describe("Your result for the step."),
+    error: z.string().optional().describe("What went wrong, when status is error."),
+  },
+  "sh-chain-abandon": { run_id: z.string().describe("The run id to abandon.") },
   "sh-workflow-list": {},
   "sh-workflow-run": {
     name: z.string().describe("The workflow name."),
@@ -53,8 +76,13 @@ export const toolDescriptions: Record<McpToolName, string> = {
   "sh-search": "Search skills by name or tag. Returned names can be passed to sh-run.",
   "sh-context": "Show effective policies and objectives for the authenticated user.",
   "sh-run": "Run a skill by name. Use sh-list or sh-search to discover available skills.",
-  "sh-workflow-list": "List all chains (multi-step skills) accessible to the authenticated user.",
-  "sh-workflow-run": "Run a chain by name. Each step's output is automatically passed to the next step.",
+  "sh-chain-list": "List all chains (multi-step skills) accessible to the authenticated user.",
+  "sh-chain-run":
+    "Start a chain run and get step 1. Do the step, then call sh-chain-advance with the run_id and your result to get the next step.",
+  "sh-chain-advance": "Report the result of the current chain step and get the next step (or the end of the run).",
+  "sh-chain-abandon": "Abandon an in-progress chain run.",
+  "sh-workflow-list": "Deprecated alias of sh-chain-list.",
+  "sh-workflow-run": "Deprecated alias of sh-chain-run; input is ignored.",
 };
 
 export interface McpToolContext {
@@ -299,8 +327,11 @@ export async function shRunWithFiles(args: { name: string; project?: string }, c
     }
 
     const version = await fetchExpandableVersion(tx, ctx.caller.user.orgId, args.name);
-    if (!version || version.kind === "chain") {
+    if (!version) {
       throw new McpToolError(`skill '${args.name}' not found.`);
+    }
+    if (version.kind === "chain") {
+      throw new McpToolError(`'${args.name}' is a chain; use sh-chain-run to start it.`);
     }
 
     try {
@@ -353,13 +384,13 @@ export async function shRunWithFiles(args: { name: string; project?: string }, c
   return { text: formatWithSessionContext(contextBlock, result.text), files: result.files };
 }
 
-export async function shWorkflowList(ctx: McpToolContext): Promise<string> {
+export async function shChainList(ctx: McpToolContext): Promise<string> {
   assertCoreFeaturesEnabled();
   const contextBlock = await maybeInjectSessionContext(ctx);
   const actor = actorFromCaller(ctx.caller);
   const result = await withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
     const prompts = await listPrompts(tx, actor);
-    const lines = ["Available workflows:"];
+    const lines = ["Available chains:"];
     for (const prompt of prompts) {
       const version = await activeVersionForPrompt(tx, actor, prompt);
       if (version?.kind !== "chain") {
@@ -369,23 +400,32 @@ export async function shWorkflowList(ctx: McpToolContext): Promise<string> {
       const desc = prompt.description ? ` — ${prompt.description}` : "";
       lines.push(`  - ${prompt.name} (${stepCount} step${stepCount === 1 ? "" : "s"})${desc}`);
     }
-    return lines.length === 1 ? "No workflows found." : lines.join("\n");
+    return lines.length === 1 ? "No chains found." : lines.join("\n");
   });
   return formatWithSessionContext(contextBlock, result);
 }
 
-export async function shWorkflowRun(args: { name: string; input: string }, ctx: McpToolContext): Promise<string> {
+function formatChainStep(runId: string, step: ChainStepResolution): string {
+  return [
+    `--- Step ${step.stepIndex + 1}: ${step.stepId} (${step.promptName} v${step.promptVersion}) ---`,
+    step.content,
+    "",
+    `When done, call sh-chain-advance with run_id "${runId}", step_index ${step.stepIndex}, status and output.`,
+  ].join("\n");
+}
+
+/** Legacy alias of `shChainList`. */
+export const shWorkflowList = shChainList;
+
+export async function shChainRun(args: { name: string }, ctx: McpToolContext): Promise<string> {
   assertCoreFeaturesEnabled();
   const contextBlock = await maybeInjectSessionContext(ctx);
   const actor = actorFromCaller(ctx.caller);
   const result = await withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
     const prompts = await listPrompts(tx, actor);
     const match = prompts.find((prompt) => prompt.name.toLowerCase() === args.name.toLowerCase());
-    if (!match) {
-      throw new McpToolError(`chain '${args.name}' not found.`);
-    }
-    const version = await activeVersionForPrompt(tx, actor, match);
-    if (version?.kind !== "chain") {
+    const version = match ? await activeVersionForPrompt(tx, actor, match) : null;
+    if (!match || version?.kind !== "chain") {
       throw new McpToolError(`chain '${args.name}' not found.`);
     }
 
@@ -393,27 +433,61 @@ export async function shWorkflowRun(args: { name: string; input: string }, ctx: 
     if (!run) {
       throw new McpToolError(`failed to run chain '${args.name}'.`);
     }
-
-    const steps = version.steps ?? [];
     if ("done" in run) {
-      return [`Workflow: ${match.name} (${steps.length} steps)`, "", "--- Final Outputs ---", JSON.stringify({}, null, 2)].join("\n");
+      return `Chain: ${match.name} has no steps to run.`;
     }
-
-    const parts = [`Workflow: ${match.name} (${steps.length} steps)`];
-    parts.push(`\n--- ✓ ${run.step.stepId} (${run.step.promptName} v${run.step.promptVersion}) ---`);
-    parts.push(run.step.content);
-    parts.push("\n--- Final Outputs ---");
-    parts.push(JSON.stringify({ runId: run.runId, pendingStep: run.step.stepId, input: parseLegacyInput(args.input) }, null, 2));
-    return parts.join("\n");
+    const total = version.steps?.length ?? 0;
+    return [`Chain: ${match.name} (${total} step${total === 1 ? "" : "s"})`, `runId: ${run.runId}`, "", formatChainStep(run.runId, run.step)].join("\n");
   });
   return formatWithSessionContext(contextBlock, result);
+}
+
+/** Legacy alias: `input` was never used by the run itself. */
+export async function shWorkflowRun(args: { name: string; input: string }, ctx: McpToolContext): Promise<string> {
+  return shChainRun({ name: args.name }, ctx);
+}
+
+export async function shChainAdvance(
+  args: { run_id: string; step_index: number; status: "success" | "error"; output?: string; error?: string },
+  ctx: McpToolContext,
+): Promise<string> {
+  assertCoreFeaturesEnabled();
+  const actor = actorFromCaller(ctx.caller);
+  return withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
+    const result = await advanceSkillChainRun(
+      tx,
+      actor,
+      args.run_id,
+      { stepIndex: args.step_index, status: args.status, output: args.output, error: args.error },
+      ctx.auditContext,
+    );
+    if ("done" in result) {
+      return args.status === "success" ? "Chain run complete." : "Chain run finished.";
+    }
+    return formatChainStep(args.run_id, result.step);
+  });
+}
+
+export async function shChainAbandon(args: { run_id: string }, ctx: McpToolContext): Promise<string> {
+  assertCoreFeaturesEnabled();
+  await withTenantContext(ctx.db, ctx.caller.user.orgId, (tx) =>
+    abandonSkillChainRun(tx, actorFromCaller(ctx.caller), args.run_id, ctx.auditContext),
+  );
+  return "Chain run abandoned.";
 }
 
 export async function invokeMcpTool(name: McpToolName, args: unknown, ctx: McpToolContext): Promise<CallToolResult> {
   try {
     return await dispatchMcpTool(name, args, ctx);
   } catch (err) {
-    if (err instanceof McpToolError) {
+    if (
+      err instanceof McpToolError ||
+      err instanceof RunNotFoundError ||
+      err instanceof RunAlreadyFinishedError ||
+      err instanceof RunStepConflictError ||
+      err instanceof ReportOutputTooLargeError ||
+      err instanceof ChainStepResolutionFailedError
+    ) {
       return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
     }
     if (err instanceof z.ZodError) {
@@ -440,8 +514,15 @@ async function dispatchMcpTool(name: McpToolName, args: unknown, ctx: McpToolCon
         ],
       };
     }
+    case "sh-chain-list":
     case "sh-workflow-list":
-      return textResult(await shWorkflowList(ctx));
+      return textResult(await shChainList(ctx));
+    case "sh-chain-run":
+      return textResult(await shChainRun(z.object(toolInputSchemas["sh-chain-run"]).parse(args), ctx));
+    case "sh-chain-advance":
+      return textResult(await shChainAdvance(z.object(toolInputSchemas["sh-chain-advance"]).parse(args), ctx));
+    case "sh-chain-abandon":
+      return textResult(await shChainAbandon(z.object(toolInputSchemas["sh-chain-abandon"]).parse(args), ctx));
     case "sh-workflow-run":
       return textResult(await shWorkflowRun(z.object(toolInputSchemas["sh-workflow-run"]).parse(args), ctx));
     default:

@@ -28,6 +28,7 @@ describe("FilterBar", () => {
     expect(markup).toContain("system");
     expect(markup).toContain("Transport");
     expect(markup).toContain("web");
+    expect(markup).toContain("mcp");
     expect(markup).toContain("cli");
   });
 

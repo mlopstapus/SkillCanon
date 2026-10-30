@@ -115,7 +115,7 @@ export function AuditLogView({
         </div>
         <p className="mb-4 max-w-[560px] text-[12.5px] leading-relaxed text-dim">
           Every mutation across the workspace, captured in-transaction on the web app, REST
-          API, and CLI. Admin-only.
+          API, MCP, and CLI. Admin-only.
         </p>
         <FilterBar
           filters={filters}

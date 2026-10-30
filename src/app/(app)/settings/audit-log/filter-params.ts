@@ -7,7 +7,7 @@ import type { AuditEventFilters, AuditTransport } from "@/bcs/audit-compliance";
  * barrel here would drag its server-only dependencies into the browser
  * bundle; see `audit-log-view.tsx`'s identical comment for the full reason.
  */
-export const AUDIT_TRANSPORTS = ["web", "api", "cli", "system"] as const;
+export const AUDIT_TRANSPORTS = ["web", "api", "mcp", "cli", "system"] as const;
 
 export type DateRangePreset = "24h" | "7d" | "30d" | "all" | "custom";
 

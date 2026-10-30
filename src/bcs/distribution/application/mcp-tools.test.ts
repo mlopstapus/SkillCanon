@@ -256,6 +256,58 @@ describe("MCP tool behavior", () => {
     expect(result).toContain("step1");
   });
 
+  it("sh-chain-run / sh-chain-advance walk a two-step chain to completion; abandon and bad reports fail with isError", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const a = `step-a-${randomUUID()}`;
+    const b = `step-b-${randomUUID()}`;
+    await publishTemplateSkill(seeded, a, "Do A.");
+    await publishTemplateSkill(seeded, b, "Do B.");
+    const chain = `chain-${randomUUID()}`;
+    const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
+    await withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
+      await createPrompt(tx, actor, { organizationId: seeded.organizationId, name: chain });
+      await publishVersion(tx, actor, {
+        organizationId: seeded.organizationId,
+        promptName: chain,
+        version: "1.0.0",
+        steps: [
+          { id: "a", promptName: a, dependsOn: [] },
+          { id: "b", promptName: b, dependsOn: ["a"] },
+        ],
+      });
+    });
+    const ctx = ctxFor(seeded);
+    const text = async (name: Parameters<typeof invokeMcpTool>[0], args: object) => {
+      const result = await invokeMcpTool(name, args, ctx);
+      return { isError: result.isError, text: (result.content[0] as { text: string }).text };
+    };
+
+    const started = await text("sh-chain-run", { name: chain });
+    expect(started.text).toContain("Do A.");
+    const runId = /runId: (\S+)/.exec(started.text)?.[1] ?? "";
+
+    const second = await text("sh-chain-advance", { run_id: runId, step_index: 0, status: "success", output: "ok" });
+    expect(second.isError).toBeUndefined();
+    expect(second.text).toContain("Do B.");
+
+    const stale = await text("sh-chain-advance", { run_id: runId, step_index: 0, status: "success" });
+    expect(stale.isError).toBe(true);
+
+    const done = await text("sh-chain-advance", { run_id: runId, step_index: 1, status: "success" });
+    expect(done.text).toBe("Chain run complete.");
+
+    const again = await text("sh-chain-abandon", { run_id: runId });
+    expect(again.isError).toBe(true);
+
+    const second_run = await text("sh-workflow-run", { name: chain, input: "x" });
+    const run2 = /runId: (\S+)/.exec(second_run.text)?.[1] ?? "";
+    expect((await text("sh-chain-abandon", { run_id: run2 })).text).toBe("Chain run abandoned.");
+
+    const viaRun = await text("sh-run", { name: chain });
+    expect(viaRun.isError).toBe(true);
+    expect(viaRun.text).toContain("sh-chain-run");
+  });
+
   it("injects the session-context block only on the first tool call in a session, not the second", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     await publishTemplateSkill(seeded, `alpha-${randomUUID()}`);

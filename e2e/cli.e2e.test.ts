@@ -16,6 +16,7 @@ const ADMIN = { email: "e2e-admin@example.test", password: "e2e-local-password-1
 const SLUG = "cli-smoke";
 const BODY = "Greet the reader.";
 const CHAIN = "cli-chain";
+const INCLUDER = "cli-includer";
 const POLICY = "Always cite the CLI smoke ticket number.";
 const CLI = resolve("cli/dist/index.js");
 
@@ -72,6 +73,12 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
         { id: "b", promptName: SLUG, dependsOn: ["a"] },
       ],
     });
+    // 015/002: a skill that includes another must sync with no template syntax.
+    await api("POST", "/api/skills", { name: INCLUDER });
+    await api("POST", `/api/skills/${INCLUDER}/versions`, {
+      version: "1.0.0",
+      mainFile: { content: `Intro. {{ include_prompt('${SLUG}') }}` },
+    });
     // A personally-owned skill can't be assigned to a project; hand it to the team.
     await api("POST", `/api/skills/${SLUG}/transfer`, { newOwnerType: "team", newOwnerId: teamId });
     await api("POST", "/api/policies", {
@@ -86,7 +93,10 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
       slug: "cli-smoke",
     });
     projectId = project.id;
+    await api("POST", `/api/skills/${INCLUDER}/transfer`, { newOwnerType: "team", newOwnerId: teamId });
     await api("POST", `/api/projects/${projectId}/skills`, { skillId: skill.id, requirement: "required" });
+    const includer = await api("GET", `/api/skills/${INCLUDER}`);
+    await api("POST", `/api/projects/${projectId}/skills`, { skillId: includer.id, requirement: "optional" });
 
     await page.goto(`${BASE}/settings/api-keys`);
     await page.getByRole("button", { name: "Issue key" }).first().click();
@@ -119,6 +129,12 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     const second = cli("advance", runId, "0", "--output", "done a");
     expect(second).toContain("step 2");
     expect(cli("advance", runId, "1")).toContain("complete");
+  });
+
+  it("syncs an including skill with no template syntax and run renders the include", () => {
+    const synced = readFileSync(join(repo, ".claude/skills", `skillcanon-${INCLUDER}`, "SKILL.md"), "utf8");
+    expect(synced).not.toMatch(/\{\{|\{%/);
+    expect(cli("run", INCLUDER)).toContain(BODY);
   });
 
   it("sync is idempotent", () => {
