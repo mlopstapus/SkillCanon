@@ -1,7 +1,7 @@
 ---
 epic: 014-quickstart-reliability
 feature: 004-pnpm-settings
-status: open
+status: done
 dependencies: []
 ---
 
@@ -11,5 +11,5 @@ pnpm warns that it ignores the `pnpm.overrides` and `pnpm.auditConfig` keys in `
 
 ## Requirements
 
-- [ ] Move `overrides` and `auditConfig` to `pnpm-workspace.yaml` (or pin pnpm and enforce it with `packageManager` + corepack in CI).
-- [ ] Confirm the lockfile resolves the overridden versions after the move.
+- [x] Move `overrides` and `auditConfig` to `pnpm-workspace.yaml` (or pin pnpm and enforce it with `packageManager` + corepack in CI).
+- [x] Confirm the lockfile resolves the overridden versions after the move.

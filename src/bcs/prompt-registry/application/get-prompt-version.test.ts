@@ -34,7 +34,7 @@ describe("getPromptVersion", () => {
     await withTenantContext(testDb.appDb, fixture.organizationId, async (tx) => {
       await expect(
         getPromptVersion(tx, fixture.organizationId, v.id),
-      ).resolves.toMatchObject({ id: v.id, version: "v1" });
+      ).resolves.toMatchObject({ id: v.id, version: "1" });
     });
   });
 

@@ -66,7 +66,7 @@ describe("/api/skills/[name]/versions", () => {
 
     expect(response.status).toBe(201);
     const body = await response.json();
-    expect(body.version).toBe("v1");
+    expect(body.version).toBe("1");
     expect(body.kind).toBe("template");
   });
 
@@ -155,7 +155,7 @@ describe("/api/skills/[name]/versions", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body).toHaveLength(1);
-    expect(body[0].version).toBe("v1");
+    expect(body[0].version).toBe("1");
   });
 
   it("returns 404 SKILL_NOT_FOUND listing versions for a nonexistent skill", async () => {

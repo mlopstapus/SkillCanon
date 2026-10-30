@@ -32,11 +32,11 @@ export interface PromptDetailProps {
 
 function nextVersionLabel(versions: PromptDetailData["versions"]): string {
   const numbers = versions
-    .map((v) => /^v(\d+)$/.exec(v.version)?.[1])
+    .map((v) => /^v?(\d+)$/.exec(v.version)?.[1])
     .filter((n): n is string => n !== undefined)
     .map(Number);
   const next = numbers.length ? Math.max(...numbers) + 1 : 1;
-  return `v${next}`;
+  return String(next);
 }
 
 /**
@@ -171,7 +171,7 @@ export function PromptDetail({ data }: PromptDetailProps) {
       {copyTargetName ? (
         <NewVersionDrawer
           promptName={copyTargetName}
-          nextVersionLabel="v1"
+          nextVersionLabel="1"
           mainFileContent={
             data.isLegacyShape
               ? `System template:\n${data.legacySystemTemplate ?? ""}\n\nUser template:\n${data.legacyUserTemplate ?? ""}`

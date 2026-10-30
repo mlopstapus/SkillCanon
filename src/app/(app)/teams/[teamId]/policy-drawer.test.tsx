@@ -9,6 +9,7 @@ describe("PolicyDrawer", () => {
     );
     expect(html).toContain("New policy");
     expect(html).toContain(">prepend<");
+    expect(html).toContain('aria-label="prepend: before prompt"');
     expect(html).toContain(">append<");
     expect(html).toContain(">inject<");
     expect(html).toContain(">validate<");
