@@ -19,6 +19,13 @@ describe("RegisterForm", () => {
     expect(markup).toContain("Minimum 8 characters");
   });
 
+  it("frames first-run setup as setting up SkillCanon for Tribe", () => {
+    const markup = renderToStaticMarkup(<RegisterFormView state={{ status: "idle" }} action={vi.fn()} />);
+
+    expect(markup).toContain("Set up SkillCanon for Tribe.");
+    expect(markup).toContain("access is by invitation");
+  });
+
   it("defaults the organization name to Tribe", () => {
     const markup = renderToStaticMarkup(<RegisterFormView state={{ status: "idle" }} action={vi.fn()} />);
 
