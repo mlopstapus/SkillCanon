@@ -68,7 +68,7 @@ describe("runGovernanceInterview", () => {
       reply: "Here you go.",
       drafts: [
         { kind: "policy", name: "audit-trail", enforcementType: "append", content: "Log every change." },
-        { kind: "objective", title: "Pass SOC2", description: "By Q3." },
+        { kind: "objective", title: "Pass the audit", description: "By Q3." },
         { kind: "policy", name: "", content: "dropped" },
       ],
     });
@@ -80,7 +80,7 @@ describe("runGovernanceInterview", () => {
     expect(result.reply).toBe("Here you go.");
     expect(result.drafts).toEqual([
       { kind: "policy", name: "audit-trail", enforcementType: "append", content: "Log every change." },
-      { kind: "objective", title: "Pass SOC2", description: "By Q3." },
+      { kind: "objective", title: "Pass the audit", description: "By Q3." },
     ]);
     expect(result.tokens).toBe(42);
     expect(calls[0]?.user).toContain("regulated software");

@@ -93,7 +93,7 @@ export function InviteFormView({ preview, state, action }: InviteFormViewProps) 
         <p className="font-mono text-xs uppercase text-a">Invitation</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Join {preview.orgName}.</h1>
         <p className="text-sm leading-6 text-dim">
-          You have been invited to the {preview.teamName} team as {roleLabel(preview.role)}.
+          You are invited to the {preview.teamName} team as {roleLabel(preview.role)}.
         </p>
       </div>
 

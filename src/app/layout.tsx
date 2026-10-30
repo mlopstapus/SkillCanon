@@ -25,8 +25,8 @@ const splineMono = Spline_Sans_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
-  title: "SkillCanon",
-  description: "Self-hosted prompt registry distributed via MCP",
+  title: "SkillCanon · Tribe",
+  description: "Tribe's internal skills registry: the governed skills our AI tools run.",
   robots: { index: false, follow: false },
 };
 

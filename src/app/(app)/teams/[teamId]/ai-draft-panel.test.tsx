@@ -14,7 +14,7 @@ describe("AiDraftPanelView", () => {
         ]}
         drafts={[
           { kind: "policy", name: "audit-trail", enforcementType: "append", content: "Log every change." },
-          { kind: "objective", title: "Pass SOC2", description: "By Q3." },
+          { kind: "objective", title: "Pass the audit", description: "By Q3." },
         ]}
         input=""
         pending={false}
@@ -26,7 +26,7 @@ describe("AiDraftPanelView", () => {
     );
     expect(html).toContain("We are regulated.");
     expect(html).toContain("Policy: audit-trail");
-    expect(html).toContain("Objective: Pass SOC2");
+    expect(html).toContain("Objective: Pass the audit");
     expect(html).toContain("Review &amp; create");
     expect(html).toContain('aria-label="Message the AI assistant"');
   });
