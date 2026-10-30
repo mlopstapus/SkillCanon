@@ -64,6 +64,8 @@ export async function summarizeObjectives(
   actor: { organizationId: string; userId: string; role: "admin" | "member" },
   scope: SummaryScope,
   pool: EvalProviderPool = getEvalProviderPool(),
+  /** Return only an already-cached summary; never call a model. */
+  cachedOnly = false,
 ): Promise<ObjectiveSummary> {
   if (scope.kind === "org" && actor.role !== "admin") {
     throw new OrgSummaryNotAllowedError();
@@ -80,6 +82,10 @@ export async function summarizeObjectives(
   const hit = cache.get(key);
   if (hit !== undefined) {
     return { summary: hit, objectiveCount: lines.length, cached: true };
+  }
+
+  if (cachedOnly) {
+    return { summary: "No summary has been generated for the current objectives yet; generate one from the Objectives tab.", objectiveCount: lines.length, cached: false };
   }
 
   const modelId = pool.defaultJudge ?? pool.models[0];

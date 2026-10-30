@@ -24,7 +24,9 @@ import {
 import { CrossOrgUserAccessError, NotAuthorizedError, assertCoreFeaturesEnabled, getTeam } from "@/bcs/identity-access";
 import { withTenantContext } from "@/shared/db";
 import { getPromptUsageSummaryForOrganization } from "./get-prompt-usage-summary-for-organization";
+import { AiNotEnabledError } from "./governance-interview";
 import { McpToolError } from "./mcp-errors";
+import { OrgSummaryNotAllowedError, summarizeObjectives } from "./summarize-objectives";
 import type { McpToolContext } from "./mcp-tools";
 
 export const ADMIN_TOOL_NAMES = [
@@ -36,6 +38,7 @@ export const ADMIN_TOOL_NAMES = [
   "sh-admin-objective-create",
   "sh-admin-objective-update",
   "sh-admin-objective-delete",
+  "sh-admin-objective-summary",
   "sh-metrics-summary",
 ] as const;
 
@@ -81,6 +84,9 @@ export const adminToolInputSchemas = {
     status: objectiveFields.status,
   },
   "sh-admin-objective-delete": { objective_id: z.string().min(1) },
+  "sh-admin-objective-summary": {
+    team_id: z.string().min(1).optional().describe("Summarize this team. Omit for the whole organization (admin only)."),
+  },
   "sh-metrics-summary": {
     from: z.string().date().optional().describe("Start date (YYYY-MM-DD). Default: 30 days before `to`."),
     to: z.string().date().optional().describe("End date (YYYY-MM-DD). Default: now."),
@@ -96,6 +102,8 @@ export const adminToolDescriptions: Record<AdminToolName, string> = {
   "sh-admin-objective-create": "Create a team objective. Needs governance:write and an admin or team owner.",
   "sh-admin-objective-update": "Update an objective. Needs governance:write and an admin or team owner.",
   "sh-admin-objective-delete": "Delete an objective. Needs governance:write and an admin or team owner.",
+  "sh-admin-objective-summary":
+    "Read the cached AI summary of a team's (or the organization's) objectives. Needs governance:read; never calls a model.",
   "sh-metrics-summary": "Org-wide skill usage summary for a date window. Needs the metrics:read scope.",
 };
 
@@ -108,6 +116,7 @@ const REQUIRED_SCOPE: Record<AdminToolName, string> = {
   "sh-admin-objective-create": "governance:write",
   "sh-admin-objective-update": "governance:write",
   "sh-admin-objective-delete": "governance:write",
+  "sh-admin-objective-summary": "governance:read",
   "sh-metrics-summary": "metrics:read",
 };
 
@@ -125,6 +134,8 @@ export function isAdminToolError(err: unknown): boolean {
     PolicyNotAuthorizedError,
     PolicyNotFoundError,
     PolicyScopeNotFoundError,
+    OrgSummaryNotAllowedError,
+    AiNotEnabledError,
   ].some((ctor) => err instanceof ctor);
 }
 
@@ -182,6 +193,16 @@ export async function invokeAdminTool(name: AdminToolName, rawArgs: unknown, ctx
       case "sh-admin-objective-delete":
         await deleteObjective(tx, actor, args.objective_id, ctx.auditContext);
         return "Objective deleted.";
+      case "sh-admin-objective-summary": {
+        const result = await summarizeObjectives(
+          tx,
+          { ...actor, role: ctx.caller.user.role },
+          args.team_id ? { kind: "team", teamId: args.team_id } : { kind: "org" },
+          undefined,
+          true,
+        );
+        return json(result);
+      }
       case "sh-metrics-summary": {
         const to = args.to ? new Date(`${args.to}T23:59:59.999Z`) : new Date();
         const from = args.from ? new Date(`${args.from}T00:00:00.000Z`) : new Date(to.getTime() - 30 * MS_PER_DAY);

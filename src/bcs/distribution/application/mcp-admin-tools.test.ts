@@ -96,6 +96,20 @@ describe("MCP admin and metrics tools", () => {
     expect((await call("sh-admin-objective-delete", { objective_id: objective.id }, ctx)).text).toBe("Objective deleted.");
   });
 
+  it("sh-admin-objective-summary reads only: no summary yet, never calls a model", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const ctx = ctxFor(seeded);
+    await call("sh-admin-objective-create", { team_id: seeded.teamId, title: "Cut cost" }, ctx);
+
+    // The org has not opted in to AI, so the tool says so instead of calling anything.
+    const off = await call("sh-admin-objective-summary", { team_id: seeded.teamId }, ctx);
+    expect(off.isError).toBe(true);
+    expect(off.text).toContain("opt in");
+
+    const noScope = await call("sh-admin-objective-summary", {}, ctxFor(seeded, []));
+    expect(noScope.isError).toBe(true);
+  });
+
   it("refuses a key without the needed scope, with isError and no change", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const readOnly = ctxFor(seeded, ["governance:read"]);

@@ -12,7 +12,7 @@ Placeholder for a paid-tier feature that uses AI to automatically summarize an o
 ## Requirements
 
 - [x] Summary box on a team's Objectives tab: summarize the team's effective objectives, or (admin) the whole org (spec `specs/047-objective-summary`). Cached by input hash, process-local (no migration).
-- [ ] Read-only MCP tool `sh-admin-objective-summary` — follow-up once #110's admin tools are on main.
+- [x] Read-only MCP tool `sh-admin-objective-summary` (governance:read; returns the cached summary only, never calls a model).
 
 ## Acceptance Criteria
 
