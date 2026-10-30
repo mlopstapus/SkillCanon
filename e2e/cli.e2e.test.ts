@@ -15,6 +15,7 @@ const BASE = (process.env.E2E_BASE_URL ?? "http://localhost:3000").replace(/\/$/
 const ADMIN = { email: "e2e-admin@example.test", password: "e2e-local-password-1" };
 const SLUG = "cli-smoke";
 const BODY = "Greet the reader.";
+const INCLUDER = "cli-includer";
 const POLICY = "Always cite the CLI smoke ticket number.";
 const CLI = resolve("cli/dist/index.js");
 
@@ -62,6 +63,12 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     const teamId = (teams.items ?? teams)[0].id;
     const skill = await api("POST", "/api/skills", { name: SLUG });
     await api("POST", `/api/skills/${SLUG}/versions`, { version: "1.0.0", mainFile: { content: BODY } });
+    // 015/002: a skill that includes another must sync with no template syntax.
+    await api("POST", "/api/skills", { name: INCLUDER });
+    await api("POST", `/api/skills/${INCLUDER}/versions`, {
+      version: "1.0.0",
+      mainFile: { content: `Intro. {{ include_prompt('${SLUG}') }}` },
+    });
     // A personally-owned skill can't be assigned to a project; hand it to the team.
     await api("POST", `/api/skills/${SLUG}/transfer`, { newOwnerType: "team", newOwnerId: teamId });
     await api("POST", "/api/policies", {
@@ -76,7 +83,10 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
       slug: "cli-smoke",
     });
     projectId = project.id;
+    await api("POST", `/api/skills/${INCLUDER}/transfer`, { newOwnerType: "team", newOwnerId: teamId });
     await api("POST", `/api/projects/${projectId}/skills`, { skillId: skill.id, requirement: "required" });
+    const includer = await api("GET", `/api/skills/${INCLUDER}`);
+    await api("POST", `/api/projects/${projectId}/skills`, { skillId: includer.id, requirement: "optional" });
 
     await page.goto(`${BASE}/settings/api-keys`);
     await page.getByRole("button", { name: "Issue key" }).first().click();
@@ -98,6 +108,12 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     expect(synced).not.toContain(BODY);
     expect(synced).not.toMatch(/\{\{|\{%/);
     expect(existsSync(join(repo, ".skillcanon/project.json"))).toBe(true);
+  });
+
+  it("syncs an including skill with no template syntax and run renders the include", () => {
+    const synced = readFileSync(join(repo, ".claude/skills", `skillcanon-${INCLUDER}`, "SKILL.md"), "utf8");
+    expect(synced).not.toMatch(/\{\{|\{%/);
+    expect(cli("run", INCLUDER)).toContain(BODY);
   });
 
   it("sync is idempotent", () => {
