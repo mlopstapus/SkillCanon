@@ -86,7 +86,7 @@ export function ApiKeysListView({ currentUser, keys, refresh }: ApiKeysListViewP
             return (
               <div
                 key={k.id}
-                className={`rounded-card border border-border bg-surface p-3.5 ${k.isActive ? "" : "opacity-60"}`}
+                className={`rounded-card border border-border bg-surface p-3.5 ${k.isActive ? "" : "border-dashed bg-transparent"}`}
               >
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="min-w-0 flex-1">

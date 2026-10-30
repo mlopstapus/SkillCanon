@@ -1,49 +1,64 @@
 @import "tailwindcss";
 
 /*
- * SkillCanon design tokens — extracted from the Claude design mockups in
- * claude.ai/design project 7babdbf3-c063-46b5-84df-ffa9f588d88a
- * (SkillCanon Audit.dc.html, SkillCanon Governance.dc.html, SkillCanon Landing.dc.html).
- * See docs/context/design-system.md for the full reference doc.
+ * Tribe design tokens (018/003), per the tribe-design skill's brand guide.
+ * The app's semantic tokens (--bg, --surface, --text, --a, ...) keep their
+ * names so pages need no rework; only their values are Tribe's.
+ *
+ * Light (paper + ink) is the default; dark is `html[data-theme="dark"]`,
+ * chosen by the theme toggle and applied before first paint (layout.tsx).
+ * No pure white, no pure black, no grey shadows: ink-tinted only.
+ * Cyan (#65D9EE) is the one brand colour and appears on focus rings, links
+ * and small highlights; in light theme --a is the ink-teal that carries text
+ * and fills at AA contrast, and cyan shows through --asoft/--aglow/--a2.
+ * Every text/background pair below was checked for WCAG AA (4.5:1).
+ *
+ * Fonts: TribeSerif/TribeSans/TribeCaption are licensed and this repository is
+ * public (decision D5, still open), so only fallback stacks ship for now.
  */
 :root {
-  /* neutrals — dark (default; the authenticated app renders dark-only, no toggle) */
-  --bg: #0b0b0c;
-  --bg2: #101011;
-  --panel: #0f0f10;
-  --surface: #161618;
-  --surface2: #1c1c1f;
-  --raise: #232326;
-  --text: #f1f0ee;
-  --dim: #9b9a96;
-  --faint: #67655f;
-  --grid: rgba(255, 255, 255, 0.03);
+  /* paper surfaces, ink text; hierarchy from ink opacity, not greys */
+  --bg: #fafaf8;
+  --bg2: #f4f4f2;
+  --panel: #f4f4f2;
+  --surface: #f4f4f2;
+  --surface2: #ebebe2;
+  --raise: #ebebe2;
+  --text: #06141b;
+  --dim: rgb(6 20 27 / 0.7);
+  --faint: rgb(6 20 27 / 0.62);
+  --grid: rgb(6 20 27 / 0.04);
 
-  /* borders — always translucent white on dark, never solid */
-  --border: rgba(255, 255, 255, 0.07);
-  --border2: rgba(255, 255, 255, 0.12);
+  /* hairlines: ink at low opacity */
+  --border: rgb(6 20 27 / 0.1);
+  --border2: rgb(6 20 27 / 0.18);
 
-  /* accent — teal, the only brand color, constant across themes */
-  --a: #00e0b8;
-  --a2: #54efce;
-  --afg: #03130f;
-  --asoft: rgba(0, 224, 184, 0.12);
-  --aglow: rgba(0, 224, 184, 0.15);
+  /* brand accent: ink-teal for text/fills, cyan for glows and tints */
+  --a: #07404f;
+  --a2: #0d4e6e;
+  --afg: #fafaf8;
+  --asoft: rgb(101 217 238 / 0.22);
+  --aglow: rgb(101 217 238 / 0.25);
+  --focus: #65d9ee;
 
-  /* semantic status — audit verbs, transports, diffs (app only) */
-  --green: #3ecf8e;
-  --gsoft: rgba(62, 207, 142, 0.13);
-  --blue: #19b5ff;
-  --bsoft: rgba(25, 181, 255, 0.13);
-  --red: #ff6b6b;
-  --rsoft: rgba(255, 107, 107, 0.13);
-  --violet: #a78bfa;
-  --vsoft: rgba(167, 139, 250, 0.14);
+  /* status colours, tuned to the brand's accent family (AA on paper) */
+  --green: #0a6b52;
+  --gsoft: rgb(10 107 82 / 0.1);
+  --blue: #0d4e6e;
+  --bsoft: rgb(13 78 110 / 0.1);
+  --red: #b42318;
+  --rsoft: rgb(180 35 24 / 0.08);
+  --violet: #8a4510;
+  --vsoft: rgb(173 89 19 / 0.12);
 
-  /* type families */
-  --ds: var(--font-bricolage), system-ui, sans-serif;
-  --bd: var(--font-hanken), system-ui, sans-serif;
-  --mo: var(--font-spline), ui-monospace, monospace;
+  /* scrim behind drawers and modals: ink, never black */
+  --scrim: rgb(6 20 27 / 0.45);
+
+  /* type roles; the licensed Tribe faces load first once D5 lets us ship them */
+  --ds: "TribeSerif", ui-serif, Georgia, "Times New Roman", serif;
+  --bd: "TribeSans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mo: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  --caption: "TribeCaption", var(--bd);
 
   /* radii */
   --radius-chip: 6px;
@@ -53,14 +68,51 @@
   --radius-cta: 20px;
   --radius-pill: 999px;
 
-  /* shadows */
-  --shadow-soft: 0 24px 60px rgba(0, 0, 0, 0.4);
-  --shadow-heavy: 0 30px 80px rgba(0, 0, 0, 0.5);
-  --shadow-drawer: -30px 0 80px rgba(0, 0, 0, 0.5);
+  /* shadows: soft, keyed to the ink colour */
+  --shadow-soft: 0 24px 60px -30px rgb(6 20 27 / 0.35);
+  --shadow-heavy: 0 30px 80px -30px rgb(6 20 27 / 0.35);
+  --shadow-drawer: -30px 0 80px -30px rgb(6 20 27 / 0.35);
   --shadow-glow: 0 8px 30px var(--aglow);
 
-  /* motion */
-  --ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+  /* motion: the house easing */
+  --ease-standard: cubic-bezier(0.625, 0.05, 0, 1);
+}
+
+html[data-theme="dark"] {
+  --bg: #06141b;
+  --bg2: #050f15;
+  --panel: #050f15;
+  --surface: #0a1d2b;
+  --surface2: #0f2736;
+  --raise: #153244;
+  --text: #fafaf8;
+  --dim: rgb(250 250 248 / 0.72);
+  --faint: rgb(250 250 248 / 0.58);
+  --grid: rgb(250 250 248 / 0.03);
+
+  --border: rgb(250 250 248 / 0.08);
+  --border2: rgb(250 250 248 / 0.14);
+
+  --a: #65d9ee;
+  --a2: #8fe6f5;
+  --afg: #06141b;
+  --asoft: rgb(101 217 238 / 0.14);
+  --aglow: rgb(101 217 238 / 0.18);
+
+  --green: #5fd3b0;
+  --gsoft: rgb(95 211 176 / 0.13);
+  --blue: #7cc4e0;
+  --bsoft: rgb(124 196 224 / 0.13);
+  --red: #ff8a80;
+  --rsoft: rgb(255 138 128 / 0.13);
+  --violet: #ff9a4d;
+  --vsoft: rgb(255 154 77 / 0.14);
+
+  --scrim: rgb(5 15 21 / 0.7);
+
+  --shadow-soft: 0 24px 60px -30px rgb(5 15 21 / 0.8);
+  --shadow-heavy: 0 30px 80px -30px rgb(5 15 21 / 0.85);
+  --shadow-drawer: -30px 0 80px -30px rgb(5 15 21 / 0.85);
 }
 
 @theme inline {
@@ -83,6 +135,8 @@
   --color-a-fg: var(--afg);
   --color-a-soft: var(--asoft);
   --color-a-glow: var(--aglow);
+  --color-focus: var(--focus);
+  --color-scrim: var(--scrim);
 
   --color-green: var(--green);
   --color-green-soft: var(--gsoft);
@@ -96,6 +150,7 @@
   --font-display: var(--ds);
   --font-sans: var(--bd);
   --font-mono: var(--mo);
+  --font-caption: var(--caption);
 
   --radius-chip: var(--radius-chip);
   --radius-control: var(--radius-control);
@@ -111,7 +166,7 @@
 
   --ease-sc: var(--ease-standard);
 
-  --animate-fade-up: fadeUp 0.7s var(--ease-standard) both;
+  --animate-fade-up: fadeUp 0.65s var(--ease-standard) both;
   --animate-tool-in: toolIn 0.4s var(--ease-standard) both;
   --animate-blink: blink 1s step-end infinite;
   --animate-floaty: floaty 3.5s ease-in-out infinite;
@@ -119,8 +174,8 @@
   --animate-dashmove: dashmove 0.6s linear infinite;
   --animate-spin-sc: spin 0.8s linear infinite;
   --animate-sheen: sheen 1.2s ease;
-  --animate-ov-in: ovIn 0.18s ease;
-  --animate-dr-in: drIn 0.22s var(--ease-standard);
+  --animate-ov-in: ovIn 0.3s var(--ease-standard);
+  --animate-dr-in: drIn 0.3s var(--ease-standard);
 }
 
 @keyframes fadeUp {
@@ -231,13 +286,16 @@ body {
   font-size: 13px;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In the base layer so utilities like text-a-fg on a link win (unlayered CSS beats every utility). */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 }
 
 :where(a, button, input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
-  outline: 2px solid var(--a);
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
   box-shadow: 0 0 0 5px var(--asoft);
 }
@@ -251,12 +309,53 @@ a {
   height: 10px;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.09);
+  background: var(--border2);
   border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--faint);
   background-clip: padding-box;
+}
+
+/* Headings are TribeSerif Light: the serif has no bold, so never synthesise one. */
+.font-display {
+  font-weight: 300 !important;
+}
+
+/* Reduced motion: a plain fade, nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes toolIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes drIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  html {
+    scroll-behavior: auto;
+  }
+  .animate-floaty,
+  .animate-glowpulse,
+  .animate-dashmove {
+    animation: none;
+  }
 }

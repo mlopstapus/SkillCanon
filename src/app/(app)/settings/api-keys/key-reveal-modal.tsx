@@ -21,7 +21,7 @@ export function KeyRevealModal({ rawKey, onClose }: KeyRevealModalProps) {
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" />
+      <div className="absolute inset-0 bg-scrim backdrop-blur-[3px]" />
       <div className="relative w-full max-w-[480px] rounded-card border border-border-2 bg-panel p-6.5 shadow-heavy">
         <div className="mb-3.5 flex items-center gap-2.5">
           <span className="grid size-8.5 place-items-center rounded-tile bg-green-soft">

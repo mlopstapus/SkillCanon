@@ -33,7 +33,7 @@ export function RemoveMemberConfirm({
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
-      <div onClick={onClose} className="absolute inset-0 bg-black/70 backdrop-blur-[3px]" aria-hidden="true" />
+      <div onClick={onClose} className="absolute inset-0 bg-scrim backdrop-blur-[3px]" aria-hidden="true" />
       <div className="relative w-full max-w-[440px] rounded-card border border-border-2 bg-panel p-6 shadow-heavy">
         <p className="font-display text-[17px] font-semibold">
           Remove {targetDisplayName} from this team?
@@ -60,7 +60,7 @@ export function RemoveMemberConfirm({
             type="button"
             disabled={isPending}
             onClick={confirm}
-            className="rounded-control bg-red px-4.5 py-2.5 text-[13px] font-semibold text-white disabled:opacity-50"
+            className="rounded-control bg-red px-4.5 py-2.5 text-[13px] font-semibold text-bg disabled:opacity-50"
           >
             {isPending ? "Removing…" : "Remove member"}
           </button>
