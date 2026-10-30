@@ -89,7 +89,8 @@ jobs:
       - run: pnpm --dir cli install --frozen-lockfile
       - run: pnpm --dir cli run build
       - run: pnpm exec playwright install --with-deps chromium
-      - run: docker compose up -d --build
+      # docker-compose.e2e.yaml adds a mail sink so the invitation e2e can read the emailed token.
+      - run: docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
       - name: Wait for the app
         # curl's own --retry skips connection resets (exit 56) while the app boots.
         run: |
@@ -106,10 +107,10 @@ jobs:
           TZ: America/New_York
       - name: Compose logs
         if: failure()
-        run: docker compose logs
+        run: docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml logs
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml down -v
 
   # Single required check for main's branch protection (contracts/required-check.md).
   # Constituent jobs above may be renamed/split/added without touching branch

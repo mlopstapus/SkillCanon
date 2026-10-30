@@ -28,6 +28,7 @@ describe("getNavigation", () => {
             label: "Audit log",
             href: "/settings/audit-log",
           },
+        { key: "evalProviders", label: "Eval providers", href: "/settings/eval-providers" },
         ],
       },
     ]);
