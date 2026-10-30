@@ -75,8 +75,8 @@ describe("skillcanon CLI", { timeout: 60_000 }, () => {
     await page.getByRole("button", { name: "Issue key" }).first().click();
     const drawer = page.getByRole("dialog").filter({ visible: true });
     await drawer.getByPlaceholder("CI deploy key").fill("cli e2e key");
-    await drawer.getByText("prompts:read").click();
-    await drawer.getByText("workflows:run").click();
+    await drawer.getByText("skills:read").click();
+    await drawer.getByText("chains:run").click();
     await drawer.getByRole("button", { name: "Generate key" }).click();
     apiKey = ((await page.locator("span.break-all").textContent()) ?? "").trim();
     expect(apiKey).toMatch(/^sk_/);
