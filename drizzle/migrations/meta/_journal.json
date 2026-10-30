@@ -257,8 +257,15 @@
     {
       "idx": 36,
       "version": "7",
-      "when": 1793383324276,
-      "tag": "0036_prompt_registry_eval_runs",
+      "when": 1793383533752,
+      "tag": "0036_vcs_integration_installations",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1793386915470,
+      "tag": "0037_prompt_registry_eval_runs",
       "breakpoints": true
     }
   ]
