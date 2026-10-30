@@ -8,6 +8,7 @@ import { withTenantContext } from "@/shared/db";
 import { seedOrgWithAdmin, type SeededOrg } from "@/shared/api/test-helpers";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { McpSessionManager, type McpCaller } from "./mcp-session";
+import { getPromptUsageSummaryForOrganization } from "./get-prompt-usage-summary-for-organization";
 import { createSyntheticSessionId, invokeMcpTool, shContext, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
 
 describe("MCP tool behavior", () => {
@@ -306,6 +307,38 @@ describe("MCP tool behavior", () => {
     const viaRun = await text("sh-run", { name: chain });
     expect(viaRun.isError).toBe(true);
     expect(viaRun.text).toContain("sh-chain-run");
+  });
+
+  it("sh-chain-advance records usage like REST advance: 200 on success, 500 on error", async () => {
+    for (const [status, code] of [["success", 200], ["error", 500]] as const) {
+      const seeded = await seedOrgWithAdmin(testDb.authDb);
+      const step = `step-${randomUUID()}`;
+      const chain = `chain-${randomUUID()}`;
+      await publishTemplateSkill(seeded, step, "Do it.");
+      const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
+      await withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
+        await createPrompt(tx, actor, { organizationId: seeded.organizationId, name: chain });
+        await publishVersion(tx, actor, {
+          organizationId: seeded.organizationId,
+          promptName: chain,
+          version: "1.0.0",
+          steps: [{ id: "a", promptName: step, dependsOn: [] }],
+        });
+      });
+      const ctx = ctxFor(seeded);
+      const started = await invokeMcpTool("sh-chain-run", { name: chain }, ctx);
+      const runId = /runId: (\S+)/.exec((started.content[0] as { text: string }).text)?.[1] ?? "";
+
+      await invokeMcpTool("sh-chain-advance", { run_id: runId, step_index: 0, status, error: "x" }, ctx);
+
+      const summary = await withTenantContext(testDb.appDb, seeded.organizationId, (tx) =>
+        getPromptUsageSummaryForOrganization(tx, seeded.organizationId, {
+          window: { from: new Date(0), to: new Date(Date.now() + 1000) },
+        }),
+      );
+      expect(summary.totalInvocations).toBe(1);
+      expect(summary.byStatus).toEqual([{ statusCode: code, runCount: 1 }]);
+    }
   });
 
   it("injects the session-context block only on the first tool call in a session, not the second", async () => {
