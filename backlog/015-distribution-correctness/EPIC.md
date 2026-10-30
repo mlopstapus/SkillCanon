@@ -11,11 +11,11 @@ The 2026-10-29 smoke test fetched three skills over REST, the CLI, MCP and a rea
 ## Features
 
 - [x] [001 - Governance in the Synced File](archive/001-governance-in-synced-file.md)
-- [ ] [002 - Render Includes Before Sync](002-render-includes-before-sync.md)
-- [ ] [003 - Chains Over CLI and MCP](003-chains-over-cli-and-mcp.md)
+- [x] [002 - Render Includes Before Sync](archive/002-render-includes-before-sync.md)
+- [x] [003 - Chains Over CLI and MCP](archive/003-chains-over-cli-and-mcp.md)
 - [x] [004 - MCP Name and Error Consistency](archive/004-mcp-name-and-error-consistency.md)
 - [x] [005 - Supporting Files Over REST and MCP](archive/005-supporting-files-over-rest-and-mcp.md)
-- [ ] [006 - One Model for Project Skills](006-one-model-for-project-skills.md)
+- [x] [006 - One Model for Project Skills](archive/006-one-model-for-project-skills.md)
 - [ ] [007 - UI Defects Found in the Smoke Test](007-ui-defects.md)
 
 _Completed features are moved to `archive/` and checked off here._

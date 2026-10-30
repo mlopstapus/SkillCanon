@@ -24,7 +24,7 @@ export const auditEvents = auditSchema.table(
     resourceId: uuid("resource_id"),
     before: jsonb("before"),
     after: jsonb("after"),
-    transport: text("transport", { enum: ["web", "api", "cli", "system"] })
+    transport: text("transport", { enum: ["web", "api", "mcp", "cli", "system"] })
       .notNull(),
     sourceIp: text("source_ip"),
     createdAt: timestamp("created_at", { withTimezone: true })

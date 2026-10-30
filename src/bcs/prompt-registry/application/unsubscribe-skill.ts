@@ -7,6 +7,10 @@ import {
 import type { UserSummary } from "@/bcs/identity-access";
 import { withAudit } from "@/shared/db";
 import { SubscriptionNotFoundError } from "../domain/subscription";
+import {
+  deleteByProjectAndSkill,
+  findByProjectAndSkill,
+} from "../infrastructure/project-skill-assignments-repo";
 import { deleteById, findByOrgAndId } from "../infrastructure/subscriptions-repo";
 import { assertAuthorizedForOwner } from "./authorize-owner-action";
 
@@ -39,7 +43,22 @@ export async function unsubscribeSkill(
 
   return withAudit(
     db,
-    (tx) => deleteById(tx, subscriptionId),
+    async (tx) => {
+      const row = await deleteById(tx, subscriptionId);
+      // 015/006: revoking a project grant drops its optional assignment too;
+      // a "required" assignment is a separate explicit choice and stays.
+      if (subscription.subscriberType === "project") {
+        const assignment = await findByProjectAndSkill(
+          tx,
+          subscription.subscriberId,
+          subscription.sourceSkillId,
+        );
+        if (assignment?.requirement === "optional") {
+          await deleteByProjectAndSkill(tx, subscription.subscriberId, subscription.sourceSkillId);
+        }
+      }
+      return row;
+    },
     (tx) =>
       record(tx, {
         organizationId: actingUser.orgId,

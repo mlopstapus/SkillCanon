@@ -66,7 +66,7 @@ export {
 // ---------------------------------------------------------------------------
 export { expand, fetchExpandableVersion } from "./application/expand";
 export type { ExpandParams, ExpansionResult } from "./domain/expansion";
-export { ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expansion";
+export { ChainNotExpandableError, ExpansionSourceNotFoundError, MAX_INCLUDE_DEPTH } from "./domain/expansion";
 
 // ---------------------------------------------------------------------------
 // Skill Sharing — Subscribe & Fork (feature 020-prompt-sharing, PDR-016)

@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { assignSkillToProjectAction, unassignSkillFromProjectAction } from "../../prompts/actions";
+import {
+  assignSkillToProjectAction,
+  subscribeSkillAction,
+  unassignSkillFromProjectAction,
+} from "../../prompts/actions";
 import { ObjectiveDrawer, type ObjectiveFormValues } from "../../teams/[teamId]/objective-drawer";
 import {
   addCollaboratorTeamAction,
@@ -17,6 +21,7 @@ import {
 } from "../actions";
 import { AddMemberDrawer } from "./add-member-drawer";
 import { AddRepoDrawer } from "./add-repo-drawer";
+import { AddSkillDrawer } from "./add-skill-drawer";
 import { AddTeamDrawer } from "./add-team-drawer";
 import { ProjectDetailView, type ProjectDetailData, type ProjectDetailTab, type ProjectObjectiveRow } from "./project-detail-view";
 
@@ -35,6 +40,7 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
   const [addTeamOpen, setAddTeamOpen] = useState(false);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [addRepoOpen, setAddRepoOpen] = useState(false);
+  const [addSkillOpen, setAddSkillOpen] = useState(false);
   const [objectiveDrawer, setObjectiveDrawer] = useState<
     { mode: "create" } | { mode: "edit"; objective: ProjectObjectiveRow } | null
   >(null);
@@ -68,6 +74,7 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
         onOpenAddTeam={() => setAddTeamOpen(true)}
         onOpenAddMember={() => setAddMemberOpen(true)}
         onOpenAddRepo={() => setAddRepoOpen(true)}
+        onOpenAddSkill={() => setAddSkillOpen(true)}
         onOpenAddObjective={() => setObjectiveDrawer({ mode: "create" })}
         onEditObjective={(objective) => setObjectiveDrawer({ mode: "edit", objective })}
         onRemoveObjective={async (objectiveId) => {
@@ -94,6 +101,26 @@ export function ProjectDetail({ data }: ProjectDetailProps) {
             await addProjectMemberAction(data.id, userId);
             setAddMemberOpen(false);
             router.refresh();
+          }}
+        />
+      ) : null}
+      {addSkillOpen ? (
+        <AddSkillDrawer
+          addableSkills={[
+            ...data.availablePrompts.map((p) => ({ ...p, personal: false })),
+            ...data.addablePersonalSkills.map((p) => ({ ...p, personal: true })),
+          ]}
+          onClose={() => setAddSkillOpen(false)}
+          onAdd={async (skill) => {
+            // Team-owned: direct optional assignment. Personal: the Share grant,
+            // which also creates the optional assignment (015/006).
+            const result = skill.personal
+              ? await subscribeSkillAction(skill.id, skill.name, { subscriberType: "project", subscriberId: data.id })
+              : await assignSkillToProjectAction(data.id, skill.id, "optional");
+            if (result?.ok !== false) {
+              setAddSkillOpen(false);
+              router.refresh();
+            }
           }}
         />
       ) : null}

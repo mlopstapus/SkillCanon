@@ -333,7 +333,7 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     expect(newPageErrors()).toEqual([]);
   });
 
-  it.fails(
+  it(
     "shows a skill granted through Share on the project's Skills tab (015/006)",
     async () => {
       await goto("/projects");
@@ -496,6 +496,11 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await page.getByLabel("Search audit events").fill("policy.created");
     await expect
       .poll(() => page.getByText(POLICY.name).first().isVisible())
+      .toBe(true);
+    // The earlier MCP sh-run is recorded with the mcp transport.
+    await goto("/settings/audit-log?transport=mcp");
+    await expect
+      .poll(() => page.getByText("prompt.expanded").first().isVisible())
       .toBe(true);
   });
 

@@ -135,6 +135,38 @@ describe("/api/skills/[name]/expand", () => {
     expect((await usageSummary(seeded.organizationId)).totalInvocations).toBe(0);
   });
 
+  it("returns 409 SKILL_IS_A_CHAIN naming the chain-runs route when the skill is a chain", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
+    const step = `step-${randomUUID()}`;
+    const chain = `chain-${randomUUID()}`;
+    await publishTemplateSkill(seeded, step);
+    const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
+    await withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
+      await createPrompt(tx, actor, { organizationId: seeded.organizationId, name: chain });
+      await publishVersion(tx, actor, {
+        organizationId: seeded.organizationId,
+        promptName: chain,
+        version: "1.0.0",
+        steps: [{ id: "a", promptName: step, dependsOn: [] }],
+      });
+    });
+
+    const response = await route()(
+      new Request(`http://x/api/skills/${chain}/expand`, {
+        method: "POST",
+        headers: { cookie, "content-type": "application/json" },
+        body: JSON.stringify({}),
+      }),
+      { params: Promise.resolve({ name: chain }) },
+    );
+
+    expect(response.status).toBe(409);
+    const body = await response.json();
+    expect(body.error.code).toBe("SKILL_IS_A_CHAIN");
+    expect(body.error.message).toContain(`/api/skills/${chain}/chain-runs`);
+  });
+
   it("returns 401 with no credential", async () => {
     const POST = route();
     const response = await POST(
