@@ -1,0 +1,2 @@
+- [x] T001 Tests for read/write denial per table, app-layer denial, webhook forgery, webhook table privacy
+- [x] T002 Query audit recorded in plan.md

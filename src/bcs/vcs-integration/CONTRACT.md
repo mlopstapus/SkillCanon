@@ -11,12 +11,12 @@ Owns `Installation`, `RepoLink`, and `PrCheck` — the bridge between a SkillCan
 
 | Endpoint / Method | Description | Consumers |
 |---|---|---|
-| `handleGithubWebhook(rawBody, signatureHeader, deliveryId)` | Verifies the HMAC signature, dedupes by `deliveryId`, dispatches on event type (`installation`, `installation_repositories`, `pull_request`: `opened`/`synchronize`/`reopened`). For a PR event, evaluates required skills and posts/updates a GitHub Check Run. | Distribution (thin webhook route handler) |
-| `linkRepo(orgId, projectId, installationId, githubRepoId, actingUserId)` | Links a GitHub repo (within an installation) to a SkillCanon project. Many-to-many — a repo may link to multiple projects (monorepo case) and a project may span multiple repos. | Distribution (route handlers, UI) |
-| `unlinkRepo(orgId, repoLinkId, actingUserId)` | Removes a repo↔project link. Does not delete PR-check history. | Distribution (route handlers) |
-| `listInstallations(orgId)` | GitHub App installations visible to this org. | Distribution (admin UI) |
-| `listRepoLinks(orgId, projectId?)` | Repo links, optionally filtered to one project. | Distribution (UI) |
-| `getPrCheck(orgId, repoLinkId, prNumber)` | Latest evaluation plus history for one PR. | Distribution (dashboard UI) |
+| `handleGithubWebhook(db, { rawBody, signatureHeader, deliveryId, eventName }, env?)` | Verifies the HMAC signature, dedupes by `deliveryId`, dispatches on event type (`installation`, `installation_repositories`, `pull_request`: `opened`/`synchronize`/`reopened`). For a PR event, evaluates required skills and posts/updates a GitHub Check Run. | Distribution (thin webhook route handler) |
+| `linkRepo(db, config, actor, { installationId, githubRepoId, projectId }, { projectExists })` | Links a GitHub repo (within an installation) to a SkillCanon project. Many-to-many — a repo may link to multiple projects (monorepo case) and a project may span multiple repos. | Distribution (route handlers, UI) |
+| `unlinkRepo(db, actor, repoLinkId)` | Soft-unlinks a repo↔project link (`unlinkedAt`). Does not delete PR-check history. | Distribution (route handlers) |
+| `listInstallations(db, orgId)` | Active (not deleted) GitHub App installations for this org. Also exposed: `buildInstallUrl`, `completeInstall` (install flow), `getInstallationAccessToken` (short-lived token for an active installation; never stored). | Distribution (admin UI) |
+| `listRepoLinks(db, orgId, projectId?)` (also `listAccessibleRepos` for the picker) | Repo links, optionally filtered to one project. | Distribution (UI) |
+| `getPrCheck(db, orgId, repoLinkId, prNumber)` → `{ latest, history }` | Latest evaluation plus history for one PR. | Distribution (dashboard UI) |
 | `getComplianceSummaryForProject(orgId, projectId, { since }?)` | Aggregates `PrCheck` rows across every repo linked to the project into `{ totalEvaluated, passed, failed, neutral, rate }`. `rate = passed / (passed + failed)` — `neutral` (evaluation-errored) rows count toward `totalEvaluated` but are excluded from `rate`'s numerator/denominator, since an infra error isn't the same claim as a missing skill. `since` omitted means all-time. Visibility/reporting only — never a merge gate (`006-vcs-integration-dashboard-ui.md`). | Distribution (dashboard UI) |
 
 ## Events Published
@@ -43,6 +43,7 @@ interface Installation {
   githubAccountLogin: string;
   githubAccountType: "Organization" | "User";
   suspendedAt: string | null;
+  deletedAt: string | null; // soft delete on uninstall; keeps repo links and PR history readable
 }
 
 interface RepoLink {
@@ -52,6 +53,7 @@ interface RepoLink {
   repoFullName: string; // "owner/repo"
   projectId: string;
   linkedByUserId: string;
+  unlinkedAt: string | null; // soft unlink; unique only among live links
 }
 
 interface RequiredSkillResult {
@@ -67,7 +69,8 @@ interface PrCheck {
   evaluatedAt: string;
   results: RequiredSkillResult[];
   status: "pass" | "fail" | "neutral"; // neutral = evaluation itself errored (e.g. Governance call failed)
-  githubCheckRunId: number | null;
+  githubCheckRunId: number | null; // one check run per head sha (GitHub ties a run to a commit)
+  error: string | null; // set only when status is neutral
 }
 ```
 

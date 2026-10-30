@@ -1,18 +1,16 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { DEFAULT_WEB_AUDIT_CONTEXT, record, type AuditContext } from "@/bcs/audit-compliance";
-import { getTeam, NotAuthorizedError } from "@/bcs/identity-access";
 import { getPromptById, getPromptVersion } from "@/bcs/prompt-registry";
 import { withAudit } from "@/shared/db";
+import type { FeedbackTriager } from "./assert-can-triage-skill";
 import { FeedbackNotFoundError, FeedbackVersionMismatchError } from "../domain/feedback";
+import { assertCanTriageSkill } from "./assert-can-triage-skill";
 import { findNoteWithPrompt, markAddressed } from "../infrastructure/feedback-repo";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
 
-export interface FeedbackTriager {
-  organizationId: string;
-  userId: string;
-  role: "admin" | "member";
-}
+export type { FeedbackTriager };
+
 
 /**
  * Marks a note addressed and links the version that addressed it. Only the
@@ -32,12 +30,7 @@ export async function markFeedbackAddressed(
   const prompt = await getPromptById(db, actor.organizationId, note.promptId);
   if (!prompt) throw new FeedbackNotFoundError(feedbackId);
 
-  // Re-derived locally: prompt-registry's owner check is not exported (same two-line rule).
-  const isOwner =
-    actor.role === "admin" ||
-    (prompt.ownerType === "user" && prompt.ownerId === actor.userId) ||
-    (prompt.ownerType === "team" && (await getTeam(db, actor.organizationId, prompt.ownerId)).ownerId === actor.userId);
-  if (!isOwner) throw new NotAuthorizedError();
+  await assertCanTriageSkill(db, actor, prompt);
 
   const version = await getPromptVersion(db, actor.organizationId, versionId);
   if (!version || version.promptId !== prompt.id) throw new FeedbackVersionMismatchError();

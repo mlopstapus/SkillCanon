@@ -1,0 +1,2 @@
+# Plan
+Read side in the VCS BC (`project-checks.ts` + two repo queries; no migration). Server-rendered page `projects/[id]/checks` with a pure `ProjectChecksView` (tested via static markup), a link from the project header, and per-link "View checks" links on the GitHub settings page. Tests: Testcontainers for the read side (rates, window, unlinked history, cross-org), view tests for empty states and rate wording; verified live against a fresh instance (not-installed state).

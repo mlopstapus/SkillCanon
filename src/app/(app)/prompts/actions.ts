@@ -2,7 +2,14 @@
 
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import { markFeedbackAddressed } from "@/bcs/distribution";
+import {
+  acceptImprovementDraft,
+  dismissImprovementDraft,
+  markFeedbackAddressed,
+  requestImprovementDraft,
+  resolveEnvDrafter,
+  setThirdPartyOptIn,
+} from "@/bcs/distribution";
 import {
   assignSkillToProject,
   createPrompt,
@@ -278,6 +285,67 @@ export async function markFeedbackAddressedAction(
         feedbackId,
         versionId,
       ),
+    );
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Owner-only: drafts an improvement of one version from its open feedback notes (016/004). */
+export async function requestImprovementDraftAction(promptName: string, versionId: string): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      requestImprovementDraft(
+        tx,
+        { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role },
+        versionId,
+        resolveEnvDrafter(),
+      ),
+    );
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Owner-only: publishes a pending draft as the next version and addresses its source notes. */
+export async function acceptImprovementDraftAction(promptName: string, draftId: string): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      acceptImprovementDraft(tx, { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role }, draftId),
+    );
+    revalidatePath("/prompts");
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+export async function dismissImprovementDraftAction(promptName: string, draftId: string): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      dismissImprovementDraft(tx, { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role }, draftId),
+    );
+    revalidatePath(`/prompts/${promptName}`);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+/** Admin-only: allow (or stop) sending skill text and feedback to the configured model provider. */
+export async function setThirdPartyOptInAction(promptName: string, enabled: boolean): Promise<PromptActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      setThirdPartyOptIn(tx, { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role }, enabled),
     );
     revalidatePath(`/prompts/${promptName}`);
     return { ok: true };
