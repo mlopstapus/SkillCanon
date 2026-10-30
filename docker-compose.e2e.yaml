@@ -1,0 +1,19 @@
+# E2E-only add-on: a mail sink so the invitation email (the only place the
+# accept token is delivered) can be read by e2e/invitations.e2e.test.ts.
+# Never part of the default stack:
+#   docker compose -f docker-compose.yaml -f docker-compose.e2e.yaml up -d --build
+# The sink's web/API port (default 8025) is read via E2E_MAIL_API.
+services:
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - "8025:8025"
+
+  app:
+    environment:
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: skillcanon@example.test
+    depends_on:
+      mailpit:
+        condition: service_started
