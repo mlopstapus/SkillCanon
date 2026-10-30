@@ -10,8 +10,8 @@ SkillCanon's README says it never calls an LLM. Evals need model calls, so the f
 
 ## Features
 
-- [x] [001 - PDR: Where Evals Run](archive/001-pdr-where-evals-run.md)
-- [ ] [002 - Eval Case Format](002-eval-case-format.md)
+- [x] [001 - PDR: Where Evals Run](001-pdr-where-evals-run.md)
+- [x] [002 - Eval Case Format](archive/002-eval-case-format.md)
 - [ ] [003 - skillcanon eval](003-skillcanon-eval.md)
 - [ ] [004 - Results Matrix](004-results-matrix.md)
 - [ ] [005 - Optional Publish Gate](005-optional-publish-gate.md)
