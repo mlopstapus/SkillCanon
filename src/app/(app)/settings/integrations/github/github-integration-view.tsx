@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export interface InstallationRowView {
   id: string;
   login: string;
@@ -10,6 +12,7 @@ export interface RepoLinkView {
   repo: string;
   account: string | null;
   project: string;
+  projectId: string;
 }
 
 type Notice = "installed" | "linked" | "unlinked" | "error" | null;
@@ -100,6 +103,7 @@ export function GithubIntegrationView({
                     <li key={l.id} className="flex items-center gap-3 text-sm">
                       <span className="font-medium">{l.repo}</span>
                       <span className="text-muted">→ {l.project}</span>
+                      <Link href={`/projects/${l.projectId}/checks`} className="underline">View checks</Link>
                       {isAdmin && (
                         <form action={unlinkAction}>
                           <input type="hidden" name="repoLinkId" value={l.id} />

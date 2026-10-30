@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { AppState, Badge } from "@/shared/ui";
 import { ProjectMetricsTrendChart, type ProjectMetricsTrendDay, type ProjectMetricsTrendSkill } from "./project-metrics-trend-chart";
@@ -107,6 +108,9 @@ export function ProjectDetailView({
             {data.leadLabel ? (
               <div className="mt-0.5 font-mono text-[11px] text-faint">lead {data.leadLabel}</div>
             ) : null}
+            <Link href={`/projects/${data.id}/checks`} className="mt-0.5 block font-mono text-[11px] text-faint underline">
+              GitHub checks
+            </Link>
           </div>
         </div>
         <div className="flex items-center justify-between">
