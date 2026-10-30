@@ -21,7 +21,7 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 
 ## Acceptance Criteria
 
-- [ ] **Needs Ben (live App):** Installing the App on a test GitHub org creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
+- [ ] **Needs Ben (live App):** Installing the App on a test GitHub account (the owner's own account is enough) creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
 - [ ] **Needs Ben (live App):** Suspending the installation in GitHub's UI updates `suspendedAt` within one webhook delivery.
 - [x] Deleting the installation soft-deletes (decision below) the `Installation` row; it removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path.
 - [x] No installation access token or the App private key ever appears in application logs.
