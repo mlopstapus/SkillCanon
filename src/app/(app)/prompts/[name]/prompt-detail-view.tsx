@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/shared/ui";
+import { EvalsPanel, type EvalsTabData, type StartEvalRunResult } from "./evals-panel";
 import { FeedbackPanel } from "./feedback-panel";
 
 export interface ChainStepView {
@@ -105,6 +106,8 @@ export interface PromptDetailData {
     /** Count of other org skills forked from this one. */
     copyCount: number;
   };
+  /** The Evals tab (017/004). */
+  evals: EvalsTabData;
   /** Feedback filed against this skill's serves (016/003). */
   feedback: {
     versions: Array<{ version: string; up: number; down: number; notes: number }>;
@@ -150,7 +153,7 @@ export interface PromptDetailData {
   accessibleSkillNames: string[];
 }
 
-export type PromptDetailTab = "overview" | "files" | "preview" | "policies" | "steps" | "runs" | "feedback";
+export type PromptDetailTab = "overview" | "files" | "preview" | "policies" | "steps" | "runs" | "feedback" | "evals";
 
 export interface PromptDetailViewProps {
   data: PromptDetailData;
@@ -175,6 +178,8 @@ export interface PromptDetailViewProps {
   onAcceptDraft: (draftId: string) => Promise<DraftActionResult>;
   onDismissDraft: (draftId: string) => Promise<DraftActionResult>;
   onSetThirdPartyOptIn: (enabled: boolean) => Promise<DraftActionResult>;
+  onStartEvalRun: (version: string, models: string[]) => Promise<StartEvalRunResult>;
+  onRefreshEvals: () => void;
 }
 
 export type DraftActionResult = { ok: true } | { ok: false; error: string };
@@ -219,6 +224,8 @@ export function PromptDetailView({
   onAcceptDraft,
   onDismissDraft,
   onSetThirdPartyOptIn,
+  onStartEvalRun,
+  onRefreshEvals,
 }: PromptDetailViewProps) {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(new Set());
@@ -266,7 +273,8 @@ export function PromptDetailView({
             ["preview", "Preview"],
             ["policies", `Applied policies (${data.appliedPolicies.length})`],
           ];
-  const tabs = [...baseTabs, feedbackTab];
+  const evalsTab: [PromptDetailTab, string] = ["evals", "Evals"];
+  const tabs = data.kind === "chain" ? [...baseTabs, feedbackTab] : [...baseTabs, evalsTab, feedbackTab];
 
   return (
     <div className="flex h-full flex-col">
@@ -617,6 +625,10 @@ export function PromptDetailView({
             </div>
           )
         ) : null}
+
+        <div hidden={activeTab !== "evals"}>
+          <EvalsPanel evals={data.evals} onStartRun={onStartEvalRun} onRefresh={onRefreshEvals} />
+        </div>
 
         {/* Always mounted (hidden when inactive) so the panel stays testable without clicking tabs. */}
         <div hidden={activeTab !== "feedback"}>
