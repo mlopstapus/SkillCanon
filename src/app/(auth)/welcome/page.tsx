@@ -27,10 +27,10 @@ export function WelcomePageContent({ user, organization }: { user: AppSessionUse
             </svg>
           </div>
         </div>
-        <p className="font-mono text-xs uppercase text-text">Instance ready</p>
+        <p className="font-caption text-xs uppercase text-text">Setup done</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Welcome, {displayName}.</h1>
         <p className="mx-auto max-w-md text-sm leading-6 text-dim">
-          {organization.name} is ready. You are signed in as the admin and can enter the authenticated app.
+          {organization.name} is ready. You are signed in as admin. Invite your builders from Teams.
         </p>
       </div>
 
@@ -46,7 +46,7 @@ export function WelcomePageContent({ user, organization }: { user: AppSessionUse
                   : "rounded-tile border border-border bg-surface px-4 py-4 text-center"
               }
             >
-              <p className={highlighted ? "font-mono text-[11px] uppercase text-text" : "font-mono text-[11px] uppercase text-faint"}>
+              <p className={highlighted ? "font-caption text-[11px] uppercase text-text" : "font-caption text-[11px] uppercase text-faint"}>
                 {stat.label}
               </p>
               <p className="mt-2 break-words font-display text-lg font-semibold text-text">{stat.value}</p>

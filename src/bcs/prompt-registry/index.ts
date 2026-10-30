@@ -219,6 +219,7 @@ export { getEvalRun, listEvalRuns } from "./application/get-eval-run";
 export { submitEvalRun } from "./application/submit-eval-run";
 export { getEvalProviderPool, setEvalProviderPool } from "./infrastructure/eval-provider-pool";
 export { getEvalsEnabled, setEvalsEnabled } from "./application/eval-settings";
+export { EVAL_CASES_FILE_NAME, parseEvalCases, type EvalCase } from "./domain/eval-cases";
 export {
   getEvalProviderConfig,
   removeEvalProvider,
@@ -230,7 +231,6 @@ export {
 export { createEvalProvider, EVAL_PROVIDER_IDS, type EvalProviderId } from "./infrastructure/eval-providers";
 export { activateCandidateVersion, applyEvalGate, getEvalGate, setEvalGate, type GateState } from "./application/eval-gate";
 export { evaluateGate, EvalGateConfigInvalidError, VersionNotCandidateError, type EvalGateConfig } from "./domain/eval-gate";
-export { EVAL_CASES_FILE_NAME } from "./domain/eval-cases";
 export {
   DEFAULT_EVAL_LIMITS,
   EvalCasesNotFoundError,

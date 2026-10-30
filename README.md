@@ -1,8 +1,10 @@
 # SkillCanon
 
-An open-source, self-hosted skill/prompt registry with **hierarchical governance**, distributed via REST, [MCP](https://modelcontextprotocol.io/), and a CLI.
+Tribe's internal skills registry. Builders keep the skills their AI tools run here, versioned and governed by team policy, and the tools fetch them over REST, [MCP](https://modelcontextprotocol.io/) or the `skillcanon` CLI.
 
-Define governed skills once, distribute them to every developer's AI tool as REST calls, MCP tools, or via the `skillcanon` CLI. Organizational policies and objectives are automatically applied during skill expansion. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the operator provider pool, or `ANTHROPIC_API_KEY` on the server until the pool has a config source, optionally `DRAFTER_MODEL`).
+**Getting access:** ask a SkillCanon admin for an invitation. Open the link in it, set your password, and you're in. There is no self-serve sign-up.
+
+Skills are defined once and distributed to every builder's AI tool. Organizational policies and objectives are applied when a skill is expanded. SkillCanon never calls an LLM itself — it resolves and serves governed skill content, and the caller's own LLM does the work. The exceptions ([PDR-020](docs/pdr/020-where-evals-run.md)) are the central eval runner, which calls a provider pool the operator configures to validate skill updates, and owner-requested drafted improvements from feedback (same per-organization opt-in as evals; uses the operator provider pool, or `ANTHROPIC_API_KEY` on the server until the pool has a config source, optionally `DRAFTER_MODEL`).
 
 ## Key Features
 
@@ -30,7 +32,7 @@ That builds and starts the whole self-hosted stack — the unified Next.js app (
 
 - **Web app:** http://localhost:3000
 - If a build fails with a message mentioning `next/font/google`, that is a network flake fetching Google Fonts: rerun `docker compose up -d --build`.
-- **First-run setup:** open http://localhost:3000/register to create the initial organization, admin user, and team. (The landing page and `/dashboard` redirect to `/login`, not to setup.)
+- **First-run setup:** there are no seeded users. On a fresh database, http://localhost:3000/ redirects to `/register`: fill in the form (the organization name defaults to "Tribe") and choose *Create instance* to create the organization, its first admin and the root team. Once an organization exists, `/register` is invitation-only and `/` goes to `/login` (or to `/dashboard` when you are signed in); everyone else joins through an admin's invitation.
 
 ### Local dev (without Docker for the app)
 
@@ -42,6 +44,21 @@ pnpm dev
 ```
 
 Requires Node `>=24` and `pnpm`. See `CLAUDE.md` for the full set of dev/lint/typecheck/test commands.
+
+## Tribe brand assets (optional)
+
+Tribe's fonts (TribeSerif, TribeSans, TribeCaption) and logos are licensed and trademarked, so they are not in this repository. Without them the app uses system fonts and the SkillCanon mark. To use Tribe's, mount a private copy of the tribe-design skill's `brand/assets` folder (it must contain `fonts/` and `logos/`) and point `BRAND_ASSETS_DIR` at it, for example in a compose override:
+
+```yaml
+services:
+  app:
+    environment:
+      BRAND_ASSETS_DIR: /brand-assets
+    volumes:
+      - /path/to/tribe-design/brand/assets:/brand-assets:ro
+```
+
+The app serves only `fonts/` and `logos/` from that folder (at `/brand/...`), loads whichever font faces are present, and switches the logo and favicon to the Tribe symbol (`logos/symbol.svg` and `symbol-inverted.svg` must exist). No rebuild is needed.
 
 ## Connect Your AI Tool
 
