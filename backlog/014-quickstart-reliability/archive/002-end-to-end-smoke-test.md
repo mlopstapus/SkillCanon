@@ -1,7 +1,7 @@
 ---
 epic: 014-quickstart-reliability
 feature: 002-end-to-end-smoke-test
-status: open
+status: done
 dependencies: [001-run-migrations-in-compose]
 ---
 
@@ -9,7 +9,7 @@ dependencies: [001-run-migrations-in-compose]
 
 One Playwright test, run in CI against `docker compose up`, that walks the path a new user takes.
 
-**Started 2026-10-29:** `e2e/ui-walk.e2e.test.ts` (`pnpm test:e2e`, `vitest.e2e.config.ts`) walks every navigation page, teams, invite drawer, policy, objective, skill create/publish/version history/search/deprecate, project create/share/tabs/repository, API key issue/revoke, metrics, audit log, phone-width navigation and sign-out/sign-in. It also fetches the UI-made skill over REST and MCP. All 24 tests run on a fresh instance in about 10 s; three are `it.fails` markers for known defects. **Done 2026-10-29:** CLI steps live in `e2e/cli.e2e.test.ts` (runs after ui-walk via `e2e/sequencer.ts`), CI job `e2e` is in `ci-gate`, and 001 landed so no manual `pnpm db:migrate`. **Left open** only for the last acceptance criterion, which stays true as each 015 fix lands; archive this item when 015 is done.
+**Started 2026-10-29:** `e2e/ui-walk.e2e.test.ts` (`pnpm test:e2e`, `vitest.e2e.config.ts`) walks every navigation page, teams, invite drawer, policy, objective, skill create/publish/version history/search/deprecate, project create/share/tabs/repository, API key issue/revoke, metrics, audit log, phone-width navigation and sign-out/sign-in. It also fetches the UI-made skill over REST and MCP. All 24 tests run on a fresh instance in about 10 s; three are `it.fails` markers for known defects. **Done 2026-10-29:** CLI steps live in `e2e/cli.e2e.test.ts` (runs after ui-walk via `e2e/sequencer.ts`), CI job `e2e` is in `ci-gate`, and 001 landed so no manual `pnpm db:migrate`. Archived 2026-10-30: every 015 fix added its assertion (see the last acceptance criterion).
 
 ## Requirements
 
@@ -20,7 +20,7 @@ One Playwright test, run in CI against `docker compose up`, that walks the path 
 ## Acceptance Criteria
 
 - [x] Reverting 014/001 makes this test fail at the setup step.
-- [ ] Each 015 fix adds an assertion here.
+- [x] Each 015 fix adds an assertion here. (015/001 #96, 002 #97, 003 #98/#99, 004 #88, 005 #95, 006 #100, 007 #86/#89/#91/#92/#94/#115 — all in `e2e/ui-walk.e2e.test.ts` and `e2e/cli.e2e.test.ts`)
 
 ## Technical Notes
 

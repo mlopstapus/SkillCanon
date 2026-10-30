@@ -1,7 +1,7 @@
 # Epic 012: AI & MCP Governance Tools
 
 **Priority:** deferred (excluded from the active sequence — see Notes)
-**Status:** deferred
+**Status:** in-progress
 **Goal:** Give an org two front ends onto the same underlying capability — reading/mutating governance state (policies, objectives, teams, API keys) and summarizing/aggregating objectives — for both an external MCP-connected AI client and a bespoke in-app AI experience, gated to the paid tier.
 
 ## Overview
