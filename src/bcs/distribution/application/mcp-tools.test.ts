@@ -8,7 +8,7 @@ import { withTenantContext } from "@/shared/db";
 import { seedOrgWithAdmin, type SeededOrg } from "@/shared/api/test-helpers";
 import { startTestDb, type TestDb } from "@/shared/db/test-helpers";
 import { McpSessionManager, type McpCaller } from "./mcp-session";
-import { createSyntheticSessionId, shContext, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
+import { createSyntheticSessionId, invokeMcpTool, shContext, shList, shRun, shSearch, shWorkflowList, shWorkflowRun, type McpToolContext } from "./mcp-tools";
 
 describe("MCP tool behavior", () => {
   let testDb: TestDb;
@@ -51,7 +51,7 @@ describe("MCP tool behavior", () => {
     };
   }
 
-  async function publishTemplateSkill(seeded: SeededOrg, name: string, content = "Hello.") {
+  async function publishTemplateSkill(seeded: SeededOrg, name: string, content = "Hello.", tags: string[] = []) {
     const actor: PromptActor = { organizationId: seeded.organizationId, userId: seeded.adminUserId };
     return withTenantContext(testDb.appDb, seeded.organizationId, async (tx) => {
       await createPrompt(tx, actor, { organizationId: seeded.organizationId, name });
@@ -60,6 +60,7 @@ describe("MCP tool behavior", () => {
         promptName: name,
         version: "1.0.0",
         mainFile: { content },
+        tags,
       });
     });
   }
@@ -85,6 +86,28 @@ describe("MCP tool behavior", () => {
 
     expect(result).toContain(matchName);
     expect(result).not.toContain(otherName);
+  });
+
+  it("sh-search returns bare names with tags that sh-run accepts, with or without an sh- prefix", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const name = `tagged-${randomUUID()}`;
+    await publishTemplateSkill(seeded, name, "Body.", ["release"]);
+
+    const search = await shSearch({ query: "release" }, ctxFor(seeded));
+    expect(search).toContain(`- ${name}:`);
+    expect(search).toContain("[tags: release]");
+
+    expect(await shRun({ name }, ctxFor(seeded))).toContain("Body.");
+    expect(await shRun({ name: `sh-${name}` }, ctxFor(seeded))).toContain("Body.");
+  });
+
+  it("invokeMcpTool reports tool failures with isError", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+
+    const result = await invokeMcpTool("sh-run", { name: "missing" }, ctxFor(seeded));
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]).toMatchObject({ type: "text", text: expect.stringContaining("Error:") });
   });
 
   it("shContext shows a team-scoped policy and objective for the caller", async () => {
@@ -131,12 +154,10 @@ describe("MCP tool behavior", () => {
     expect(result).toContain(objectiveTitle);
   });
 
-  it("shContext rejects a malformed project_id without throwing", async () => {
+  it("shContext rejects a malformed project_id", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
 
-    const result = await shContext({ project_id: "not-a-uuid" }, ctxFor(seeded));
-
-    expect(result).toContain("invalid project_id");
+    await expect(shContext({ project_id: "not-a-uuid" }, ctxFor(seeded))).rejects.toThrow("invalid project_id");
   });
 
   it("shRun expands a prompt and records exactly one prompt.expanded audit event", async () => {
@@ -160,9 +181,7 @@ describe("MCP tool behavior", () => {
   it("shRun reports a clear error for a prompt the caller cannot see, without recording an audit event", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
 
-    const result = await shRun({ name: "does-not-exist" }, ctxFor(seeded));
-
-    expect(result).toContain("not found");
+    await expect(shRun({ name: "does-not-exist" }, ctxFor(seeded))).rejects.toThrow("not found");
     const rows = Array.from(
       await testDb.ownerDb.execute(
         sql`select 1 from audit.audit_events where organization_id = ${seeded.organizationId} and action = 'prompt.expanded'`,
