@@ -12,9 +12,9 @@ SkillCanon's README says it never calls an LLM. Evals need model calls, so the f
 
 - [x] [001 - PDR: Where Evals Run](001-pdr-where-evals-run.md)
 - [x] [002 - Eval Case Format](archive/002-eval-case-format.md)
-- [ ] [003 - skillcanon eval](003-skillcanon-eval.md)
+- [ ] [003 - Central Eval Runner and skillcanon eval](003-skillcanon-eval.md)
 - [ ] [004 - Results Matrix](004-results-matrix.md)
-- [ ] [005 - Optional Publish Gate](005-optional-publish-gate.md)
+- [ ] [005 - Eval Gate on Merging a Skill Update](005-optional-publish-gate.md)
 
 _Completed features are moved to `archive/` and checked off here._
 

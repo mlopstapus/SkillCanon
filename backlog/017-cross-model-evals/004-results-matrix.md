@@ -7,7 +7,26 @@ dependencies: [003-skillcanon-eval]
 
 # Results Matrix
 
+Per [PDR-020](../../docs/pdr/020-where-evals-run.md), results come from centrally executed runs (003), so the page can also start a run and show its progress.
+
 ## Requirements
 
-- [ ] An "Evals" tab on the skill page: a version × model matrix of pass rate, with the previous version beside the active one and regressions highlighted.
-- [ ] Each cell drills down to per-case results.
+- [ ] An "Evals" tab on the skill page: a version × model matrix of pass rate, with the previous version beside the active one and regressions highlighted. Cells are keyed by version and model; a comparison is only drawn between two results for the same content digest, otherwise both digests are shown side by side with no computed delta.
+- [ ] Each cell drills down to per-case results (input, assertion outcomes or rubric score, latency, tokens, error).
+- [ ] An authorised user can start a run for a version from the tab (choosing models from the provider pool) and sees queued/running/failed state; the matrix refreshes when the run finishes. With no pool configured, the tab says evals are not configured and offers no run control.
+- [ ] A version with no `evals/cases.yaml` shows an empty state explaining how to add one.
+
+## Acceptance Criteria
+
+- A skill with two versions and results for both shows both rows with regressions highlighted.
+- A run started from the tab appears as running, then as results.
+- Pool unconfigured and no-cases states render without errors.
+
+## Open Questions (for Ben)
+
+- Regression rule: proposed default is any drop in pass rate versus the previous version's same-model result. Should a tolerance apply?
+- Who can start a run: any skill editor (proposed default) or admins only?
+
+## Dependencies
+
+- 003 central eval runner and results API.
