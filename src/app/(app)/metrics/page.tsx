@@ -105,7 +105,7 @@ export function MetricsPageView({ data }: { data: MetricsPageData }) {
 function MetricTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-card border border-border bg-surface px-4 py-3.5">
-      <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
+      <div className="mb-2 font-caption text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
       <div className="font-display text-[22px] font-bold">{value}</div>
     </div>
   );

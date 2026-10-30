@@ -53,24 +53,24 @@ export function EventDetailDrawer({ row, onClose }: EventDetailDrawerProps) {
         <div className="flex-1 overflow-y-auto px-5.5 py-5">
           <div className="mb-5.5 grid grid-cols-2 gap-px overflow-hidden rounded-tile border border-border bg-border">
             <div className="bg-surface p-3">
-              <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-faint">Actor</div>
+              <div className="mb-1 font-caption text-[10px] uppercase tracking-[0.08em] text-faint">Actor</div>
               <div className="font-mono text-[12.5px] text-text">{actor.displayName}</div>
               <div className="mt-0.5 font-mono text-[10.5px] text-faint">{actor.subtitle}</div>
             </div>
             <div className="bg-surface p-3">
-              <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-faint">Source</div>
+              <div className="mb-1 font-caption text-[10px] uppercase tracking-[0.08em] text-faint">Source</div>
               <div className="font-mono text-[12.5px] text-text">{event.transport}</div>
               <div className="mt-0.5 font-mono text-[10.5px] text-faint">{event.sourceIp ?? "—"}</div>
             </div>
             <div className="bg-surface p-3">
-              <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-faint">Resource</div>
+              <div className="mb-1 font-caption text-[10px] uppercase tracking-[0.08em] text-faint">Resource</div>
               <div className="font-mono text-[12.5px] text-text">{event.resourceType}</div>
               <div className="mt-0.5 truncate font-mono text-[10.5px] text-faint">
                 {event.resourceId ?? "—"}
               </div>
             </div>
             <div className="bg-surface p-3">
-              <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-faint">
+              <div className="mb-1 font-caption text-[10px] uppercase tracking-[0.08em] text-faint">
                 Timestamp
               </div>
               <div className="font-mono text-[12.5px] text-text">{formatUtcTimestamp(event.createdAt)}</div>

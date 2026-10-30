@@ -67,7 +67,7 @@ export function PromptsListView({
       <div className="border-b border-border bg-bg px-6.5 pt-4">
         <div className="flex items-start justify-between gap-5">
           <div>
-            <div className="mb-2 font-mono text-[10.5px] tracking-[0.12em] text-faint uppercase">
+            <div className="mb-2 font-caption text-[10.5px] tracking-[0.12em] text-faint uppercase">
               Skill registry
             </div>
             <h1 className="font-display text-[22px] font-bold tracking-tight">Skills</h1>
@@ -135,7 +135,7 @@ export function PromptsListView({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="sticky top-0 z-[5] grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_100px_130px_90px] gap-2.5 border-b border-border bg-bg px-6.5 py-2.5 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">
+        <div className="sticky top-0 z-[5] grid grid-cols-[minmax(160px,1fr)_110px_120px_80px_100px_130px_90px] gap-2.5 border-b border-border bg-bg px-6.5 py-2.5 font-caption text-[10px] tracking-[0.1em] text-faint uppercase">
           <span>Name</span>
           <span>Project</span>
           <span>Owner</span>
