@@ -48,6 +48,11 @@ services:
       # "REPLACE_ME", so the zero-config default must be a real, if dev-only,
       # value — same pattern as APP_DB_PASSWORD/AUTH_DB_PASSWORD above).
       JWT_SECRET: ${JWT_SECRET:-changeme_in_production}
+      # GitHub App (VCS integration). Empty = integration off; see README "GitHub integration".
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG:-}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
     depends_on:
       database:
         condition: service_healthy

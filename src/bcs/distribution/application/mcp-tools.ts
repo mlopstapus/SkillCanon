@@ -29,6 +29,8 @@ import { assertCoreFeaturesEnabled } from "@/bcs/identity-access";
 import { FEEDBACK_RATINGS, InvalidFeedbackError, ServeNotFoundError } from "../domain/feedback";
 import { computeContentDigest } from "../domain/prompt-usage";
 import { fileFeedback } from "./file-feedback";
+import { isAdminToolError, ADMIN_TOOL_NAMES, adminToolDescriptions, adminToolInputSchemas, invokeAdminTool } from "./mcp-admin-tools";
+import { McpToolError } from "./mcp-errors";
 import { recordPromptUsage } from "./record-prompt-usage";
 import { type McpCaller, type McpSessionManager, mcpSessionManager } from "./mcp-session";
 
@@ -47,11 +49,13 @@ export const MCP_TOOL_NAMES = [
   // Legacy names, kept as aliases of sh-chain-list / sh-chain-run for one release.
   "sh-workflow-list",
   "sh-workflow-run",
+  ...ADMIN_TOOL_NAMES,
 ] as const;
 
 export type McpToolName = (typeof MCP_TOOL_NAMES)[number];
 
 export const toolInputSchemas = {
+  ...adminToolInputSchemas,
   "sh-list": {},
   "sh-search": { query: z.string().describe("Search term to match against skill names, descriptions, and tags.") },
   "sh-context": { project_id: z.string().optional().describe("Optional UUID of the project to layer on top.") },
@@ -83,6 +87,7 @@ export const toolInputSchemas = {
 } as const;
 
 export const toolDescriptions: Record<McpToolName, string> = {
+  ...adminToolDescriptions,
   "sh-list": "List all available skills (including chains) in the SkillCanon registry.",
   "sh-search": "Search skills by name or tag. Returned names can be passed to sh-run.",
   "sh-context": "Show effective policies and objectives for the authenticated user.",
@@ -110,8 +115,7 @@ function actorFromCaller(caller: McpCaller): PromptActor {
   return { organizationId: caller.user.orgId, userId: caller.user.id };
 }
 
-/** A tool-level failure the caller can act on; surfaced as `isError: true`, not a transport error. */
-export class McpToolError extends Error {}
+export { McpToolError };
 
 export function textResult(text: string): CallToolResult {
   return { content: [{ type: "text", text }] };
@@ -537,6 +541,7 @@ export async function invokeMcpTool(name: McpToolName, args: unknown, ctx: McpTo
   } catch (err) {
     if (
       err instanceof McpToolError ||
+      isAdminToolError(err) ||
       err instanceof ServeNotFoundError ||
       err instanceof InvalidFeedbackError ||
       err instanceof RunNotFoundError ||
@@ -545,7 +550,7 @@ export async function invokeMcpTool(name: McpToolName, args: unknown, ctx: McpTo
       err instanceof ReportOutputTooLargeError ||
       err instanceof ChainStepResolutionFailedError
     ) {
-      return { content: [{ type: "text", text: `Error: ${err.message}` }], isError: true };
+      return { content: [{ type: "text", text: `Error: ${(err as Error).message}` }], isError: true };
     }
     if (err instanceof z.ZodError) {
       return { content: [{ type: "text", text: `Error: invalid arguments: ${err.message}` }], isError: true };
@@ -585,7 +590,7 @@ async function dispatchMcpTool(name: McpToolName, args: unknown, ctx: McpToolCon
     case "sh-workflow-run":
       return textResult(await shWorkflowRun(z.object(toolInputSchemas["sh-workflow-run"]).parse(args), ctx));
     default:
-      return textResult(`Error: unknown tool '${name satisfies never}'.`);
+      return textResult(await invokeAdminTool(name, args, ctx));
   }
 }
 

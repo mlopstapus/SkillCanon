@@ -29,6 +29,7 @@ docker compose up -d
 That builds and starts the whole self-hosted stack — the unified Next.js app (`app`, port 3000) and Postgres (`database`, port 5432). Postgres starts with no pre-baked schema; a one-shot `migrate` service (the Dockerfile's `migrator` stage) applies the Drizzle migrations and `app` starts only after it succeeds. Re-running `docker compose up -d` on an existing volume is a no-op for migrations.
 
 - **Web app:** http://localhost:3000
+- If a build fails with a message mentioning `next/font/google`, that is a network flake fetching Google Fonts: rerun `docker compose up -d --build`.
 - **First-run setup:** open http://localhost:3000/register to create the initial organization, admin user, and team. (The landing page and `/dashboard` redirect to `/login`, not to setup.)
 
 ### Local dev (without Docker for the app)
@@ -105,6 +106,20 @@ Response:
 ```
 
 Available tools: `sh-list` (list skills), `sh-search` (search by name/tag), `sh-context` (show effective policies/objectives for the caller), `sh-run` (run a skill by name).
+
+## GitHub integration
+
+Off by default. To connect SkillCanon to GitHub, register a GitHub App once (a manual step) and give the instance its settings. The App is owned by a **personal GitHub account** (currently `mlopstapus`), not an organization, so nothing below needs organization-level permissions. It can be transferred to an organization later (GitHub: the App's settings → **Advanced → Transfer ownership**) without any SkillCanon change, because no owner name is configured or hard-coded anywhere; only the App id, slug, key and secret are.
+
+1. Signed in as the owning account: **Settings → Developer settings → GitHub Apps → New GitHub App**.
+2. **Where can this GitHub App be installed?** Choose **Only on this account** (the default; it can install on that account and its repositories). Choose **Any account** only if you want others to install it too.
+3. Repository permissions: **Checks: read & write**, **Pull requests: read**, **Contents: read**, **Metadata: read**. No organization or account permissions are needed. Subscribe to the **Installation**, **Installation repositories** and **Pull request** events.
+4. Webhook URL: `https://<your-host>/api/webhooks/github` (must be reachable from GitHub), with a webhook secret you choose. Setup URL (callback): `https://<your-host>/api/integrations/github/callback`.
+5. Generate a private key (PEM) for the App.
+6. Set `GITHUB_APP_ID`, `GITHUB_APP_SLUG` (the App's URL name), `GITHUB_APP_PRIVATE_KEY` and `GITHUB_APP_WEBHOOK_SECRET` in the environment (`.env` next to `docker-compose.yaml` works) and restart.
+7. A SkillCanon admin opens **Settings → Integrations → GitHub** (`/settings/integrations/github`) and chooses **Install SkillCanon on GitHub**, then installs it on the account (and the repositories) to be checked.
+
+Until all four settings are present the page says the App is not configured and the webhook endpoint answers 503. The private key and installation tokens are never stored or logged; uninstalling on GitHub soft-deletes the installation so check history stays readable.
 
 ## Governance Model
 

@@ -11,24 +11,29 @@ Register the SkillCanon GitHub App and build the `Installation` aggregate — th
 
 ## Requirements
 
-- [ ] A GitHub App is registered (manually, once, by the maintainer) with permissions `checks:write`, `pull_requests:read`, `contents:read`, `metadata:read`, subscribed to `installation`, `installation_repositories`, and `pull_request` webhook events.
-- [ ] The App's private key is stored as an env-var secret (`GITHUB_APP_PRIVATE_KEY` or equivalent), never committed — same convention as every other credential in this repo (SMTP, Sentry DSN, Postgres creds).
-- [ ] An "Install SkillCanon on GitHub" flow in the web UI redirects to GitHub's App installation page and handles the callback, creating an `Installation` row (`vcs_integration.installations`) on success.
-- [ ] `installation` webhook events (`created`, `deleted`, `suspend`, `unsuspend`) update the corresponding `Installation` row's `suspendedAt` field or remove it.
-- [ ] Installation access tokens are minted on demand from the App's private key per GitHub's standard exchange, never persisted beyond the request that used them.
-- [ ] `listInstallations(orgId)` is implemented and exposed per `CONTRACT.md`.
-- [ ] Every `InstallationCreated`/`InstallationSuspended`/`InstallationDeleted` writes an audit event via `record()`.
+- [ ] **Needs Ben:** A GitHub App is registered (manually, once, by the maintainer; steps in the README) with permissions `checks:write`, `pull_requests:read`, `contents:read`, `metadata:read`, subscribed to `installation`, `installation_repositories`, and `pull_request` webhook events.
+- [x] The App's private key is stored as an env-var secret (`GITHUB_APP_PRIVATE_KEY` or equivalent), never committed — same convention as every other credential in this repo (SMTP, Sentry DSN, Postgres creds).
+- [x] An "Install SkillCanon on GitHub" flow in the web UI redirects to GitHub's App installation page and handles the callback, creating an `Installation` row (`vcs_integration.installations`) on success.
+- [x] `installation` webhook events (`created`, `deleted`, `suspend`, `unsuspend`) update the corresponding `Installation` row's `suspendedAt` field or remove it.
+- [x] Installation access tokens are minted on demand from the App's private key per GitHub's standard exchange, never persisted beyond the request that used them.
+- [x] `listInstallations(orgId)` is implemented and exposed per `CONTRACT.md`.
+- [x] Every `InstallationCreated`/`InstallationSuspended`/`InstallationDeleted` writes an audit event via `record()`.
 
 ## Acceptance Criteria
 
-- [ ] Installing the App on a test GitHub org creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
-- [ ] Suspending the installation in GitHub's UI updates `suspendedAt` within one webhook delivery.
-- [ ] Deleting the installation removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path.
-- [ ] No installation access token or the App private key ever appears in application logs.
+- [ ] **Needs Ben (live App):** Installing the App on a test GitHub account (the owner's own account is enough) creates exactly one `Installation` row with the correct `githubInstallationId`, `githubAccountLogin`, `githubAccountType`.
+- [ ] **Needs Ben (live App):** Suspending the installation in GitHub's UI updates `suspendedAt` within one webhook delivery.
+- [x] Deleting the installation soft-deletes (decision below) the `Installation` row; it removes the `Installation` row (or marks it deleted — see Open Questions) and existing `RepoLink`/`PrCheck` rows referencing it don't orphan-crash any read path.
+- [x] No installation access token or the App private key ever appears in application logs.
 
 ## Open Questions
 
 - On `installation.deleted`, hard-delete the `Installation` row or soft-delete (keep for audit history, since `PrCheck` history for its repos should presumably remain queryable)? Given this repo's hard-FK, hard-delete-everywhere default (`docs/context/database-conventions.md`), soft-delete here would be the exception — decide during implementation, default to hard-delete unless it breaks `PrCheck` history queries.
+
+## Decisions
+
+- App ownership (Ben, 2026-10-30): the GitHub App lives under a personal GitHub account (`mlopstapus`), not an org: README setup assumes a user-owned App ("Only on this account", "Any account" optional), no org-level permissions, no hard-coded owner; a later transfer to an org needs no code change.
+- `installation.deleted`: SOFT delete (`deleted_at`), not hard delete — hard FKs from repo links and PR checks would otherwise block it and lose history. Suspend/unsuspend/deleted/token-refusal and replay are covered by tests with a stubbed GitHub; the live-App criteria need Ben's registered App.
 
 ## Dependencies
 
