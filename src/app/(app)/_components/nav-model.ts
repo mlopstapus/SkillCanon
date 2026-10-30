@@ -6,7 +6,8 @@ export type NavKey =
   | "projects"
   | "metrics"
   | "apiKeys"
-  | "auditLog";
+  | "auditLog"
+  | "evalProviders";
 
 export type NavItem = {
   key: NavKey;
@@ -30,6 +31,7 @@ const directRoutes: ReadonlyArray<readonly [string, NavKey]> = [
   ["/metrics", "metrics"],
   ["/settings/api-keys", "apiKeys"],
   ["/settings/audit-log", "auditLog"],
+  ["/settings/eval-providers", "evalProviders"],
 ];
 
 export function getNavigation(teamId: string): NavSection[] {
@@ -57,6 +59,11 @@ export function getNavigation(teamId: string): NavSection[] {
           key: "auditLog",
           label: "Audit log",
           href: "/settings/audit-log",
+        },
+        {
+          key: "evalProviders",
+          label: "Eval providers",
+          href: "/settings/eval-providers",
         },
       ],
     },

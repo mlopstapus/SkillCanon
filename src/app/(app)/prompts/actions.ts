@@ -35,7 +35,7 @@ import {
   type LocalSkillInvalidFolder,
   type SubscriberType,
 } from "@/bcs/prompt-registry";
-import { getEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
+import { resolveEvalProviderPool, submitEvalRun } from "@/bcs/prompt-registry";
 import { authenticateSession } from "@/bcs/identity-access";
 import { authDb, db, withTenantContext } from "@/shared/db";
 
@@ -627,12 +627,12 @@ export async function startEvalRunAction(
 ): Promise<PromptActionResult> {
   try {
     const actingUser = await requireActingUser();
-    await withTenantContext(db, actingUser.orgId, (tx) =>
+    await withTenantContext(db, actingUser.orgId, async (tx) =>
       submitEvalRun(
         tx,
         { organizationId: actingUser.orgId, userId: actingUser.id },
         { promptName, version, models },
-        getEvalProviderPool(),
+        await resolveEvalProviderPool(tx, actingUser.orgId),
       ),
     );
     revalidatePath(`/prompts/${promptName}`);

@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import {
   EVAL_CASES_FILE_NAME,
   countForksOfSkill,
-  getEvalProviderPool,
+  resolveEvalProviderPool,
   getEvalRun,
   getEvalsEnabled,
   listEvalRuns,
@@ -78,7 +78,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
     // Evals tab (017/004): the latest eight versions, with their finished results.
-    const poolModels = getEvalProviderPool().models;
+    const poolModels = (await resolveEvalProviderPool(tx, user.orgId)).models;
     const evalVersions: EvalVersionInput[] = [];
     for (const v of [...sortedVersions].slice(0, 8).reverse()) {
       let cases: EvalVersionInput["cases"] = [];

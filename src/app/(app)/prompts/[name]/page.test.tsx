@@ -51,7 +51,7 @@ vi.mock("@/bcs/governance", () => ({ resolveAllPolicies: async () => [] }));
 vi.mock("@/bcs/prompt-registry", () => ({
   countForksOfSkill: async () => 0,
   EVAL_CASES_FILE_NAME: "evals/cases.yaml",
-  getEvalProviderPool: () => ({ providers: [], models: [] }),
+  resolveEvalProviderPool: async () => ({ providers: [], models: [] }),
   getEvalRun: async () => ({ results: [] }),
   getEvalsEnabled: async () => false,
   listEvalRuns: async () => [],

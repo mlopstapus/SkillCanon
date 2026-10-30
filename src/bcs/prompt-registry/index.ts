@@ -220,6 +220,15 @@ export { getEvalProviderPool, setEvalProviderPool } from "./infrastructure/eval-
 export { getEvalsEnabled, setEvalsEnabled } from "./application/eval-settings";
 export { EVAL_CASES_FILE_NAME, parseEvalCases, type EvalCase } from "./domain/eval-cases";
 export {
+  getEvalProviderConfig,
+  removeEvalProvider,
+  resolveEvalProviderPool,
+  setEvalDefaultJudge,
+  setEvalProvider,
+  type EvalProviderConfigView,
+} from "./application/eval-provider-config";
+export { createEvalProvider, EVAL_PROVIDER_IDS, type EvalProviderId } from "./infrastructure/eval-providers";
+export {
   DEFAULT_EVAL_LIMITS,
   EvalCasesNotFoundError,
   EvalJudgeRequiredError,
