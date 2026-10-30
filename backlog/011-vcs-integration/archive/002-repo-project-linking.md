@@ -1,7 +1,7 @@
 ---
 epic: 011-vcs-integration
 feature: 002-repo-project-linking
-status: open
+status: done
 dependencies: ["001-github-app-registration-and-installation"]
 ---
 
