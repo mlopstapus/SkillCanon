@@ -26,10 +26,10 @@ git clone https://github.com/mlopstapus/SkillCanon.git && cd SkillCanon
 docker compose up -d
 ```
 
-That builds and starts the whole self-hosted stack — the unified Next.js app (`app`, port 3000) and Postgres (`database`, port 5432). Postgres starts with no pre-baked schema; migrations run automatically as part of the app's own startup path via Drizzle.
+That builds and starts the whole self-hosted stack — the unified Next.js app (`app`, port 3000) and Postgres (`database`, port 5432). Postgres starts with no pre-baked schema; a one-shot `migrate` service (the Dockerfile's `migrator` stage) applies the Drizzle migrations and `app` starts only after it succeeds. Re-running `docker compose up -d` on an existing volume is a no-op for migrations.
 
 - **Web app:** http://localhost:3000
-- First visit redirects to first-run setup, which creates the initial organization, admin user, and team.
+- **First-run setup:** open http://localhost:3000/register to create the initial organization, admin user, and team. (The landing page and `/dashboard` redirect to `/login`, not to setup.)
 
 ### Local dev (without Docker for the app)
 
