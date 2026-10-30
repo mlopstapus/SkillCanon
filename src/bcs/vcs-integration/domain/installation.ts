@@ -39,6 +39,53 @@ export class InstallationOwnedByAnotherOrganizationError extends Error {
   }
 }
 
+export interface RepoLink {
+  id: string;
+  organizationId: string;
+  installationId: string;
+  githubRepoId: number;
+  repoFullName: string;
+  projectId: string;
+  linkedByUserId: string;
+  createdAt: Date;
+  unlinkedAt: Date | null;
+}
+
+export class RepoNotAccessibleError extends Error {
+  constructor() {
+    super("That repository is not accessible through this GitHub installation.");
+    this.name = "RepoNotAccessibleError";
+  }
+}
+
+export class DuplicateRepoLinkError extends Error {
+  constructor() {
+    super("That repository is already linked to this project.");
+    this.name = "DuplicateRepoLinkError";
+  }
+}
+
+export class LinkProjectNotFoundError extends Error {
+  constructor() {
+    super("No such project in this organization.");
+    this.name = "LinkProjectNotFoundError";
+  }
+}
+
+export class RepoLinkNotFoundError extends Error {
+  constructor() {
+    super("No such repository link.");
+    this.name = "RepoLinkNotFoundError";
+  }
+}
+
+export class VcsNotAuthorizedError extends Error {
+  constructor() {
+    super("Only an organization admin can manage GitHub repository links.");
+    this.name = "VcsNotAuthorizedError";
+  }
+}
+
 export class GithubApiError extends Error {
   // Status only: never echo a response body or request header that could carry a token.
   constructor(public readonly status: number) {

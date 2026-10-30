@@ -1,4 +1,5 @@
-import { bigint, index, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { id, organizationId } from "@/shared/db/columns";
 import { vcsIntegrationSchema } from "@/shared/db/schemas";
 
@@ -35,3 +36,35 @@ export const webhookDeliveries = vcsIntegrationSchema.table("webhook_deliveries"
   deliveryId: text("delivery_id").primaryKey(),
   receivedAt: timestamp("received_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * A GitHub repo (within an installation) linked to a SkillCanon project;
+ * many-to-many. `unlinked_at` is a soft delete so PR check history for the
+ * link stays queryable (OWNERSHIP.md: pr_checks are never truncated). The
+ * uniqueness rule applies only to live links, so a project can be relinked.
+ * `project_id` and `linked_by_user_id` carry no FK, matching other
+ * cross-context ids in this codebase.
+ */
+export const repoLinks = vcsIntegrationSchema.table(
+  "repo_links",
+  {
+    id: id(),
+    organizationId: organizationId(),
+    installationId: uuid("installation_id")
+      .notNull()
+      .references(() => installations.id),
+    githubRepoId: bigint("github_repo_id", { mode: "number" }).notNull(),
+    repoFullName: text("repo_full_name").notNull(),
+    projectId: uuid("project_id").notNull(),
+    linkedByUserId: uuid("linked_by_user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    unlinkedAt: timestamp("unlinked_at", { withTimezone: true }),
+  },
+  (table) => [
+    uniqueIndex("repo_links_live_unique")
+      .on(table.installationId, table.githubRepoId, table.projectId)
+      .where(sql`${table.unlinkedAt} is null`),
+    index("repo_links_organization_id_project_id_index").on(table.organizationId, table.projectId),
+    index("repo_links_github_repo_id_index").on(table.githubRepoId),
+  ],
+);

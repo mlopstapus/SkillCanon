@@ -92,3 +92,24 @@ export function verifyWebhookSignature(secret: string, rawBody: string, signatur
   const given = Buffer.from(signatureHeader);
   return expected.length === given.length && timingSafeEqual(expected, given);
 }
+
+export interface GithubRepo {
+  id: number;
+  fullName: string;
+}
+
+/** Every repository an installation can see, via its short-lived token (paged, capped at 1000). */
+export async function listInstallationRepositories(token: string, fetchImpl: FetchLike = fetch): Promise<GithubRepo[]> {
+  const repos: GithubRepo[] = [];
+  for (let page = 1; page <= 10; page += 1) {
+    const response = await fetchImpl(`${GITHUB_API}/installation/repositories?per_page=100&page=${page}`, {
+      headers: { accept: "application/vnd.github+json", "x-github-api-version": "2022-11-28", authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new GithubApiError(response.status);
+    const body = (await response.json()) as { repositories?: Array<{ id: number; full_name: string }> };
+    const batch = body.repositories ?? [];
+    repos.push(...batch.map((r) => ({ id: r.id, fullName: r.full_name })));
+    if (batch.length < 100) break;
+  }
+  return repos;
+}

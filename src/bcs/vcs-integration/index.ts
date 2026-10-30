@@ -6,13 +6,20 @@ export {
   getInstallationAccessToken,
   listInstallations,
 } from "./application/installations";
+export { linkRepo, listAccessibleRepos, listRepoLinks, unlinkRepo } from "./application/repo-links";
+export type { RepoLinkListItem, VcsActor } from "./application/repo-links";
 export { getGithubAppConfig } from "./infrastructure/github-app";
 export type { GithubAppConfig } from "./infrastructure/github-app";
 export {
+  DuplicateRepoLinkError,
   GithubApiError,
   GithubAppNotConfiguredError,
   InstallationNotActiveError,
   InstallationOwnedByAnotherOrganizationError,
   InvalidInstallStateError,
+  LinkProjectNotFoundError,
+  RepoLinkNotFoundError,
+  RepoNotAccessibleError,
+  VcsNotAuthorizedError,
 } from "./domain/installation";
-export type { Installation } from "./domain/installation";
+export type { Installation, RepoLink } from "./domain/installation";

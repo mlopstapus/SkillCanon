@@ -11,19 +11,23 @@ Build the `RepoLink` aggregate — the many-to-many join between a GitHub repo (
 
 ## Requirements
 
-- [ ] `linkRepo(orgId, projectId, installationId, githubRepoId, actingUserId)` creates a `RepoLink` row; enforces uniqueness on `(installationId, githubRepoId, projectId)` — the same repo can link to a different project again, but not the same project twice.
-- [ ] `unlinkRepo(orgId, repoLinkId, actingUserId)` removes a link. Does not delete any `PrCheck` history for that link (per `OWNERSHIP.md`'s append-only stance on `pr_checks`).
-- [ ] `listRepoLinks(orgId, projectId?)` returns links, optionally filtered to one project, including enough repo metadata (full name, installation account) to render a management UI.
-- [ ] Linking a repo validates the repo is actually accessible through the given `installationId` (call GitHub's list-repos-for-installation API, don't just trust the client-submitted `githubRepoId`).
-- [ ] `RepoLinked`/`RepoUnlinked` audit events fire on link/unlink.
-- [ ] A minimal linking UI exists under `src/app/(app)/settings/integrations/github/` — pick an installation, pick a repo from that installation's accessible repos, pick a project, confirm.
+- [x] `linkRepo(orgId, projectId, installationId, githubRepoId, actingUserId)` creates a `RepoLink` row; enforces uniqueness on `(installationId, githubRepoId, projectId)` — the same repo can link to a different project again, but not the same project twice.
+- [x] `unlinkRepo(orgId, repoLinkId, actingUserId)` removes a link. Does not delete any `PrCheck` history for that link (per `OWNERSHIP.md`'s append-only stance on `pr_checks`).
+- [x] `listRepoLinks(orgId, projectId?)` returns links, optionally filtered to one project, including enough repo metadata (full name, installation account) to render a management UI.
+- [x] Linking a repo validates the repo is actually accessible through the given `installationId` (call GitHub's list-repos-for-installation API, don't just trust the client-submitted `githubRepoId`).
+- [x] `RepoLinked`/`RepoUnlinked` audit events fire on link/unlink.
+- [x] A minimal linking UI exists under `src/app/(app)/settings/integrations/github/` — pick an installation, pick a repo from that installation's accessible repos, pick a project, confirm.
 
 ## Acceptance Criteria
 
-- [ ] Linking the same repo to two different projects succeeds and produces two distinct `RepoLink` rows.
-- [ ] Linking the same repo to the same project twice is rejected with a clear error, not a duplicate row.
-- [ ] Attempting to link a repo the installation doesn't actually have access to (spoofed `githubRepoId`) is rejected.
-- [ ] Unlinking a repo leaves prior `PrCheck` rows for it queryable (verify via `getPrCheck`), just with no new evaluations firing afterward.
+- [x] Linking the same repo to two different projects succeeds and produces two distinct `RepoLink` rows.
+- [x] Linking the same repo to the same project twice is rejected with a clear error, not a duplicate row.
+- [x] Attempting to link a repo the installation doesn't actually have access to (spoofed `githubRepoId`) is rejected.
+- [x] Unlinking a repo leaves prior `PrCheck` rows for it queryable (verify via `getPrCheck`), just with no new evaluations firing afterward.
+
+## Decisions
+
+- Unlink is a SOFT delete (`unlinked_at`) so PR check history keeps its parent row; uniqueness applies to live links only. Management is org-admin only (default; delegation to project owners can follow). Spoofed repo ids, unknown projects, non-admins and cross-org access are covered by tests with a stubbed GitHub; a run against a real GitHub App needs Ben.
 
 ## Open Questions
 
