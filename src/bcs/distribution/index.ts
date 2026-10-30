@@ -50,3 +50,22 @@ export type { McpCaller, McpSessionCleanupOptions } from "./application/mcp-sess
 
 export { MCP_TOOL_NAMES, invokeMcpTool, parseLegacyInput, textResult, toolDescriptions, toolInputSchemas } from "./application/mcp-tools";
 export type { Db, McpToolContext, McpToolName } from "./application/mcp-tools";
+
+export {
+  acceptImprovementDraft,
+  dismissImprovementDraft,
+  getThirdPartyOptIn,
+  listImprovementDrafts,
+  requestImprovementDraft,
+  setThirdPartyOptIn,
+} from "./application/improvement-drafts";
+export { resolveEnvDrafter, createAnthropicDrafter } from "./infrastructure/anthropic-drafter";
+export {
+  DraftFailedError,
+  DraftNotDraftableError,
+  DraftNotFoundError,
+  DraftNotPendingError,
+  DraftingUnavailableError,
+  lineDiff,
+} from "./domain/improvement-draft";
+export type { DiffLine, DraftedImprovement, ImprovementDraft, ImprovementDraftInput, ImprovementDrafter } from "./domain/improvement-draft";
