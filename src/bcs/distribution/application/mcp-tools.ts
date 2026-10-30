@@ -16,6 +16,7 @@ import {
   RunStepConflictError,
   abandonSkillChainRun,
   advanceSkillChainRun,
+  getSkillChainRun,
   startSkillChainRun,
   type ChainStepResolution,
   type PromptActor,
@@ -458,7 +459,16 @@ export async function shChainAdvance(
 ): Promise<string> {
   assertCoreFeaturesEnabled();
   const actor = actorFromCaller(ctx.caller);
-  return withTenantContext(ctx.db, ctx.caller.user.orgId, async (tx) => {
+  const startedAt = Date.now();
+  const orgId = ctx.caller.user.orgId;
+  return withTenantContext(ctx.db, orgId, async (tx) => {
+    // Same telemetry as REST advance: the step being reported on, if it is a template skill.
+    const pendingStep = (await getSkillChainRun(tx, orgId, args.run_id))?.steps.find(
+      (step) => step.stepIndex === args.step_index && step.reportedStatus === null,
+    );
+    const stepVersion = pendingStep
+      ? await fetchExpandableVersion(tx, orgId, pendingStep.promptName, pendingStep.promptVersion)
+      : null;
     const result = await advanceSkillChainRun(
       tx,
       actor,
@@ -466,6 +476,18 @@ export async function shChainAdvance(
       { stepIndex: args.step_index, status: args.status, output: args.output, error: args.error },
       ctx.auditContext,
     );
+    if (stepVersion?.kind === "template") {
+      await recordPromptUsage(tx, {
+        organizationId: orgId,
+        promptId: stepVersion.promptId,
+        promptVersionId: stepVersion.id,
+        promptVersion: stepVersion.version,
+        projectId: null,
+        userId: ctx.caller.user.id,
+        statusCode: args.status === "success" ? 200 : 500,
+        latencyMs: Date.now() - startedAt,
+      });
+    }
     if ("done" in result) {
       return args.status === "success" ? "Chain run complete." : "Chain run finished.";
     }
