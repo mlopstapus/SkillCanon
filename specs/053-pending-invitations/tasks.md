@@ -1,0 +1,5 @@
+- [x] T001 Summary fields
+- [x] T002 Page data, view, revoke action
+- [x] T003 View tests
+- [x] T004 e2e: pending row, accept, revoke
+- [x] T005 Archive 015/008
