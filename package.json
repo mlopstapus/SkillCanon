@@ -10,6 +10,7 @@
     "dev": "next dev",
     "build": "next build",
     "demo:ownership-transfer": "node scripts/demo-ownership-transfer.mjs",
+    "import:org": "node scripts/import-org.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "eval-worker": "tsx scripts/eval-worker.ts",
