@@ -25,7 +25,7 @@ Delivered in parts so each PR stays reviewable: **1a** job tables, queue semanti
 - [x] An org must opt in to evals (admin action, audited) before any run is accepted; this is also consent to send skill content to the providers. (#109)
 - [ ] Submitting and reading runs is audited and limited by an API-key scope.
 
-Part 1a shipped in `specs/046-central-eval-runner/` (migration 0036, `executeEvalRun`, REST submit/read, org opt-in; default pool empty so submit is 409). Part 1c (pool admin page, Anthropic and OpenAI providers, migration 0041) shipped in `specs/052-eval-provider-pool/`. The worker (1b) and CLI (2) remain; this file stays open.
+Part 1a shipped in `specs/046-central-eval-runner/` (migration 0036, `executeEvalRun`, REST submit/read, org opt-in; default pool empty so submit is 409). Part 1c (pool admin page, Anthropic and OpenAI providers, migration 0041) shipped in `specs/052-eval-provider-pool/`. Part 1b (separate worker, migration 0042) shipped in `specs/053-eval-worker/`. The CLI (2) remains; this file stays open.
 
 ## Acceptance Criteria
 

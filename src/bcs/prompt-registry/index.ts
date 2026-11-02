@@ -214,6 +214,7 @@ export type {
 // Central evals (017/003, PDR-020)
 // ---------------------------------------------------------------------------
 export { executeEvalRun, type EvalScope } from "./application/execute-eval-run";
+export { evalWorkerTick, type EvalWorkerDeps } from "./application/eval-worker";
 export { getEvalRun, listEvalRuns } from "./application/get-eval-run";
 export { submitEvalRun } from "./application/submit-eval-run";
 export { getEvalProviderPool, setEvalProviderPool } from "./infrastructure/eval-provider-pool";
