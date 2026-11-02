@@ -1,12 +1,14 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { AuditContext } from "@/bcs/audit-compliance";
-import { authenticateApiKey, authenticateSession, type UserSummary } from "@/bcs/identity-access";
+import { authenticateApiKey, authenticateSession, NotAuthorizedError, type UserSummary } from "@/bcs/identity-access";
 import { authDb as defaultAuthDb } from "@/shared/db";
 
 export interface ResolvedCaller {
   actingUser: UserSummary;
   organizationId: string;
   auditContext: AuditContext;
+  /** API-key scopes; undefined for a browser session (full user authority). */
+  scopes?: string[];
 }
 
 export function apiAuditContext(request: Request): AuditContext {
@@ -46,7 +48,7 @@ export async function resolveCaller(
     if (!result) {
       return null;
     }
-    return { actingUser: result.user, organizationId: result.user.orgId, auditContext };
+    return { actingUser: result.user, organizationId: result.user.orgId, auditContext, scopes: result.scopes };
   }
 
   const user = await authenticateSession(authDbClient, request.headers.get("cookie"));
@@ -54,4 +56,9 @@ export async function resolveCaller(
     return null;
   }
   return { actingUser: user, organizationId: user.orgId, auditContext };
+}
+
+/** An API key must carry one of `accepted`; a session passes. Throws the registered 403. */
+export function requireScope(caller: ResolvedCaller, ...accepted: string[]) {
+  if (caller.scopes && !caller.scopes.some((s) => accepted.includes(s))) throw new NotAuthorizedError();
 }

@@ -4,6 +4,7 @@ import { registerInitCommand } from "./commands/init.js";
 import { registerSyncCommand } from "./commands/sync.js";
 import { registerRunCommand } from "./commands/run.js";
 import { registerFeedbackCommand } from "./commands/feedback.js";
+import { registerEvalCommand } from "./commands/eval.js";
 import { redact } from "./redact.js";
 import { getInstalledVersion } from "./version.js";
 import { checkForUpdate } from "./update-check.js";
@@ -17,6 +18,7 @@ registerInitCommand(program);
 registerSyncCommand(program);
 registerRunCommand(program);
 registerFeedbackCommand(program);
+registerEvalCommand(program);
 
 async function main(): Promise<void> {
   // Kicked off in parallel with the command itself (not awaited yet) so a

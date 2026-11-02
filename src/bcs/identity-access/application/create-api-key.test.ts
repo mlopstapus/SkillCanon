@@ -95,6 +95,14 @@ describe("createApiKey", () => {
     expect(result.id).toBeTruthy();
   });
 
+  it("lets a member request evals:run (017/003 part 2) but no other :run scope", async () => {
+    const member = await makeUser(testDb, "member");
+    const result = await withTenantContext(testDb.appDb, member.orgId, (tx) =>
+      createApiKey(tx, member, { name: "Evals", scopes: ["evals:run"] }),
+    );
+    expect(result.id).toBeTruthy();
+  });
+
   it("rejects a member requesting a :write scope", async () => {
     const member = await makeUser(testDb, "member");
 

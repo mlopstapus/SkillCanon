@@ -52,7 +52,8 @@ export function isScopeAllowedForRole(scope: string, role: UserRole): boolean {
   if (role === "admin") {
     return true;
   }
-  return scope.endsWith(":read");
+  // `evals:run` is open to members: who may evaluate a skill is decided by skill access, not by this cap (017/003 part 2).
+  return scope.endsWith(":read") || scope === "evals:run";
 }
 
 /** Thrown when `createApiKey` is called with an empty `scopes` array (FR-002). */
