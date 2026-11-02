@@ -138,6 +138,21 @@ Off by default. To connect SkillCanon to GitHub, register a GitHub App once (a m
 
 Until all four settings are present the page says the App is not configured and the webhook endpoint answers 503. The private key and installation tokens are never stored or logged; uninstalling on GitHub soft-deletes the installation so check history stays readable.
 
+## Importing the org structure (admins)
+
+`pnpm import:org` builds teams and people from an HR roster export, over the REST API, and can be re-run safely.
+
+```bash
+pnpm import:org --roster <roster.csv> --teams <teams.json> \
+  [--server http://localhost:3000] [--api-key-file <path>] [--root-team <slug>] [--dry-run]
+```
+
+- **Roster** (`--roster`): a CSV with the columns `name, email, title, department, manager_email`. People with no `manager_email` go in a top-level `Executive` team.
+- **Mapping** (`--teams`): a JSON object of `manager_email → team name`, e.g. `{ "head.of.talent@example.com": "Talent" }`. A manager with reports who is missing from it gets a team named `Squad: <name>` and is listed in the report so you can add a proper name and re-run.
+- **Convention:** a manager owns the team *and belongs to it*; everyone else belongs to their manager's team; a team's parent is the team of its manager's manager. Reporting lines live on people, not in team names.
+- **Safe to re-run:** people are matched by email and teams by slug. A second run with the same files writes nothing; a person who moved is moved. People who left the roster are reported, never deleted. New people get a random password and the `member` role, so an admin resets their password before they sign in.
+- **Keys and files:** pass an admin's API key with `--api-key-file` or `SKILLCANON_API_KEY`. The roster and mapping hold personal data, so keep them outside this repository; the script refuses a path inside it. `--dry-run` prints the report without writing.
+
 ## Governance Model
 
 SkillCanon uses a recursive team hierarchy for governance:
