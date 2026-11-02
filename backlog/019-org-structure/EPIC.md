@@ -43,5 +43,5 @@ _Completed features are moved to `archive/` and checked off here._
 
 ## Open questions
 
-- **Secondary membership.** A person in more than one team (matrix orgs, a lead who also sits on an engagement). Options: a `team_memberships` table with one primary; or keep one team and rely on projects for engagement membership. Decide after 001 shows how many people need it; the Tribe roster had one.
+- ~~**Secondary membership.**~~ Decided 2026-11-02 after the first real import: a person has one team, and **engagements are projects** (one per client, under the squad that serves it, members = the people staffed on it). Nothing finer than the engagement is modelled: no pods, no workstreams as teams or projects. Where staffing comes from (the staffing system's accounts) is a later feature if the mapping proves worth automating.
 - **Where the functional names come from.** Rippling has titles and managers, not team names. 001 uses a hand-maintained mapping file plus SCC's engagement assignments for delivery squads. If that mapping is painful to keep, the alternative is a `team` column in the roster that HR owns.
