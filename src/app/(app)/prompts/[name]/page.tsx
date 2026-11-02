@@ -279,7 +279,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
             })
           : [],
         drafting: {
-          configured: resolveDrafter() !== null,
+          configured: resolveDrafter(await resolveEvalProviderPool(tx, user.orgId)) !== null,
           optedIn: draftingOptedIn,
           canChangeOptIn: user.role === "admin",
         },

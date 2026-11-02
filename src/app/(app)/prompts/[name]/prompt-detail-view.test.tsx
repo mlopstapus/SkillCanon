@@ -463,7 +463,7 @@ describe("PromptDetailView", () => {
   it("explains why drafting is unavailable: no provider, or no opt-in (admins get the button)", () => {
     const withDraftable = { draftableVersions: [{ id: "v1-id", version: "1", openNotes: 2 }] };
     const noProvider = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: false, optedIn: false, canChangeOptIn: true } } };
-    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={noProvider} activeTab="feedback" />)).toContain("ANTHROPIC_API_KEY");
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={noProvider} activeTab="feedback" />)).toContain("Eval providers settings page");
 
     const notOptedIn = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: true, optedIn: false, canChangeOptIn: true } } };
     const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={notOptedIn} activeTab="feedback" />);

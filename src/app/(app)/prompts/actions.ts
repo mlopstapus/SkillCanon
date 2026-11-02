@@ -298,12 +298,12 @@ export async function markFeedbackAddressedAction(
 export async function requestImprovementDraftAction(promptName: string, versionId: string): Promise<PromptActionResult> {
   try {
     const actingUser = await requireActingUser();
-    await withTenantContext(db, actingUser.orgId, (tx) =>
+    await withTenantContext(db, actingUser.orgId, async (tx) =>
       requestImprovementDraft(
         tx,
         { organizationId: actingUser.orgId, userId: actingUser.id, role: actingUser.role },
         versionId,
-        resolveDrafter(),
+        resolveDrafter(await resolveEvalProviderPool(tx, actingUser.orgId)),
       ),
     );
     revalidatePath(`/prompts/${promptName}`);
