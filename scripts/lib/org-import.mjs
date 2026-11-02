@@ -167,7 +167,7 @@ export async function applyPlan(plan, { call, rootTeamSlug, dryRun = false }) {
   const errors = [];
   const report = {
     teams: { created: 0, updated: 0, unchanged: 0 },
-    people: { created: 0, moved: 0, unchanged: 0 },
+    people: { created: 0, moved: 0, unchanged: 0, managersSet: 0 },
     squadsToName: plan.squads.map((s) => s.name),
     invalid: plan.invalid,
     warnings: [...plan.warnings],
@@ -260,6 +260,16 @@ export async function applyPlan(plan, { call, rootTeamSlug, dryRun = false }) {
     report.needPasswordReset.push(m.email);
   }
 
+  // 2b. Reporting lines (019/002): managerId follows manager_email, set once everyone exists.
+  for (const m of plan.members) {
+    const existing = userByEmail.get(m.email);
+    const managerId = (m.managerEmail && userByEmail.get(m.managerEmail)?.id) || null;
+    if (!existing || (existing.managerId ?? null) === managerId) continue;
+    await write("PUT", `/api/users/${existing.id}`, { managerId });
+    existing.managerId = managerId;
+    report.people.managersSet++;
+  }
+
   // 3. Owners, now that the people exist.
   for (const t of plan.teams) {
     const team = teamBySlug.get(t.slug);
@@ -285,7 +295,7 @@ export function formatReport(report, { dryRun = false } = {}) {
   const lines = [
     dryRun ? "Dry run: nothing was written." : "Import finished.",
     `Teams: ${report.teams.created} created, ${report.teams.updated} updated, ${report.teams.unchanged} unchanged.`,
-    `People: ${report.people.created} created, ${report.people.moved} moved, ${report.people.unchanged} unchanged.`,
+    `People: ${report.people.created} created, ${report.people.moved} moved, ${report.people.unchanged} unchanged, ${report.people.managersSet} reporting lines set.`,
   ];
   if (report.squadsToName.length) lines.push(`Teams awaiting a name (add the manager to the mapping): ${report.squadsToName.join("; ")}`);
   if (report.needPasswordReset.length) lines.push(`${report.needPasswordReset.length} people were created with a random password and need a reset before they sign in.`);

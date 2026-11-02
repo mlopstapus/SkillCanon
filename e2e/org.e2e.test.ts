@@ -72,7 +72,7 @@ describe("roster import", { timeout: 90_000 }, () => {
 
     const after = (await api("GET", "/api/teams?pageSize=100")).items as Array<{ id: string; slug: string; name: string; parentTeamId: string | null; ownerId: string | null }>;
     const byName = (name: string) => after.find((t) => t.name === name)!;
-    const everyone = (await api("GET", "/api/users?pageSize=100")).items as Array<{ id: string; email: string; teamId: string }>;
+    const everyone = (await api("GET", "/api/users?pageSize=100")).items as Array<{ id: string; email: string; teamId: string; managerId: string | null }>;
     const email = (id: string | null) => everyone.find((u) => u.id === id)?.email;
 
     expect(byName("Executive").parentTeamId).toBe(after.find((t) => t.slug === rootSlug)!.id);
@@ -83,6 +83,7 @@ describe("roster import", { timeout: 90_000 }, () => {
     expect(email(byName("Squad: Gus Penn").ownerId)).toBe("gus.penn@example.test");
     const gus = everyone.find((u) => u.email === "gus.penn@example.test")!;
     expect(gus.teamId).toBe(byName("Squad: Gus Penn").id);
+    expect(gus.managerId).toBe(everyone.find((u) => u.email === "riley.stone@example.test")!.id);
   });
 
   it("is idempotent: a second run changes nothing", () => {
