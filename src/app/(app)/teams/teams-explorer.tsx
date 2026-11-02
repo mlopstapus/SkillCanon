@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-access";
 import { AppState, Badge } from "@/shared/ui";
 import { AddMemberDrawer } from "./add-member-drawer";
+import { revokeInvitationAction } from "./actions";
 import { InviteMemberDrawer } from "./invite-member-drawer";
 import { ReportsToDrawer } from "./reports-to-drawer";
 import { RemoveMemberConfirm } from "./remove-member-confirm";
@@ -16,10 +17,21 @@ type SidebarView = "team" | "unassigned";
 
 type DrawerState = { mode: TeamFormMode; contextTeam: Team | null };
 
+export type PendingInvitationView = {
+  id: string;
+  email: string;
+  teamId: string;
+  role: "admin" | "member";
+  invitedBy: string;
+  expiresAt: string;
+};
+
 export type TeamsExplorerProps = {
   currentUser: AppSessionUser;
   teams: Team[];
   users: UserAccountSummary[];
+  /** Pending invitations (admins only; empty for everyone else). */
+  pendingInvitations?: PendingInvitationView[];
   initialSelectedTeamId: string;
 };
 
@@ -189,9 +201,19 @@ export function TeamsExplorerView({
   currentUser,
   teams,
   users,
+  pendingInvitations = [],
   initialSelectedTeamId,
   refresh,
 }: TeamsExplorerViewProps) {
+  const [revokeError, setRevokeError] = useState<string | null>(null);
+
+  async function revoke(invitationId: string) {
+    setRevokeError(null);
+    const result = await revokeInvitationAction({ invitationId });
+    if (result.ok) refresh();
+    else setRevokeError(result.error);
+  }
+
   const [selectedTeamId, setSelectedTeamId] = useState(initialSelectedTeamId);
   const [tab, setTab] = useState<Tab>("details");
   const [filterText, setFilterText] = useState("");
@@ -530,6 +552,35 @@ export function TeamsExplorerView({
             {inviteNotice ? (
               <p role="status" className="text-[12.5px] text-green">{inviteNotice}</p>
             ) : null}
+            {(() => {
+              const pending = pendingInvitations.filter((i) => i.teamId === selectedTeam.id);
+              if (!isAdmin || pending.length === 0) return null;
+              return (
+                <section aria-label="Pending invitations" className="flex flex-col gap-2">
+                  <h3 className="font-mono text-[11px] uppercase text-faint">Pending invitations</h3>
+                  {revokeError ? <p role="alert" className="text-[12.5px] text-red">{revokeError}</p> : null}
+                  {pending.map((i) => (
+                    <div key={i.id} className="flex items-center gap-3 rounded-card border border-border bg-surface p-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-semibold">{i.email}</div>
+                        <div className="mt-0.5 font-mono text-[11px] text-faint">
+                          invited by {i.invitedBy} · expires {i.expiresAt}
+                        </div>
+                      </div>
+                      <Badge variant={i.role === "admin" ? "accent" : "neutral"}>{i.role}</Badge>
+                      <button
+                        type="button"
+                        onClick={() => void revoke(i.id)}
+                        aria-label={`Revoke invitation for ${i.email}`}
+                        className="rounded-control border border-border px-2.5 py-1 font-mono text-[11px] text-dim"
+                      >
+                        Revoke
+                      </button>
+                    </div>
+                  ))}
+                </section>
+              );
+            })()}
             {ownerUser && directReports.length > 0 ? (
               <div className="rounded-card border border-border bg-surface p-3" aria-label="Direct reports">
                 <div className="text-[12px] font-semibold text-dim">Direct reports of {ownerUser.displayName}</div>
