@@ -78,6 +78,7 @@ const data: PromptDetailData = {
   shareState: { users: [], teams: [], projects: [] },
   shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: [],
+  gate: { canManage: false, enabled: false, models: [], minPassPct: 100, candidates: [] },
   evals: { enabled: true, poolModels: [], matrix: { models: [], rows: [] } },
   feedback: {
     versions: [],

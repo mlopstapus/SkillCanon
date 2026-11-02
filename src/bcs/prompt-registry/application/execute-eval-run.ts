@@ -17,6 +17,7 @@ import {
 } from "../infrastructure/eval-runs-repo";
 import { findPromptByOrgAndId } from "../infrastructure/prompts-repo";
 import { findVersionById } from "../infrastructure/prompt-versions-repo";
+import { applyEvalGate } from "./eval-gate";
 import { expand } from "./expand";
 
 type Db = PostgresJsDatabase<Record<string, never>>;
@@ -74,6 +75,7 @@ export async function executeEvalRun(
   if (!prepared) return;
   if ("error" in prepared) {
     await fail(prepared.error!);
+    await scope((tx) => applyEvalGate(tx, organizationId, runId));
     return;
   }
 
@@ -162,4 +164,5 @@ export async function executeEvalRun(
         }),
     ),
   );
+  await scope((tx) => applyEvalGate(tx, organizationId, runId));
 }

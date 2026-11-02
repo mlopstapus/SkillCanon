@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { EvalRunStatus } from "../domain/eval-run";
-import { evalProviderConfigs, evalResults, evalRuns, evalSettings } from "./schema";
+import { evalGates, evalProviderConfigs, evalResults, evalRuns, evalSettings } from "./schema";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
 
@@ -144,4 +144,22 @@ export async function listQueuedRuns(db: Tx, limit: number): Promise<{ id: strin
 export async function failStaleRuns(db: Tx, olderThanSecs: number): Promise<number> {
   const rows = await db.execute<{ n: number }>(sql`select prompt_registry.fail_stale_eval_runs(${olderThanSecs}) as n`);
   return Number(rows[0]?.n ?? 0);
+}
+
+export async function getGate(tx: Tx, promptId: string) {
+  const [row] = await tx.select().from(evalGates).where(eq(evalGates.promptId, promptId));
+  return row ?? null;
+}
+
+export async function upsertGate(
+  tx: Tx,
+  row: { promptId: string; organizationId: string; enabled: boolean; models: string[]; minPassPct: number; updatedBy: string },
+) {
+  await tx
+    .insert(evalGates)
+    .values(row)
+    .onConflictDoUpdate({
+      target: evalGates.promptId,
+      set: { enabled: row.enabled, models: row.models, minPassPct: row.minPassPct, updatedBy: row.updatedBy, updatedAt: new Date() },
+    });
 }

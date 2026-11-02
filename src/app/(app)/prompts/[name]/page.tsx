@@ -5,6 +5,7 @@ import {
   countForksOfSkill,
   resolveEvalProviderPool,
   getEvalRun,
+  getEvalGate,
   getEvalsEnabled,
   listEvalRuns,
   parseEvalCases,
@@ -78,6 +79,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
     const activeVersion = versions.find((v) => v.id === prompt.activeVersionId) ?? null;
     const sortedVersions = [...versions].sort((a, b) => b.version.localeCompare(a.version, undefined, { numeric: true }));
     // Evals tab (017/004): the latest eight versions, with their finished results.
+    const gate = await getEvalGate(tx, user.orgId, name);
     const poolModels = (await resolveEvalProviderPool(tx, user.orgId)).models;
     const evalVersions: EvalVersionInput[] = [];
     for (const v of [...sortedVersions].slice(0, 8).reverse()) {
@@ -232,6 +234,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ n
       steps,
       chainRuns,
       accessibleSkillNames: accessibleSkills.map((s) => s.name),
+      gate: { canManage: canTransferOwnership, enabled: gate.enabled, models: gate.models, minPassPct: gate.minPassPct, candidates: gate.candidates },
       evals: { enabled: draftingOptedIn, poolModels, matrix: buildEvalMatrix(evalVersions, poolModels) },
       feedback: {
         versions: feedbackSummary.byVersion.map(({ version, up, down, notes }) => ({ version, up, down, notes })),

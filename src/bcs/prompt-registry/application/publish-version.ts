@@ -21,6 +21,7 @@ import {
   type PublishVersionFileInput,
   type PublishVersionParams,
 } from "../domain/prompt";
+import { gateHoldsPublish, submitGateRun } from "./eval-gate";
 import { insertFiles, type InsertPromptVersionFileParams } from "../infrastructure/prompt-version-files-repo";
 import { findPromptByOrgAndName, updatePrompt } from "../infrastructure/prompts-repo";
 import {
@@ -125,14 +126,16 @@ export async function publishVersion(
         ]
       : [];
 
+  const gate = await gateHoldsPublish(db, prompt);
+
   try {
     const newVersion = await withAudit(
       db,
       async (tx) => {
         const inserted = await insertPromptVersion(tx, versionValues);
         await insertFiles(tx, fileRows);
-        // Advance the prompt's active version to the newly published one.
-        await updatePrompt(tx, prompt.id, { activeVersionId: versionId });
+        // Advance the prompt's active version, unless the eval gate holds this one back as a candidate (017/005).
+        if (!gate) await updatePrompt(tx, prompt.id, { activeVersionId: versionId });
         return { ...inserted, files: fileRows.map(({ id, name, content, isMain }) => ({ id, name, content, isMain })) };
       },
       (tx) =>
@@ -149,6 +152,10 @@ export async function publishVersion(
           sourceIp: auditContext.sourceIp ?? null,
         }),
     );
+    if (gate) {
+      const state = await submitGateRun(db, actor, prompt, version, gate, auditContext);
+      return { ...newVersion, candidate: true as const, gate: state };
+    }
     return newVersion;
   } catch (err) {
     if (isUniqueViolation(err)) {

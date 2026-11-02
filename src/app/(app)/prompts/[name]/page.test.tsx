@@ -54,6 +54,7 @@ vi.mock("@/bcs/prompt-registry", () => ({
   resolveEvalProviderPool: async () => ({ providers: [], models: [] }),
   getEvalRun: async () => ({ results: [] }),
   getEvalsEnabled: async () => false,
+  getEvalGate: async () => ({ enabled: false, models: [], minPassPct: 100, candidates: [] }),
   listEvalRuns: async () => [],
   parseEvalCases: () => [],
   expand: async () => ({ content: "", appliedPolicies: [] }),

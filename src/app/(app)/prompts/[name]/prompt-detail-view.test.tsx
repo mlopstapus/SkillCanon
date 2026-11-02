@@ -56,6 +56,7 @@ const baseData: PromptDetailData = {
   shareState: { users: [], teams: [], projects: [] },
   shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: ["commit-message"],
+  gate: { canManage: false, enabled: false, models: [], minPassPct: 100, candidates: [] },
   evals: { enabled: true, poolModels: [], matrix: { models: [], rows: [] } },
   feedback: {
     versions: [
@@ -116,6 +117,8 @@ const baseProps = {
   onDismissDraft: vi.fn(),
   onSetThirdPartyOptIn: vi.fn(),
   onStartEvalRun: vi.fn(),
+  onSetGate: vi.fn(),
+  onActivateCandidate: vi.fn(),
   onRefreshEvals: vi.fn(),
 };
 

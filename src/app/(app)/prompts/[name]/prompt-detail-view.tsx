@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Badge } from "@/shared/ui";
 import { EvalsPanel, type EvalsTabData, type StartEvalRunResult } from "./evals-panel";
+import { GatePanel, type GateActionResult, type GateTabData } from "./gate-panel";
 import { FeedbackPanel } from "./feedback-panel";
 
 export interface ChainStepView {
@@ -108,6 +109,8 @@ export interface PromptDetailData {
   };
   /** The Evals tab (017/004). */
   evals: EvalsTabData;
+  /** The activation gate (017/005). */
+  gate: GateTabData;
   /** Feedback filed against this skill's serves (016/003). */
   feedback: {
     versions: Array<{ version: string; up: number; down: number; notes: number }>;
@@ -180,6 +183,8 @@ export interface PromptDetailViewProps {
   onSetThirdPartyOptIn: (enabled: boolean) => Promise<DraftActionResult>;
   onStartEvalRun: (version: string, models: string[]) => Promise<StartEvalRunResult>;
   onRefreshEvals: () => void;
+  onSetGate: (config: { enabled: boolean; models: string[]; minPassPct: number }) => Promise<GateActionResult>;
+  onActivateCandidate: (version: string, reason: string) => Promise<GateActionResult>;
 }
 
 export type DraftActionResult = { ok: true } | { ok: false; error: string };
@@ -226,6 +231,8 @@ export function PromptDetailView({
   onSetThirdPartyOptIn,
   onStartEvalRun,
   onRefreshEvals,
+  onSetGate,
+  onActivateCandidate,
 }: PromptDetailViewProps) {
   const [versionMenuOpen, setVersionMenuOpen] = useState(false);
   const [expandedStepKeys, setExpandedStepKeys] = useState<Set<string>>(new Set());
@@ -628,6 +635,9 @@ export function PromptDetailView({
 
         <div hidden={activeTab !== "evals"}>
           <EvalsPanel evals={data.evals} onStartRun={onStartEvalRun} onRefresh={onRefreshEvals} />
+          {data.evals.enabled && data.evals.poolModels.length > 0 ? (
+            <GatePanel gate={data.gate} poolModels={data.evals.poolModels} onSetGate={onSetGate} onActivate={onActivateCandidate} />
+          ) : null}
         </div>
 
         {/* Always mounted (hidden when inactive) so the panel stays testable without clicking tabs. */}
