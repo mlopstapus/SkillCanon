@@ -55,7 +55,7 @@ export function NavigationList({ pathname, teamId }: NavigationListProps) {
           key={section.label}
         >
           <h2
-            className="mb-2 px-2 font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-faint"
+            className="mb-2 px-2 font-caption text-[10px] font-semibold uppercase tracking-[0.16em] text-faint"
             id={`nav-${section.label.toLowerCase()}`}
           >
             {section.label}

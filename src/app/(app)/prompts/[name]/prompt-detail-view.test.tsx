@@ -56,6 +56,7 @@ const baseData: PromptDetailData = {
   shareState: { users: [], teams: [], projects: [] },
   shareSummary: { teamCount: 0, subscriberCount: 0, copyCount: 0 },
   accessibleSkillNames: ["commit-message"],
+  evals: { enabled: true, poolModels: [], matrix: { models: [], rows: [] } },
   feedback: {
     versions: [
       { version: "2", up: 1, down: 0, notes: 1 },
@@ -114,6 +115,8 @@ const baseProps = {
   onAcceptDraft: vi.fn(),
   onDismissDraft: vi.fn(),
   onSetThirdPartyOptIn: vi.fn(),
+  onStartEvalRun: vi.fn(),
+  onRefreshEvals: vi.fn(),
 };
 
 describe("PromptDetailView", () => {
@@ -460,7 +463,7 @@ describe("PromptDetailView", () => {
   it("explains why drafting is unavailable: no provider, or no opt-in (admins get the button)", () => {
     const withDraftable = { draftableVersions: [{ id: "v1-id", version: "1", openNotes: 2 }] };
     const noProvider = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: false, optedIn: false, canChangeOptIn: true } } };
-    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={noProvider} activeTab="feedback" />)).toContain("ANTHROPIC_API_KEY");
+    expect(renderToStaticMarkup(<PromptDetailView {...baseProps} data={noProvider} activeTab="feedback" />)).toContain("Eval providers settings page");
 
     const notOptedIn = { ...baseData, feedback: { ...baseData.feedback, ...withDraftable, drafting: { configured: true, optedIn: false, canChangeOptIn: true } } };
     const html = renderToStaticMarkup(<PromptDetailView {...baseProps} data={notOptedIn} activeTab="feedback" />);

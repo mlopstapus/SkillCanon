@@ -1,4 +1,4 @@
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import type { EvalRunStatus } from "../domain/eval-run";
 import { evalProviderConfigs, evalResults, evalRuns, evalSettings } from "./schema";
@@ -131,4 +131,17 @@ export async function upsertDefaultJudge(tx: Tx, organizationId: string, default
     .insert(evalSettings)
     .values({ organizationId, defaultJudge, updatedBy })
     .onConflictDoUpdate({ target: evalSettings.organizationId, set: { defaultJudge, updatedBy, updatedAt: new Date() } });
+}
+
+/** Cross-org via a SECURITY DEFINER function (migration 0042); call on the plain app connection. */
+export async function listQueuedRuns(db: Tx, limit: number): Promise<{ id: string; organizationId: string }[]> {
+  const rows = await db.execute<{ id: string; organization_id: string }>(
+    sql`select id, organization_id from prompt_registry.list_queued_eval_runs(${limit})`,
+  );
+  return rows.map((r) => ({ id: r.id, organizationId: r.organization_id }));
+}
+
+export async function failStaleRuns(db: Tx, olderThanSecs: number): Promise<number> {
+  const rows = await db.execute<{ n: number }>(sql`select prompt_registry.fail_stale_eval_runs(${olderThanSecs}) as n`);
+  return Number(rows[0]?.n ?? 0);
 }

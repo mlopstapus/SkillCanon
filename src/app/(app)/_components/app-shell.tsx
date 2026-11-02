@@ -82,7 +82,7 @@ export function AppShell({ children, navigation, user }: AppShellProps) {
           {navigation}
         </div>
         <div className="flex items-center justify-between border-t border-border px-4 py-2.5">
-          <span className="font-mono text-[10px] tracking-[0.1em] text-faint uppercase">Theme</span>
+          <span className="font-caption text-[10px] tracking-[0.1em] text-faint uppercase">Theme</span>
           <ThemeToggle />
         </div>
         <AccountFooter user={user} />

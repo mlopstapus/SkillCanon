@@ -71,7 +71,7 @@ export function ShareDrawer({
             className="rounded-control border border-border-2 bg-surface px-3 py-2 text-[12.5px] text-text outline-none"
           />
           <div>
-            <div className="mb-2 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">People</div>
+            <div className="mb-2 font-caption text-[10px] tracking-[0.1em] text-faint uppercase">People</div>
             <div className="flex flex-col gap-2">
               {shareState.users.filter((u) => matches(u.name)).map((u) => (
                 <GrantRow
@@ -84,7 +84,7 @@ export function ShareDrawer({
             </div>
           </div>
           <div>
-            <div className="mb-2 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">Teams</div>
+            <div className="mb-2 font-caption text-[10px] tracking-[0.1em] text-faint uppercase">Teams</div>
             <div className="flex flex-col gap-2">
               {shareState.teams.filter((t) => matches(t.name)).map((t) => (
                 <GrantRow
@@ -97,7 +97,7 @@ export function ShareDrawer({
             </div>
           </div>
           <div>
-            <div className="mb-2 font-mono text-[10px] tracking-[0.1em] text-faint uppercase">Projects</div>
+            <div className="mb-2 font-caption text-[10px] tracking-[0.1em] text-faint uppercase">Projects</div>
             <div className="flex flex-col gap-2">
               {shareState.projects.filter((p) => matches(p.name)).map((p) => (
                 <GrantRow

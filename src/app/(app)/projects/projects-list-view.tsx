@@ -22,7 +22,7 @@ export function ProjectsListView({ rows, onNewProject }: ProjectsListViewProps) 
       <div className="border-b border-border bg-bg px-6.5 pt-4 pb-4">
         <div className="flex items-start justify-between gap-5">
           <div>
-            <div className="mb-2 font-mono text-[10.5px] tracking-[0.12em] text-faint uppercase">
+            <div className="mb-2 font-caption text-[10.5px] tracking-[0.12em] text-faint uppercase">
               Skill registry
             </div>
             <h1 className="font-display text-[22px] font-bold tracking-tight">Projects</h1>

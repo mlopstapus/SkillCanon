@@ -74,7 +74,7 @@ function AssignRow({
 export function UnassignedUsersPanel({ users, teams, onAssigned }: UnassignedUsersPanelProps) {
   return (
     <div>
-      <p className="mb-4 font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
+      <p className="mb-4 font-caption text-[10.5px] uppercase tracking-[0.12em] text-faint">
         Unassigned users
       </p>
       {users.length === 0 ? (

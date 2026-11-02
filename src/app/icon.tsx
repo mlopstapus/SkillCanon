@@ -1,9 +1,26 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { brandAssetsDir, hasBrandSymbol } from "@/shared/brand/assets";
 
 export const size = { width: 32, height: 32 };
 export const contentType = "image/png";
+export const dynamic = "force-dynamic";
 
+/** The Tribe symbol when brand assets are configured, otherwise the SkillCanon mark (ink tile, cyan bar). */
 export default function Icon() {
+  const dir = brandAssetsDir();
+  if (dir && hasBrandSymbol(dir)) {
+    const symbol = `data:image/svg+xml;base64,${readFileSync(join(dir, "logos", "symbol.svg")).toString("base64")}`;
+    return new ImageResponse(
+      (
+        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#fafaf8", borderRadius: 8 }}>
+          <img src={symbol} width={17} height={20} alt="" />
+        </div>
+      ),
+      { ...size },
+    );
+  }
   return new ImageResponse(
     (
       <div

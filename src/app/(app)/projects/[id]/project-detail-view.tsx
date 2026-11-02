@@ -390,7 +390,7 @@ export function ProjectDetailView({
 function MetricTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-card border border-border bg-surface px-4 py-3.5">
-      <div className="mb-2 font-mono text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
+      <div className="mb-2 font-caption text-[10px] tracking-[0.08em] text-faint uppercase">{label}</div>
       <div className="font-display text-[22px] font-bold">{value}</div>
     </div>
   );
@@ -410,7 +410,7 @@ function PromptGroup({
   return (
     <div>
       <div className="mb-2.5 flex items-center gap-2">
-        <span className={`font-mono text-[10px] tracking-[0.1em] uppercase ${color}`}>{label}</span>
+        <span className={`font-caption text-[10px] tracking-[0.1em] uppercase ${color}`}>{label}</span>
         <span className="h-px flex-1 bg-border" />
       </div>
       {rows.length === 0 ? (

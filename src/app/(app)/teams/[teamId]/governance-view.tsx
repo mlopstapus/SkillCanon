@@ -180,7 +180,7 @@ export function GovernanceView(props: GovernanceViewProps) {
         <div className="border-b border-border px-6.5 pt-3.5">
           <div className="flex items-start justify-between gap-5">
             <div className="min-w-0">
-              <div className="mb-2 font-mono text-[10.5px] uppercase tracking-[.12em] text-faint">
+              <div className="mb-2 font-caption text-[10.5px] uppercase tracking-[.12em] text-faint">
                 Effective governance
               </div>
               <div className="flex items-center gap-2.5">

@@ -27,7 +27,7 @@ export function TextField({
 
   return (
     <label className="grid gap-2" htmlFor={inputId}>
-      <span className="font-mono text-[10.5px] font-medium uppercase tracking-wider text-faint">{label}</span>
+      <span className="font-caption text-[10.5px] font-medium uppercase tracking-wider text-faint">{label}</span>
       <span
         className={cn(
           "flex min-h-12 items-center gap-3 rounded-control border border-border bg-surface px-3 text-dim transition-colors focus-within:border-a focus-within:text-a focus-within:shadow-glow",

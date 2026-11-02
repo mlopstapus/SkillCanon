@@ -359,3 +359,22 @@ body {
     animation: none;
   }
 }
+
+/*
+ * Tribe symbol, only when brand assets are configured (BRAND_ASSETS_DIR, see
+ * src/shared/brand/assets.ts): the licensed files are never in this repo.
+ * Not recoloured or stretched: light symbol on paper, inverted on ink.
+ */
+.brand-symbol {
+  display: none;
+}
+html[data-brand="tribe"] .brand-fallback {
+  display: none;
+}
+html[data-brand="tribe"] .brand-symbol {
+  display: block;
+  background: url("/brand/logos/symbol.svg") center / contain no-repeat;
+}
+html[data-brand="tribe"][data-theme="dark"] .brand-symbol {
+  background-image: url("/brand/logos/symbol-inverted.svg");
+}

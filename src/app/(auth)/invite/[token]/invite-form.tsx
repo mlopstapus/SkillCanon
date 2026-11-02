@@ -90,7 +90,7 @@ export function InviteFormView({ preview, state, action }: InviteFormViewProps) 
   return (
     <section className="grid gap-7">
       <div className="grid gap-3">
-        <p className="font-mono text-xs uppercase text-text">Invitation</p>
+        <p className="font-caption text-xs uppercase text-text">Invitation</p>
         <h1 className="font-display text-3xl font-semibold text-text sm:text-4xl">Join {preview.orgName}.</h1>
         <p className="text-sm leading-6 text-dim">
           You are invited to the {preview.teamName} team as {roleLabel(preview.role)}.
@@ -111,7 +111,7 @@ export function InviteFormView({ preview, state, action }: InviteFormViewProps) 
       <div className="flex items-center gap-3 rounded-tile border border-border bg-surface px-4 py-3">
         <EmailIcon className="h-4 w-4 shrink-0 text-faint" />
         <span className="min-w-0 truncate font-mono text-[13px] text-dim">{preview.email}</span>
-        <span className="ml-auto flex shrink-0 items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-wide text-faint">
+        <span className="ml-auto flex shrink-0 items-center gap-1.5 font-caption text-[10.5px] uppercase tracking-wide text-faint">
           <PasswordIcon className="h-3 w-3" />
           Locked to this invitation
         </span>

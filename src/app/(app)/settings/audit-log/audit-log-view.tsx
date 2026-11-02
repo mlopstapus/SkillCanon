@@ -102,7 +102,7 @@ export function AuditLogView({
       <div className="border-b border-border p-6 pb-0">
         <div className="mb-1 flex items-start justify-between gap-4">
           <div>
-            <p className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.12em] text-faint">
+            <p className="mb-2 font-caption text-[10.5px] uppercase tracking-[0.12em] text-faint">
               Settings · Compliance
             </p>
             <h1 className="font-display text-[21px] font-bold tracking-tight">Audit log</h1>
