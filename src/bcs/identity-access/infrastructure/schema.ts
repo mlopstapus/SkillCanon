@@ -90,6 +90,13 @@ export const users = identityAccessSchema.table(
       .notNull()
       .default("member"),
     isActive: boolean("is_active").notNull().default(true),
+    /**
+     * Who this person reports to (019/002). Nullable; same organization and
+     * never self, enforced by `updateUser`/`createUser` (an FK alone can't
+     * prove the tenant). Policy and objective inheritance still follow the
+     * team tree, not this chain.
+     */
+    managerId: uuid("manager_id").references((): AnyPgColumn => users.id),
     ...timestamps(),
   },
   (table) => [

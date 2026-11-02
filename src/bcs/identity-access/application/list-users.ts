@@ -23,6 +23,7 @@ export async function listUsers(
     email: row.email,
     role: row.role as "admin" | "member",
     isActive: row.isActive,
+    managerId: row.managerId,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   }));

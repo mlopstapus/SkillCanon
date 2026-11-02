@@ -6,6 +6,7 @@ import type { AppSessionUser, Team, UserAccountSummary } from "@/bcs/identity-ac
 import { AppState, Badge } from "@/shared/ui";
 import { AddMemberDrawer } from "./add-member-drawer";
 import { InviteMemberDrawer } from "./invite-member-drawer";
+import { ReportsToDrawer } from "./reports-to-drawer";
 import { RemoveMemberConfirm } from "./remove-member-confirm";
 import { TeamFormDrawer, type TeamFormMode } from "./team-form-drawer";
 import { UnassignedUsersPanel } from "./unassigned-users-panel";
@@ -200,6 +201,7 @@ export function TeamsExplorerView({
   const [inviteNotice, setInviteNotice] = useState<string | null>(null);
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<UserAccountSummary | null>(null);
+  const [reportsToTarget, setReportsToTarget] = useState<UserAccountSummary | null>(null);
 
   function closeDrawer() {
     setDrawer(null);
@@ -222,6 +224,11 @@ export function TeamsExplorerView({
 
   function onRemoveSuccess() {
     setRemoveTarget(null);
+    refresh();
+  }
+
+  function onReportsToSuccess() {
+    setReportsToTarget(null);
     refresh();
   }
 
@@ -319,6 +326,9 @@ export function TeamsExplorerView({
     : undefined;
   const canManageMembers = isAdmin || selectedTeam.ownerId === currentUser.id;
   const addMemberCandidates = users.filter((u) => u.teamId !== selectedTeam.id);
+  const managerById = new Map(users.map((u) => [u.id, u]));
+  // The owner's direct reports, with the ones who sit outside this team marked (019/002).
+  const directReports = ownerUser ? users.filter((u) => u.managerId === ownerUser.id) : [];
 
   return (
     <div className="grid min-h-full grid-cols-[280px_minmax(0,1fr)]">
@@ -520,6 +530,23 @@ export function TeamsExplorerView({
             {inviteNotice ? (
               <p role="status" className="text-[12.5px] text-green">{inviteNotice}</p>
             ) : null}
+            {ownerUser && directReports.length > 0 ? (
+              <div className="rounded-card border border-border bg-surface p-3" aria-label="Direct reports">
+                <div className="text-[12px] font-semibold text-dim">Direct reports of {ownerUser.displayName}</div>
+                <ul className="mt-1.5 flex flex-col gap-1">
+                  {directReports.map((u) => (
+                    <li key={u.id} className="text-[12.5px] text-text">
+                      {u.displayName}
+                      {u.teamId !== selectedTeam.id ? (
+                        <span className="ml-1.5 font-mono text-[11px] text-faint">
+                          outside this team{u.teamId ? ` · ${byId.get(u.teamId)?.name ?? "another team"}` : ""}
+                        </span>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {members.length === 0 ? (
               <p role="status" className="text-[12.5px] text-dim">No members on this team yet.</p>
             ) : (
@@ -534,8 +561,21 @@ export function TeamsExplorerView({
                   <div className="min-w-0 flex-1">
                     <div className="text-[13px] font-semibold">{m.displayName}</div>
                     <div className="mt-0.5 font-mono text-[11px] text-faint">{m.email}</div>
+                    {m.managerId && managerById.get(m.managerId) ? (
+                      <div className="mt-0.5 text-[11px] text-dim">Reports to {managerById.get(m.managerId)?.displayName}</div>
+                    ) : null}
                   </div>
                   <Badge variant={m.role === "admin" ? "accent" : "neutral"}>{m.role}</Badge>
+                  {isAdmin ? (
+                    <button
+                      type="button"
+                      onClick={() => setReportsToTarget(m)}
+                      aria-label={`Reports to for ${m.displayName}`}
+                      className="rounded-control border border-border px-2 py-1 text-[11px] text-dim"
+                    >
+                      Reports to
+                    </button>
+                  ) : null}
                   {canManageMembers ? (
                     <button
                       type="button"
@@ -581,6 +621,15 @@ export function TeamsExplorerView({
           teamsById={byId}
           onClose={() => setAddMemberOpen(false)}
           onSuccess={onAddMemberSuccess}
+        />
+      ) : null}
+
+      {reportsToTarget ? (
+        <ReportsToDrawer
+          target={reportsToTarget}
+          users={users}
+          onClose={() => setReportsToTarget(null)}
+          onSuccess={onReportsToSuccess}
         />
       ) : null}
 

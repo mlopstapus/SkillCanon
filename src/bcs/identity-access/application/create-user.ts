@@ -5,6 +5,8 @@ import {
   type AuditContext,
 } from "@/bcs/audit-compliance";
 import { NotAuthorizedError, type UserSummary } from "../domain/user";
+import { update } from "../infrastructure/users-repo";
+import { assertValidManager } from "./assert-valid-manager";
 import { insertValidatedUser } from "./insert-validated-user";
 
 type Tx = PostgresJsDatabase<Record<string, never>>;
@@ -16,6 +18,8 @@ export interface CreateUserParams {
   email: string;
   password: string;
   role?: "admin" | "member";
+  /** Who the new person reports to (019/002). */
+  managerId?: string | null;
 }
 
 export interface CreateUserOptions {
@@ -45,7 +49,13 @@ export async function createUser(
     password: params.password,
     role: params.role ?? "member",
   };
+  if (params.managerId) {
+    await assertValidManager(tx, actingUser.orgId, null, params.managerId);
+  }
   const result = await insertValidatedUser(tx, normalized);
+  if (params.managerId) {
+    await update(tx, result.id, { managerId: params.managerId });
+  }
   const auditContext = options.auditContext ?? DEFAULT_WEB_AUDIT_CONTEXT;
   await record(tx, {
     organizationId: actingUser.orgId,
@@ -63,6 +73,7 @@ export async function createUser(
       displayName: normalized.displayName,
       email: normalized.email.toLowerCase(),
       role: normalized.role,
+      managerId: params.managerId ?? null,
       isActive: true,
     },
     transport: auditContext.transport,

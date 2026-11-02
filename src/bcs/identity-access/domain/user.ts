@@ -11,6 +11,8 @@ export interface User {
   passwordHash: string | null;
   role: UserRole;
   isActive: boolean;
+  /** Who this person reports to (019/002); null when no one. */
+  managerId: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +27,7 @@ export interface UserAccountSummary {
   email: string;
   role: UserRole;
   isActive: boolean;
+  managerId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +40,8 @@ export interface UserSummary {
   teamId: string | null;
   role: UserRole;
   email: string;
+  /** Set by `getUser` (019/002); absent on identities built elsewhere. */
+  managerId?: string | null;
 }
 
 /** Presentation-safe live identity returned only by browser session resolution. */
@@ -61,6 +66,22 @@ export class InvalidTeamAssignmentError extends Error {
       "Cannot assign a user to a team in a different organization, or a nonexistent team.",
     );
     this.name = "InvalidTeamAssignmentError";
+  }
+}
+
+/** Thrown when a manager is missing, in another organization, or the user themself (019/002). */
+export class InvalidManagerError extends Error {
+  constructor(message = "The manager must be another user in your organization.") {
+    super(message);
+    this.name = "InvalidManagerError";
+  }
+}
+
+/** Thrown when setting a manager would make a reporting loop; the message names it (019/002). */
+export class ManagerCycleError extends Error {
+  constructor(loop: string[]) {
+    super(`That would create a reporting loop: ${loop.join(" → ")}.`);
+    this.name = "ManagerCycleError";
   }
 }
 

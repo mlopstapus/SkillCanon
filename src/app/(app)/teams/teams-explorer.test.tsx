@@ -249,4 +249,35 @@ describe("TeamsExplorer", () => {
     expect(engIdx).toBeLessThan(platformIdx);
     expect(platformIdx).toBeLessThan(marketingIdx);
   });
+
+  it("shows who each member reports to, an admin Reports to control, and the owner's direct reports with outsiders marked (019/002)", () => {
+    const reportingUsers = [
+      ...users,
+      makeUser({ id: "user-dave", displayName: "Dave", email: "dave@acme.com", teamId: platform.id, managerId: "user-carol" }),
+      makeUser({ id: "user-erin", displayName: "Erin", email: "erin@acme.com", teamId: root.id, managerId: "user-carol" }),
+    ];
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView
+        currentUser={adminSession}
+        teams={teams}
+        users={reportingUsers}
+        initialSelectedTeamId={platform.id}
+        refresh={noop}
+      />,
+    );
+
+    expect(markup).toContain("Reports to Carol");
+    expect(markup).toContain('aria-label="Reports to for Dave"');
+    expect(markup).toContain("Direct reports of Carol");
+    expect(markup).toContain("outside this team");
+    expect(markup).toContain("Acme Corp");
+  });
+
+  it("hides the Reports to control from a non-admin", () => {
+    const markup = renderToStaticMarkup(
+      <TeamsExplorerView currentUser={memberSession} teams={teams} users={users} initialSelectedTeamId={platform.id} refresh={noop} />,
+    );
+
+    expect(markup).not.toContain("Reports to for");
+  });
 });

@@ -1,0 +1,2 @@
+ALTER TABLE "identity_access"."users" ADD COLUMN "manager_id" uuid;--> statement-breakpoint
+ALTER TABLE "identity_access"."users" ADD CONSTRAINT "users_manager_id_users_id_fk" FOREIGN KEY ("manager_id") REFERENCES "identity_access"."users"("id") ON DELETE no action ON UPDATE no action;

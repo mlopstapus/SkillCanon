@@ -54,9 +54,10 @@ describe("getUser", () => {
       teamId,
       role: "admin",
       email: summary.email,
+      managerId: null,
     });
     expect(Object.keys(summary).sort()).toEqual(
-      ["email", "id", "orgId", "role", "teamId"].sort(),
+      ["email", "id", "managerId", "orgId", "role", "teamId"].sort(),
     );
   });
 

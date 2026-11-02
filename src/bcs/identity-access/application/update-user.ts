@@ -13,6 +13,7 @@ import {
   type UserSummary,
 } from "../domain/user";
 import { findById as findTeamById } from "../infrastructure/teams-repo";
+import { assertValidManager } from "./assert-valid-manager";
 import {
   findByOrgAndId,
   update,
@@ -63,6 +64,10 @@ export async function updateUser(
     if (!team || team.organizationId !== actingUser.orgId) {
       throw new InvalidTeamAssignmentError();
     }
+  }
+
+  if (fields.managerId !== undefined && fields.managerId !== null) {
+    await assertValidManager(tx, actingUser.orgId, targetUserId, fields.managerId);
   }
 
   const normalizedFields: UpdateUserFields = { ...fields };

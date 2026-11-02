@@ -24,6 +24,8 @@ export interface UpdateUserFields {
   isActive?: boolean;
   /** `null` unassigns the user from every team (019-account-team-settings-ui). */
   teamId?: string | null;
+  /** Who this person reports to; `null` clears it (019/002). */
+  managerId?: string | null;
 }
 
 export async function insert(
