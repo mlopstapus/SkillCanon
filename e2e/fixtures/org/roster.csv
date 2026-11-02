@@ -1,0 +1,26 @@
+name,email,title,department,manager_email
+Avery Quill,avery.quill@example.test,Chief Executive,Executive,
+Sam Ellery,sam.ellery@example.test,Executive Assistant,Executive,avery.quill@example.test
+Morgan Vale,morgan.vale@example.test,"Head of Talent, Acquisition",Talent,avery.quill@example.test
+Riley Stone,riley.stone@example.test,Head of Engineering,Engineering,avery.quill@example.test
+Jordan Birch,jordan.birch@example.test,Head of Partnerships,Partnerships,avery.quill@example.test
+Kit Orson,kit.orson@example.test,People Ops Lead,Talent,morgan.vale@example.test
+Lane Ferris,lane.ferris@example.test,Recruiting Lead,Talent,morgan.vale@example.test
+Lee Sparrow,lee.sparrow@example.test,Talent Operations,Talent,morgan.vale@example.test
+Ash Pell,ash.pell@example.test,Recruiter,Talent,lane.ferris@example.test
+Bay Dorn,bay.dorn@example.test,Recruiter,Talent,lane.ferris@example.test
+Cove Hart,cove.hart@example.test,Recruiter,Talent,lane.ferris@example.test
+Pip Hale,pip.hale@example.test,Recruiter,Talent,lane.ferris@example.test
+Dana Wick,dana.wick@example.test,Engineer,Engineering,riley.stone@example.test
+Eli Moss,eli.moss@example.test,Engineer,Engineering,riley.stone@example.test
+Fran Lund,fran.lund@example.test,Product Manager,Engineering,riley.stone@example.test
+Gus Penn,gus.penn@example.test,Staff Engineer,Engineering,riley.stone@example.test
+Max Tolland,max.tolland@example.test,Designer,Engineering,riley.stone@example.test
+Nia Quint,nia.quint@example.test,Engineer,Engineering,riley.stone@example.test
+Oak Verne,oak.verne@example.test,Engineer,Engineering,riley.stone@example.test
+Hal Reeve,hal.reeve@example.test,Engineer,Engineering,gus.penn@example.test
+Ivy Cross,ivy.cross@example.test,Engineer,Engineering,gus.penn@example.test
+Rue Dane,rue.dane@example.test,Engineer,Engineering,gus.penn@example.test
+Jules Marsh,jules.marsh@example.test,Partner Manager,Partnerships,riley.stone@example.test
+Kai Brand,kai.brand@example.test,Partner Manager,Partnerships,riley.stone@example.test
+Quin Rowe,quin.rowe@example.test,Analyst,Partnerships,riley.stone@example.test
