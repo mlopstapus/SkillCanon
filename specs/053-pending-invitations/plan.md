@@ -1,0 +1,2 @@
+# Plan
+`InvitationSummary` gains `invitedById` and `expiresAt` (list and get). Teams page loads `listInvitations` for admins, keeps pending ones and resolves inviter names from the already-loaded users. `TeamsExplorerView` renders a "Pending invitations" region (always in the DOM, hidden with the Members tab) and a `revokeInvitationAction` server action refreshes the page. Tests: view markup tests (admin/non-admin/team filter) and e2e (pending row with inviter and expiry, gone after accept, revoke then link says revoked). No migration.

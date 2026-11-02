@@ -22,6 +22,8 @@ export async function listInvitations(
     teamId: row.teamId,
     role: row.role as "admin" | "member",
     state: deriveInvitationState(row, now),
+    invitedById: row.invitedById,
+    expiresAt: row.expiresAt,
     createdAt: row.createdAt,
   }));
 }
