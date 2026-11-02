@@ -131,6 +131,34 @@ describe("/api/users/[userId]", () => {
     expect(response.status).toBe(200);
   });
 
+  it("sets a manager and reads it back, and rejects the reverse with 422 MANAGER_CYCLE (019/002)", async () => {
+    const seeded = await seedOrgWithAdmin(testDb.authDb);
+    const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);
+    const boss = await seedMember(seeded);
+    const report = await seedMember(seeded);
+    const { GET, PUT } = route();
+    const put = (id: string, managerId: string | null) =>
+      PUT(
+        new Request(`http://x/api/users/${id}`, {
+          method: "PUT",
+          headers: { cookie, "content-type": "application/json" },
+          body: JSON.stringify({ managerId }),
+        }),
+        { params: Promise.resolve({ userId: id }) },
+      );
+
+    expect((await put(report.id, boss.id)).status).toBe(200);
+    const read = await GET(new Request(`http://x/api/users/${report.id}`, { headers: { cookie } }), {
+      params: Promise.resolve({ userId: report.id }),
+    });
+    expect((await read.json()).managerId).toBe(boss.id);
+
+    const loop = await put(boss.id, report.id);
+    expect(loop.status).toBe(422);
+    expect((await loop.json()).error.code).toBe("MANAGER_CYCLE");
+    expect((await put(report.id, report.id)).status).toBe(422);
+  });
+
   it("returns 422 VALIDATION_FAILED for a malformed email on update", async () => {
     const seeded = await seedOrgWithAdmin(testDb.authDb);
     const cookie = await loginAndBuildCookie(testDb.authDb, seeded.adminEmail, seeded.adminPassword);

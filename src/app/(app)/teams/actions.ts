@@ -159,3 +159,20 @@ export async function revokeInvitationAction(params: {
     return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
   }
 }
+
+/** Sets (or, with `null`, clears) who a person reports to. Admin only; a loop or a stranger is refused. */
+export async function setManagerAction(params: {
+  targetUserId: string;
+  managerId: string | null;
+}): Promise<TeamActionResult> {
+  try {
+    const actingUser = await requireActingUser();
+    await withTenantContext(db, actingUser.orgId, (tx) =>
+      updateUser(tx, actingUser, params.targetUserId, { managerId: params.managerId }),
+    );
+    revalidatePath("/teams");
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}

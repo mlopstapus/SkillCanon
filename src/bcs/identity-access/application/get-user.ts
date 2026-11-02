@@ -38,5 +38,6 @@ export async function getUser(
     teamId: row.teamId,
     role: row.role as "admin" | "member",
     email: row.email,
+    managerId: row.managerId,
   };
 }

@@ -15,6 +15,7 @@ const updateUserSchema = z.object({
   username: z.string().min(1).optional(),
   role: z.enum(["admin", "member"]).optional(),
   teamId: z.string().min(1).nullable().optional(),
+  managerId: z.string().min(1).nullable().optional(),
 });
 
 /**

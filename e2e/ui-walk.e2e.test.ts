@@ -178,6 +178,24 @@ describe("SkillCanon UI walk", { timeout: 60_000 }, () => {
     await drawer().getByRole("button", { name: "Close" }).click();
   });
 
+  it("sets Reports to in the drawer and shows it on the team page (019/002)", async () => {
+    await goto("/teams");
+    const teams = await (await page.request.get(`${BASE}/api/teams?pageSize=100`)).json();
+    const teamId = teams.items.find((t: { parentTeamId: string | null }) => !t.parentTeamId).id;
+    const created = await page.request.post(`${BASE}/api/users`, {
+      data: { teamId, username: "report-e2e", displayName: "Report E2E", email: "report-e2e@example.test", password: "e2e-local-password-1" },
+    });
+    expect(created.status()).toBe(201);
+
+    await goto("/teams");
+    await page.getByRole("button", { name: "Members" }).click();
+    await page.getByRole("button", { name: "Reports to for Report E2E" }).click();
+    await drawer().getByLabel("Reports to").selectOption({ label: `${ADMIN.name} (${ADMIN.email})` });
+    await drawer().getByRole("button", { name: "Save" }).click();
+    await expect.poll(() => drawer().count()).toBe(0);
+    await expect.poll(() => page.getByText(`Reports to ${ADMIN.name}`).first().isVisible()).toBe(true);
+  });
+
   it("creates a policy and an objective at the root team", async () => {
     await nav().getByRole("link", { name: "Governance" }).click();
     await page.waitForURL(/\/policies$/);

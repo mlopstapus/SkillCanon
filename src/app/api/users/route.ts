@@ -12,6 +12,7 @@ const createUserSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   role: z.enum(["admin", "member"]).optional(),
+  managerId: z.string().min(1).nullable().optional(),
 });
 
 export async function handlePost(request: Request, { caller, db }: { caller: ResolvedCaller; db: Db }) {
