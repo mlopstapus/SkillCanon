@@ -120,12 +120,16 @@ describe("applyPlan", () => {
     expect(owner("org-talent")).toBe("morgan.vale@example.test");
     expect(owner("org-squad-gus-penn")).toBe("gus.penn@example.test");
     expect(server.teams.find((t) => t.slug === "org-executive")?.parentTeamId).toBe("t-root");
+    expect(first.people.managersSet).toBe(24);
+    const user = (email: string) => server.users.find((u) => u.email === email)!;
+    expect(user("gus.penn@example.test").managerId).toBe(user("riley.stone@example.test").id);
+    expect(user("avery.quill@example.test").managerId).toBeUndefined();
 
     const before = server.writes.length;
     const second = await applyPlan(plan, { call: server.call });
     expect(server.writes.length).toBe(before);
     expect(second.teams).toEqual({ created: 0, updated: 0, unchanged: 5 });
-    expect(second.people).toEqual({ created: 0, moved: 0, unchanged: 25 });
+    expect(second.people).toEqual({ created: 0, moved: 0, unchanged: 25, managersSet: 0 });
   });
 
   it("moves only the person who moved, and reports someone no longer in the roster without deleting them", async () => {

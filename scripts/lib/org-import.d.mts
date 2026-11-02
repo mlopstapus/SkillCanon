@@ -28,7 +28,7 @@ export interface Plan {
 }
 export interface ImportReport {
   teams: { created: number; updated: number; unchanged: number };
-  people: { created: number; moved: number; unchanged: number };
+  people: { created: number; moved: number; unchanged: number; managersSet: number };
   squadsToName: string[];
   invalid: Plan["invalid"];
   warnings: string[];

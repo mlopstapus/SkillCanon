@@ -17,7 +17,7 @@ One script that turns an HR roster into SkillCanon teams and people, re-runnable
 - [x] **Idempotent.** Matches people by email and teams by slug. A second run with the same files changes nothing; a run with a moved person moves them (and only them). Removed people are reported, not deleted.
 - [x] **Report.** Prints counts (teams created/updated, people created/moved/unchanged), the `Squad:` teams awaiting a name, and roster emails that failed validation. Exit code 0 on success even with squads to name; 1 on any REST error.
 - [x] **No invented data.** Nothing is created that the roster doesn't state. No placeholder passwords in the output; created people get a random password and `role: member`, and the report says they need a reset.
-- [ ] Sets `managerId` on each person once 002 ships; until then it is skipped, not faked.
+- [x] Sets `managerId` on each person once 002 ships; until then it is skipped, not faked.
 
 ## Acceptance Criteria
 
